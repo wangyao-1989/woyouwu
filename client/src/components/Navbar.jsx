@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import logo from '../assets/logo.png';
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -45,9 +46,7 @@ function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">悟</span>
-              </div>
+              <img src={logo} alt="woyouwu" className="w-10 h-10 rounded-lg" />
               <span className="text-xl font-bold text-gray-800">woyouwu</span>
             </Link>
             <div className="hidden md:flex ml-10 space-x-8">
