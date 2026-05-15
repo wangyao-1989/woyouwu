@@ -142,7 +142,7 @@ function ItemDetail() {
               {item.images.map((img, index) => (
                 <img
                   key={index}
-                  src={`http://localhost:5000${img}`}
+                  src={`${img}`}
                   alt={`${item.name} ${index + 1}`}
                   className={`w-full h-24 object-cover rounded-lg cursor-pointer ${index === 0 ? 'col-span-4 h-64' : ''}`}
                 />

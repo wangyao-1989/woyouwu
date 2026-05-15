@@ -10,6 +10,7 @@ import Resources from './pages/Resources';
 import ResourceDetail from './pages/ResourceDetail';
 import CreateResource from './pages/CreateResource';
 import Profile from './pages/Profile';
+import Users from './pages/Users';
 import Messages from './pages/Messages';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -58,6 +59,7 @@ function App() {
             <Route path="/resources/edit/:id" element={
               <ProtectedRoute><CreateResource /></ProtectedRoute>
             } />
+            <Route path="/users" element={<Users />} />
             <Route path="/profile/:id?" element={
               <ProtectedRoute><Profile /></ProtectedRoute>
             } />

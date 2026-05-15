@@ -56,6 +56,9 @@ function Navbar() {
               <Link to="/resources" className="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition">
                 资源分享
               </Link>
+              <Link to="/users" className="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition">
+                发现用户
+              </Link>
             </div>
           </div>
 

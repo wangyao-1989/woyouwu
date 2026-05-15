@@ -136,7 +136,7 @@ function Items() {
             <Link key={item._id} to={`/items/${item._id}`} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition group">
               <div className="relative">
                 <img
-                  src={item.images[0] ? `http://localhost:5000${item.images[0]}` : 'https://via.placeholder.com/300x200'}
+                  src={item.images[0] ? `${item.images[0]}` : 'https://via.placeholder.com/300x200'}
                   alt={item.name}
                   className="w-full h-48 object-cover group-hover:scale-105 transition duration-300"
                 />
