@@ -10,9 +10,10 @@ function Profile() {
   const [profileUser, setProfileUser] = useState(null);
   const [userItems, setUserItems] = useState([]);
   const [userResources, setUserResources] = useState([]);
-  const [stats, setStats] = useState({ items: 0, resources: 0, followers: 0, following: 0 });
+  const [userPosts, setUserPosts] = useState([]);
+  const [stats, setStats] = useState({ items: 0, resources: 0, followers: 0, following: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('items');
+  const [activeTab, setActiveTab] = useState('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -34,6 +35,9 @@ function Profile() {
     }
   });
   const [newSkill, setNewSkill] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [postImage, setPostImage] = useState(null);
+  const [likedPosts, setLikedPosts] = useState([]);
 
   const isOwnProfile = !id || id === currentUser?.id;
   const profileId = id || currentUser?.id;
@@ -68,14 +72,16 @@ function Profile() {
         }
       });
 
-      const [itemsRes, resourcesRes, statsRes] = await Promise.all([
+      const [itemsRes, resourcesRes, statsRes, postsRes] = await Promise.all([
         axios.get(`/api/users/${profileId}/items`),
         axios.get(`/api/users/${profileId}/resources`),
-        axios.get(`/api/users/${profileId}/stats`)
+        axios.get(`/api/users/${profileId}/stats`),
+        axios.get(`/api/posts/user/${profileId}`)
       ]);
       setUserItems(itemsRes.data);
       setUserResources(resourcesRes.data);
-      setStats(statsRes.data);
+      setUserPosts(postsRes.data.posts);
+      setStats({ ...statsRes.data, posts: postsRes.data.total });
 
       if (currentUser && !isOwnProfile) {
         const currentUserData = await axios.get(`/api/users/${currentUser.id}`);
@@ -179,6 +185,58 @@ function Profile() {
       fetchProfile();
     } catch (error) {
       alert('操作失败');
+    }
+  };
+
+  const handlePostSubmit = async () => {
+    if (!postContent.trim() && !postImage) {
+      alert('请输入内容或上传图片');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('content', postContent);
+    if (postImage) {
+      formData.append('image', postImage);
+    }
+
+    try {
+      const res = await axios.post('/api/posts', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUserPosts([res.data.post, ...userPosts]);
+      setPostContent('');
+      setPostImage(null);
+      setStats(prev => ({ ...prev, posts: prev.posts + 1 }));
+    } catch (error) {
+      alert('发布失败');
+    }
+  };
+
+  const handleLike = async (postId) => {
+    try {
+      const res = await axios.post(`/api/posts/${postId}/like`);
+      setUserPosts(prev => prev.map(post => 
+        post._id === postId ? res.data.post : post
+      ));
+      if (res.data.isLiked) {
+        setLikedPosts(prev => [...prev, postId]);
+      } else {
+        setLikedPosts(prev => prev.filter(id => id !== postId));
+      }
+    } catch (error) {
+      alert('操作失败');
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (!confirm('确定删除这条动态吗？')) return;
+    try {
+      await axios.delete(`/api/posts/${postId}`);
+      setUserPosts(prev => prev.filter(post => post._id !== postId));
+      setStats(prev => ({ ...prev, posts: prev.posts - 1 }));
+    } catch (error) {
+      alert('删除失败');
     }
   };
 
@@ -302,6 +360,10 @@ function Profile() {
 
             <div className="flex justify-center sm:justify-start gap-8 mt-6 pt-6 border-t">
               <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{stats.posts}</p>
+                <p className="text-sm text-gray-500">动态</p>
+              </div>
+              <div className="text-center">
                 <p className="text-2xl font-bold text-gray-800">{stats.items}</p>
                 <p className="text-sm text-gray-500">物品</p>
               </div>
@@ -365,8 +427,56 @@ function Profile() {
             )}
           </div>
 
+          {isOwnProfile && (
+            <div className="border-t bg-gray-50 p-4">
+              <div className="flex gap-4">
+                <img
+                  src={currentUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${currentUser?.nickname}`}
+                  alt=""
+                  className="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <textarea
+                    value={postContent}
+                    onChange={(e) => setPostContent(e.target.value)}
+                    placeholder="分享你的想法..."
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    rows={3}
+                    maxLength={2000}
+                  />
+                  <div className="flex justify-between items-center mt-3">
+                    <label className="flex items-center text-sm text-gray-500 cursor-pointer hover:text-primary-600 transition">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      上传图片
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => setPostImage(e.target.files[0])} />
+                    </label>
+                    <button
+                      onClick={handlePostSubmit}
+                      disabled={!postContent.trim() && !postImage}
+                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      发布动态
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="border-t">
             <div className="flex">
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`flex-1 px-6 py-4 font-medium transition ${
+                  activeTab === 'posts'
+                    ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                动态 ({stats.posts})
+              </button>
               <button
                 onClick={() => setActiveTab('items')}
                 className={`flex-1 px-6 py-4 font-medium transition ${
@@ -375,7 +485,7 @@ function Profile() {
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                物品 ({userItems.length})
+                物品 ({stats.items})
               </button>
               <button
                 onClick={() => setActiveTab('resources')}
@@ -385,13 +495,81 @@ function Profile() {
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                资源 ({userResources.length})
+                资源 ({stats.resources})
               </button>
             </div>
           </div>
 
           <div className="p-6">
-            {activeTab === 'items' ? (
+            {activeTab === 'posts' ? (
+              userPosts.length > 0 ? (
+                <div className="space-y-4">
+                  {userPosts.map((post) => (
+                    <div
+                      key={post._id}
+                      className="bg-gray-50 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={post.author?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${post.author?.nickname}`}
+                          alt={post.author?.nickname}
+                          className="w-10 h-10 rounded-full bg-gray-200"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-800">{post.author?.nickname}</span>
+                              <span className="text-xs text-gray-400">· {new Date(post.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            {isOwnProfile && (
+                              <button
+                                onClick={() => handleDeletePost(post._id)}
+                                className="text-gray-400 hover:text-red-500 transition"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-gray-700 leading-relaxed mt-2">{post.content}</p>
+                          {post.image && (
+                            <img src={post.image} alt="" className="mt-4 max-w-full rounded-lg" />
+                          )}
+                          <div className="flex items-center gap-6 mt-4 text-sm text-gray-500">
+                            <button className="hover:text-primary-600 transition">
+                              <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              {post.comments?.length || 0}
+                            </button>
+                            <button
+                              onClick={() => handleLike(post._id)}
+                              className={`transition ${likedPosts.includes(post._id) ? 'text-red-600' : 'hover:text-red-600'}`}
+                            >
+                              <svg className="w-5 h-5 inline mr-1" fill={likedPosts.includes(post._id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              </svg>
+                              {post.likes?.length || 0}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-gray-500">暂无动态</p>
+                  {isOwnProfile && (
+                    <p className="text-gray-400 text-sm mt-1">分享你的第一个动态吧！</p>
+                  )}
+                </div>
+              )
+            ) : activeTab === 'items' ? (
               userItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userItems.map((item) => (

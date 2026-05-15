@@ -11,6 +11,7 @@ const userRoutes = require('./routes/user');
 const itemRoutes = require('./routes/item');
 const resourceRoutes = require('./routes/resource');
 const messageRoutes = require('./routes/message');
+const postRoutes = require('./routes/post');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/posts', postRoutes);
 
 app.get('/', (req, res) => {
   res.send('woyouwu API is running');
