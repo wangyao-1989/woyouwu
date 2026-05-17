@@ -13,10 +13,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: '用户名、密码和昵称不能为空' });
     }
 
-    if (!email && !phone) {
-      return res.status(400).json({ message: '邮箱和手机号至少填写一项' });
-    }
-
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: '用户名已存在' });

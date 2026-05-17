@@ -29,11 +29,6 @@ function Register() {
       return;
     }
 
-    if (!formData.email && !formData.phone) {
-      setError('邮箱和手机号至少填写一项');
-      return;
-    }
-
     if (formData.password.length < 6) {
       setError('密码至少需要6个字符');
       return;
