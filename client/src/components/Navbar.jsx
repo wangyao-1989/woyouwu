@@ -54,7 +54,7 @@ function Navbar() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <img 
-                src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=WW%20logo%20lettermark%2C%20retro%20style%2C%20teal%20and%20orange%20colors%2C%20bold%20black%20outline%2C%20white%20highlight%2C%20clean%20white%20background&image_size=square" 
+                src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=WW%20monogram%20logo%2C%20retro%20rounded%20typography%2C%20left%20W%20teal%20turquoise%20color%2C%20right%20W%20orange%20gold%20color%2C%20thick%20black%20outline%2C%20white%20bevel%20highlight%20on%20top%2C%203D%20shadow%2C%20clean%20white%20background%2C%20vector%20style&image_size=square" 
                 alt="Wowoo" 
                 className="h-8 w-auto"
               />
