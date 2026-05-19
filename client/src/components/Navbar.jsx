@@ -53,7 +53,11 @@ function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gray-800 wowoo-heading">Wowoo</span>
+              <img 
+                src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=WW%20logo%20lettermark%2C%20retro%20style%2C%20teal%20and%20orange%20colors%2C%20bold%20black%20outline%2C%20white%20highlight%2C%20clean%20white%20background&image_size=square" 
+                alt="Wowoo" 
+                className="h-8 w-auto"
+              />
             </Link>
             <div className="hidden md:flex ml-10 space-x-1">
               <Link 
