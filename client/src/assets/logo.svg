@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
+  <!-- Left W - Teal -->
+  <path 
+    d="M10 55 Q5 55 5 50 L5 20 Q5 15 10 15 L25 15 Q30 15 30 20 L30 35 Q30 40 25 40 L18 40 L22 50 L35 50 Q40 50 40 45 L40 15 Q40 10 45 10 L60 10" 
+    fill="#5AC4B8" 
+    stroke="#1a1a1a" 
+    stroke-width="3" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  <!-- Left W highlight -->
+  <path 
+    d="M12 17 L23 17 L23 28 Q23 33 28 33 L32 33 L25 42 L12 42" 
+    fill="rgba(255,255,255,0.4)" 
+    stroke="none"
+  />
+  
+  <!-- Right W - Orange -->
+  <path 
+    d="M60 55 Q55 55 55 50 L55 20 Q55 15 60 15 L75 15 Q80 15 80 20 L80 35 Q80 40 75 40 L68 40 L72 50 L85 50 Q90 50 90 45 L90 15 Q90 10 95 10 L110 10" 
+    fill="#F6B26B" 
+    stroke="#1a1a1a" 
+    stroke-width="3" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  <!-- Right W highlight -->
+  <path 
+    d="M62 17 L73 17 L73 28 Q73 33 78 33 L82 33 L75 42 L62 42" 
+    fill="rgba(255,255,255,0.4)" 
+    stroke="none"
+  />
+</svg>
