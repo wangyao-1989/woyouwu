@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import Logo from '../assets/logo.svg';
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -54,7 +55,7 @@ function Navbar() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2 group">
               <img 
-                src={require('../assets/logo.svg').default} 
+                src={Logo} 
                 alt="Wowoo" 
                 className="h-10 w-auto transition-transform group-hover:rotate-3"
               />
