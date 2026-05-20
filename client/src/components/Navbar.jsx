@@ -64,7 +64,7 @@ function Navbar() {
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                Explore
+                探索
               </Link>
               <Link 
                 to="/items" 
@@ -74,7 +74,7 @@ function Navbar() {
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                Creations
+                创作
               </Link>
               <Link 
                 to="/resources" 
@@ -84,7 +84,7 @@ function Navbar() {
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                Ideas
+                资源
               </Link>
               <Link 
                 to="/users" 
@@ -94,7 +94,7 @@ function Navbar() {
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                Stuff
+                用户
               </Link>
             </div>
           </div>
@@ -121,14 +121,14 @@ function Navbar() {
               <>
                 {/* Create button */}
                 <Link 
-                  to="/items/create" 
-                  className="inline-flex items-center px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg"
-                >
-                  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Post
-                </Link>
+                to="/items/create" 
+                className="inline-flex items-center px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg"
+              >
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                发布
+              </Link>
 
                 {/* Messages */}
                 <Link to="/messages" className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all">
@@ -154,10 +154,10 @@ function Navbar() {
             ) : (
               <>
                 <Link to="/login" className="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium rounded-xl hover:bg-gray-50 transition-all">
-                  Log in
+                  登录
                 </Link>
                 <Link to="/register" className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-all shadow-wowoo">
-                  Sign up
+                  注册
                 </Link>
               </>
             )}

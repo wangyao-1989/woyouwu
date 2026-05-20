@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 export function getTypeStyle(type) {
   switch (type) {
     case 'creation':
-      return { bg: 'bg-creation-bg', text: 'text-creation-text', label: 'CREATION' };
+      return { bg: 'bg-creation-bg', text: 'text-creation-text', label: '创作' };
     case 'idea':
-      return { bg: 'bg-idea-bg', text: 'text-idea-text', label: 'IDEA' };
+      return { bg: 'bg-idea-bg', text: 'text-idea-text', label: '想法' };
     case 'stuff':
-      return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: 'STUFF' };
+      return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: '物品' };
     default:
-      return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'ITEM' };
+      return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
   }
 }
 
@@ -67,7 +67,7 @@ function ContentCard({ item, viewMode = 'grid' }) {
                   alt={item.author?.nickname || 'user'}
                   className="w-6 h-6 rounded-full bg-gray-200"
                 />
-                <span className="text-sm text-gray-500">{item.author?.nickname || 'Anonymous'}</span>
+                <span className="text-sm text-gray-500">{item.author?.nickname || '匿名'}</span>
               </div>
               <div className="flex items-center space-x-4 text-sm text-gray-400">
                 <span className="flex items-center">

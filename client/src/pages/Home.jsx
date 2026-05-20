@@ -8,8 +8,8 @@ const mockContent = [
   {
     id: 1,
     type: 'creation',
-    title: 'My Portfolio Website 2024 Redesign',
-    description: 'Built with Next.js + Tailwind. A clean and modern portfolio to showcase my work.',
+    title: '我的作品集网站 2024 重新设计',
+    description: '使用 Next.js + Tailwind 构建。一个干净现代的作品集来展示我的作品。',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
     author: {
       nickname: 'helen.dev',
@@ -21,8 +21,8 @@ const mockContent = [
   {
     id: 2,
     type: 'idea',
-    title: 'What if we turn memories into shareable files?',
-    description: 'A thought that popped up in the shower. Not just photos, but feelings, thoughts, sounds, and moments.',
+    title: '如果我们能把记忆变成可分享的文件？',
+    description: '洗澡时冒出来的想法。不只是照片，还有感受、想法、声音和时刻。',
     image: null,
     author: {
       nickname: 'raymond',
@@ -34,8 +34,8 @@ const mockContent = [
   {
     id: 3,
     type: 'stuff',
-    title: 'Fujifilm Mini 8 for Trade',
-    description: 'Good condition. Looking for books or stationary in exchange!',
+    title: '富士迷你 8 相机交换',
+    description: '状况良好。想用它换书或文具！',
     image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
     author: {
       nickname: 'sarah.k',
@@ -47,8 +47,8 @@ const mockContent = [
   {
     id: 4,
     type: 'creation',
-    title: 'Research Summary: Urban Green Space',
-    description: 'Data analysis of urban green spaces based on five-year survey data.',
+    title: '研究总结：城市绿地',
+    description: '基于五年调查数据的城市绿地数据分析。',
     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
     author: {
       nickname: 'researcher',
@@ -60,8 +60,8 @@ const mockContent = [
   {
     id: 5,
     type: 'idea',
-    title: 'A reading community without pressure',
-    description: 'A web page to help people collect and share reading notes, no need to "finish" anything.',
+    title: '没有压力的阅读社区',
+    description: '一个帮助人们收集和分享阅读笔记的网页，不需要"读完"任何东西。',
     image: null,
     author: {
       nickname: 'celine',
@@ -85,13 +85,13 @@ function Home() {
   const getTypeStyle = (type) => {
     switch (type) {
       case 'creation':
-        return { bg: 'bg-creation-bg', text: 'text-creation-text', label: 'CREATION' };
+        return { bg: 'bg-creation-bg', text: 'text-creation-text', label: '创作' };
       case 'idea':
-        return { bg: 'bg-idea-bg', text: 'text-idea-text', label: 'IDEA' };
+        return { bg: 'bg-idea-bg', text: 'text-idea-text', label: '想法' };
       case 'stuff':
-        return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: 'STUFF' };
+        return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: '物品' };
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'ITEM' };
+        return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
     }
   };
 
@@ -107,24 +107,24 @@ function Home() {
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 wowoo-heading leading-tight">
-                Open a box of<br />
-                <span className="text-gray-700">inspiration.</span>
+                打开一个灵感<br />
+                <span className="text-gray-700">的盒子。</span>
               </h1>
               <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto lg:mx-0">
-                Random discoveries from real people. Every visit, a new surprise.
+                来自真实用户的随机发现。每次访问，都是一个新惊喜。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button 
                   onClick={() => navigate('/items/create')}
                   className="px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
                 >
-                  I'm Feeling Lucky ✨
+                  手气不错 ✨
                 </button>
                 <button 
                   onClick={() => setActiveFilter('all')}
                   className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-all scale-hover"
                 >
-                  Shuffle ↻
+                  换一批 ↻
                 </button>
               </div>
             </div>
@@ -164,17 +164,22 @@ function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center space-x-2">
-              {['all', 'creation', 'idea', 'stuff'].map((filter) => (
+              {[
+                { value: 'all', label: '全部' },
+                { value: 'creation', label: '创作' },
+                { value: 'idea', label: '想法' },
+                { value: 'stuff', label: '物品' }
+              ].map((filter) => (
                 <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
+                  key={filter.value}
+                  onClick={() => setActiveFilter(filter.value)}
                   className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-                    activeFilter === filter
+                    activeFilter === filter.value
                       ? 'bg-gray-100 text-gray-900'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter.label}
                 </button>
               ))}
             </div>
