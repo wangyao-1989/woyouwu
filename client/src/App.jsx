@@ -12,6 +12,8 @@ import CreateResource from './pages/CreateResource';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
 import Messages from './pages/Messages';
+import AdminSettings from './pages/AdminSettings';
+import AdminUsers from './pages/AdminUsers';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -28,6 +30,28 @@ function ProtectedRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user.role || user.role !== 'admin') {
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -65,6 +89,12 @@ function App() {
             } />
             <Route path="/messages" element={
               <ProtectedRoute><Messages /></ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <AdminRoute><AdminSettings /></AdminRoute>
+            } />
+            <Route path="/admin/users" element={
+              <AdminRoute><AdminUsers /></AdminRoute>
             } />
           </Routes>
         </main>

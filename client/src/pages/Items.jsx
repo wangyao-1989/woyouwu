@@ -7,11 +7,11 @@ const mockItems = [
   {
     id: 1,
     type: 'creation',
-    title: 'My Portfolio Website 2024 Redesign',
-    description: 'Built with Next.js + Tailwind. A clean and modern portfolio to showcase my work.',
+    title: '我的个人网站2024全新改版',
+    description: '使用Next.js + Tailwind构建，干净现代的作品集展示我的作品。',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
-    category: 'Web Design',
-    location: 'San Francisco',
+    category: '网页设计',
+    location: '上海',
     status: 'available',
     author: { nickname: 'helen.dev', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=helen' },
     likes: 45,
@@ -21,11 +21,11 @@ const mockItems = [
   {
     id: 2,
     type: 'idea',
-    title: 'What if we turn memories into shareable files?',
-    description: 'A thought that popped up in the shower. Not just photos, but feelings, thoughts, sounds, and moments.',
+    title: '如果我们能把回忆变成可分享的文件呢？',
+    description: '洗澡时的一个想法。不只是照片，还有感觉、想法、声音和瞬间。',
     image: null,
-    category: 'Concept',
-    location: 'Remote',
+    category: '创意',
+    location: '远程',
     status: 'available',
     author: { nickname: 'raymond', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=raymond' },
     likes: 78,
@@ -35,11 +35,11 @@ const mockItems = [
   {
     id: 3,
     type: 'stuff',
-    title: 'Fujifilm Mini 8 for Trade',
-    description: 'Good condition. Looking for books or stationary in exchange!',
+    title: '富士拍立得Mini8交换',
+    description: '成色不错。寻求书籍或文具交换！',
     image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
-    category: 'Electronics',
-    location: 'New York',
+    category: '电子产品',
+    location: '北京',
     status: 'available',
     author: { nickname: 'sarah.k', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=sarah' },
     likes: 12,
@@ -49,11 +49,11 @@ const mockItems = [
   {
     id: 4,
     type: 'creation',
-    title: 'Research Summary: Urban Green Space',
-    description: 'Data analysis of urban green spaces based on five-year survey data.',
+    title: '研究摘要：城市绿地空间',
+    description: '基于五年调查数据的城市绿地空间数据分析。',
     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
-    category: 'Research',
-    location: 'London',
+    category: '研究',
+    location: '伦敦',
     status: 'available',
     author: { nickname: 'researcher', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=researcher' },
     likes: 36,
@@ -63,11 +63,11 @@ const mockItems = [
   {
     id: 5,
     type: 'idea',
-    title: 'A reading community without pressure',
-    description: 'A web page to help people collect and share reading notes, no need to "finish" anything.',
+    title: '一个没有压力的阅读社区',
+    description: '帮助人们收集和分享读书笔记的网页，不需要"完成"任何事情。',
     image: null,
-    category: 'Community',
-    location: 'Tokyo',
+    category: '社区',
+    location: '东京',
     status: 'available',
     author: { nickname: 'celine', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=celine' },
     likes: 21,
@@ -97,8 +97,8 @@ function Items() {
       
       if (filters.search) {
         filtered = filtered.filter(item => 
-          item.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-          item.description.toLowerCase().includes(filters.search.toLowerCase())
+          item.title.includes(filters.search) ||
+          item.description.includes(filters.search)
         );
       }
       
@@ -132,62 +132,62 @@ function Items() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6 wowoo-heading">Explore Creations</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6 wowoo-heading">探索创作</h1>
           
           {/* Filter Controls */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-wowoo mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">类型</label>
                 <select
                   value={filters.type}
                   onChange={(e) => handleFilterChange('type', e.target.value)}
                   className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
                 >
-                  <option value="">All Types</option>
-                  <option value="creation">Creation</option>
-                  <option value="idea">Idea</option>
-                  <option value="stuff">Stuff</option>
+                  <option value="">所有类型</option>
+                  <option value="creation">创作</option>
+                  <option value="idea">灵感</option>
+                  <option value="stuff">物品</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">分类</label>
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
                   className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
                 >
-                  <option value="">All Categories</option>
-                  <option value="Web Design">Web Design</option>
-                  <option value="Concept">Concept</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Research">Research</option>
-                  <option value="Community">Community</option>
+                  <option value="">所有分类</option>
+                  <option value="网页设计">网页设计</option>
+                  <option value="创意">创意</option>
+                  <option value="电子产品">电子产品</option>
+                  <option value="研究">研究</option>
+                  <option value="社区">社区</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sort</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">排序</label>
                 <select
                   value={filters.sort}
                   onChange={(e) => handleFilterChange('sort', e.target.value)}
                   className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
                 >
-                  <option value="-createdAt">Newest First</option>
-                  <option value="createdAt">Oldest First</option>
-                  <option value="likes">Most Liked</option>
+                  <option value="-createdAt">最新优先</option>
+                  <option value="createdAt">最早优先</option>
+                  <option value="likes">最多点赞</option>
                 </select>
               </div>
 
               <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">搜索</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
-                    placeholder="Search items, ideas, creations..."
+                    placeholder="搜索物品、灵感、创作..."
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
                   />
                   <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@ function Items() {
           {/* View Toggle */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">{items.length} items</span>
+              <span className="text-sm text-gray-500">{items.length} 个结果</span>
             </div>
             <div className="flex items-center space-x-2 bg-gray-50 rounded-xl p-1">
               <button
@@ -213,7 +213,7 @@ function Items() {
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 0 01-2 2h-2a2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 0 01-2 2h-2a2 2 0 01-2-2v-2zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </button>
               <button
@@ -242,8 +242,8 @@ function Items() {
             <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-gray-500 text-lg">No items found</p>
-            <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
+            <p className="text-gray-500 text-lg">没有找到内容</p>
+            <p className="text-gray-400 text-sm mt-2">尝试调整筛选条件</p>
           </div>
         ) : (
           viewMode === 'grid' ? (

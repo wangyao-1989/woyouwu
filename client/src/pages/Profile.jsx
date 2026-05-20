@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import AvatarCropper from '../components/AvatarCropper';
 
 function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: currentUser, updateUser } = useAuth();
+  const avatarInputRef = useRef(null);
   const [profileUser, setProfileUser] = useState(null);
   const [userItems, setUserItems] = useState([]);
   const [userResources, setUserResources] = useState([]);
@@ -38,6 +40,8 @@ function Profile() {
   const [postContent, setPostContent] = useState('');
   const [postImage, setPostImage] = useState(null);
   const [likedPosts, setLikedPosts] = useState([]);
+  const [cropImage, setCropImage] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   const isOwnProfile = !id || id === currentUser?.id;
   const profileId = id || currentUser?.id;
@@ -128,8 +132,17 @@ function Profile() {
     const file = e.target.files[0];
     if (!file) return;
 
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target.result);
+      setCropImage(event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAvatarCrop = async (blob) => {
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', blob, 'avatar.jpg');
 
     try {
       const res = await axios.put('/api/users/profile', formData, {
@@ -137,9 +150,24 @@ function Profile() {
       });
       updateUser(res.data.user);
       setProfileUser(res.data.user);
+      setCropImage(null);
+      setAvatarPreview(null);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
     } catch (error) {
       alert('头像上传失败');
+      setCropImage(null);
+      setAvatarPreview(null);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
     }
+  };
+
+  const handleAvatarCancel = () => {
+    setCropImage(null);
+    setAvatarPreview(null);
   };
 
   const handleBackgroundChange = async (e) => {
@@ -303,7 +331,7 @@ function Profile() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                    <input ref={avatarInputRef} type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
                   </label>
                 )}
               </div>
@@ -337,12 +365,30 @@ function Profile() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 {isOwnProfile ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-                  >
-                    编辑资料
-                  </button>
+                  <>
+                    {currentUser?.role === 'admin' && (
+                      <>
+                        <Link
+                          to="/admin/settings"
+                          className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                        >
+                          系统设置
+                        </Link>
+                        <Link
+                          to="/admin/users"
+                          className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                        >
+                          用户管理
+                        </Link>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                    >
+                      编辑资料
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={handleFollow}
@@ -803,6 +849,14 @@ function Profile() {
             </div>
           </div>
         </div>
+      )}
+
+      {cropImage && (
+        <AvatarCropper
+          image={cropImage}
+          onCancel={handleAvatarCancel}
+          onCrop={handleAvatarCrop}
+        />
       )}
     </div>
   );

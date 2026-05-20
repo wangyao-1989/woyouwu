@@ -17,13 +17,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          const message = error.response.data?.message;
+          if (message === '用户不存在' || message === '认证失败，请重新登录') {
+            handleAutoLogout();
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
+
+  const handleAutoLogout = () => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+  };
+
   const fetchUser = async () => {
     try {
       const res = await axios.get('/api/auth/me');
       setUser(res.data);
     } catch (error) {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
+      handleAutoLogout();
     } finally {
       setLoading(false);
     }
@@ -31,20 +53,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     const res = await axios.post('/api/auth/login', { username, password });
-    const { token, user: userData } = res.data;
+    const { token } = res.data;
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    setUser(userData);
-    return userData;
+    await fetchUser();
   };
 
   const register = async (data) => {
     const res = await axios.post('/api/auth/register', data);
-    const { token, user: userData } = res.data;
+    const { token } = res.data;
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    setUser(userData);
-    return userData;
+    await fetchUser();
   };
 
   const logout = () => {

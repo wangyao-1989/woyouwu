@@ -55,7 +55,8 @@ router.post('/register', async (req, res) => {
         nickname: user.nickname,
         email: user.email,
         phone: user.phone,
-        avatar: user.avatar
+        avatar: user.avatar,
+        role: user.role
       }
     });
   } catch (error) {
@@ -94,6 +95,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         phone: user.phone,
         avatar: user.avatar,
+        role: user.role,
         contactWechat: user.contactWechat,
         contactPhone: user.contactPhone,
         contactEmail: user.contactEmail

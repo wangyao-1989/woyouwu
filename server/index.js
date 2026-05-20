@@ -12,6 +12,9 @@ const itemRoutes = require('./routes/item');
 const resourceRoutes = require('./routes/resource');
 const messageRoutes = require('./routes/message');
 const postRoutes = require('./routes/post');
+const contentRoutes = require('./routes/content');
+const adminRoutes = require('./routes/admin');
+const errorHandler = require('./middleware/error');
 
 const app = express();
 
@@ -34,14 +37,45 @@ app.use('/api/items', itemRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/contents', contentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('woyouwu API is running');
 });
 
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  if (process.send) {
+    process.send('ready');
+  }
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 5000);
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 5000);
 });
 
 module.exports = app;

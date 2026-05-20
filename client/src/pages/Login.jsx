@@ -1,14 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasLogo, setHasLogo] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkLogo = async () => {
+      try {
+        await axios.head('/api/admin/logo');
+        setHasLogo(true);
+      } catch (error) {
+        setHasLogo(false);
+      }
+    };
+    checkLogo();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,12 +44,20 @@ function Login() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 fade-in">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">悟</span>
-            </div>
+            {hasLogo ? (
+              <img 
+                src={`/uploads/logo.png?t=${Date.now()}`}
+                alt="Logo"
+                className="w-12 h-12 object-contain"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xl">悟</span>
+              </div>
+            )}
           </Link>
           <h2 className="text-3xl font-bold text-gray-800">欢迎回来</h2>
-          <p className="text-gray-600 mt-2">登录到 woyouwu</p>
+          <p className="text-gray-600 mt-2">登录到 WYW</p>
         </div>
 
         {error && (

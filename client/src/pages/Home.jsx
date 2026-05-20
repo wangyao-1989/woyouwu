@@ -3,13 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
-// Mock data for content showcase
+// 示例内容数据
 const mockContent = [
   {
     id: 1,
     type: 'creation',
-    title: 'My Portfolio Website 2024 Redesign',
-    description: 'Built with Next.js + Tailwind. A clean and modern portfolio to showcase my work.',
+    title: '我的个人网站 2024 全新改版',
+    description: '使用 Next.js + Tailwind 构建，干净现代的设计展示我的作品。',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
     author: {
       nickname: 'helen.dev',
@@ -21,8 +21,8 @@ const mockContent = [
   {
     id: 2,
     type: 'idea',
-    title: 'What if we turn memories into shareable files?',
-    description: 'A thought that popped up in the shower. Not just photos, but feelings, thoughts, sounds, and moments.',
+    title: '如果我们能把回忆变成可分享的文件呢？',
+    description: '洗澡时冒出的想法，不只是照片，还有感觉、想法、声音和瞬间。',
     image: null,
     author: {
       nickname: 'raymond',
@@ -34,8 +34,8 @@ const mockContent = [
   {
     id: 3,
     type: 'stuff',
-    title: 'Fujifilm Mini 8 for Trade',
-    description: 'Good condition. Looking for books or stationary in exchange!',
+    title: '富士拍立得 Mini 8 交换',
+    description: '成色不错，想交换书或者文具！',
     image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
     author: {
       nickname: 'sarah.k',
@@ -47,8 +47,8 @@ const mockContent = [
   {
     id: 4,
     type: 'creation',
-    title: 'Research Summary: Urban Green Space',
-    description: 'Data analysis of urban green spaces based on five-year survey data.',
+    title: '研究报告：城市绿地空间分析',
+    description: '基于五年调查数据的城市绿地空间数据可视化分析。',
     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
     author: {
       nickname: 'researcher',
@@ -60,8 +60,8 @@ const mockContent = [
   {
     id: 5,
     type: 'idea',
-    title: 'A reading community without pressure',
-    description: 'A web page to help people collect and share reading notes, no need to "finish" anything.',
+    title: '一个没有压力的阅读社区',
+    description: '一个帮助人们收集和分享读书笔记的网站，不需要"完成"任何东西。',
     image: null,
     author: {
       nickname: 'celine',
@@ -85,13 +85,23 @@ function Home() {
   const getTypeStyle = (type) => {
     switch (type) {
       case 'creation':
-        return { bg: 'bg-creation-bg', text: 'text-creation-text', label: 'CREATION' };
+        return { bg: 'bg-creation-bg', text: 'text-creation-text', label: '创作' };
       case 'idea':
-        return { bg: 'bg-idea-bg', text: 'text-idea-text', label: 'IDEA' };
+        return { bg: 'bg-idea-bg', text: 'text-idea-text', label: '灵感' };
       case 'stuff':
-        return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: 'STUFF' };
+        return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: '好物' };
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'ITEM' };
+        return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
+    }
+  };
+
+  const getFilterLabel = (filter) => {
+    switch (filter) {
+      case 'all': return '全部';
+      case 'creation': return '创作';
+      case 'idea': return '灵感';
+      case 'stuff': return '好物';
+      default: return filter;
     }
   };
 
@@ -101,51 +111,51 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-white fade-in">
-      {/* Hero Section */}
+      {/* 主视觉区域 */}
       <section className="relative py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 wowoo-heading leading-tight">
-                Open a box of<br />
-                <span className="text-gray-700">inspiration.</span>
+                打开一盒<br />
+                <span className="text-gray-700">灵感惊喜。</span>
               </h1>
               <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto lg:mx-0">
-                Random discoveries from real people. Every visit, a new surprise.
+                来自真实用户的随机发现，每次访问都有新惊喜。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button 
                   onClick={() => navigate('/items/create')}
                   className="px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
                 >
-                  I'm Feeling Lucky ✨
+                  我要发布 ✨
                 </button>
                 <button 
                   onClick={() => setActiveFilter('all')}
                   className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-all scale-hover"
                 >
-                  Shuffle ↻
+                  刷新内容 ↻
                 </button>
               </div>
             </div>
             <div className="flex-1">
-              {/* Decorative Illustration Area */}
+              {/* 装饰插画区域 */}
               <div className="relative">
                 <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
                 <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
                 <div className="bg-gradient-to-br from-primary-50 via-white to-idea-bg p-8 rounded-3xl border border-gray-100 shadow-wowoo">
                   <svg viewBox="0 0 300 250" className="w-full h-auto">
-                    {/* Box illustration */}
+                    {/* 盒子插画 */}
                     <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
                     <rect x="50" y="100" width="200" height="30" fill="#e89f4a" rx="8" />
                     <rect x="130" y="85" width="40" height="25" fill="#d48a3c" rx="4" />
                     
-                    {/* Flying items */}
+                    {/* 飞散的物品 */}
                     <circle cx="100" cy="70" r="20" fill="#dae8fc" />
                     <circle cx="200" cy="60" r="15" fill="#d5e8d4" />
                     <rect x="220" y="30" width="35" height="28" fill="#e1d5e7" rx="4" />
                     
-                    {/* Decorative sparkles */}
+                    {/* 装饰性闪光 */}
                     <text x="85" y="68" fontSize="16">📷</text>
                     <text x="188" y="58" fontSize="12">🌱</text>
                     <text x="225" y="28" fontSize="14">📝</text>
@@ -159,7 +169,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Filter and View Controls */}
+      {/* 筛选和视图控制 */}
       <section className="px-4 pb-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -174,7 +184,7 @@ function Home() {
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {getFilterLabel(filter)}
                 </button>
               ))}
             </div>
@@ -188,7 +198,7 @@ function Home() {
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </button>
               <button
@@ -208,7 +218,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Content Grid */}
+      {/* 内容网格 */}
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
           {viewMode === 'grid' ? (
