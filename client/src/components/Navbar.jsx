@@ -53,7 +53,7 @@ function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gray-800 wowoo-heading">Wowoo</span>
+              <span className="text-2xl font-bold text-gray-800 wowoo-heading">woyouwu</span>
             </Link>
             <div className="hidden md:flex ml-10 space-x-1">
               <Link 
