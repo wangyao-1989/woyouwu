@@ -354,6 +354,22 @@ function Home() {
           )}
         </div>
       </section>
+
+      <footer className="bg-gray-900 text-gray-400 py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-sm text-gray-500">&copy; 2026 我有物. All rights reserved.</p>
+            <div className="flex items-center space-x-4 mt-4 md:mt-0">
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                鲁ICP备2026026388号
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

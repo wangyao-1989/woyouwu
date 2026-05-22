@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -14,23 +13,9 @@ function Register() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoFailed, setLogoFailed] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkLogo = async () => {
-      try {
-        const response = await axios.head('/api/admin/logo');
-        if (response.status === 200) {
-          setLogoUrl('/uploads/logo.png?' + Date.now());
-        }
-      } catch (error) {
-        setLogoUrl(null);
-      }
-    };
-    checkLogo();
-  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -68,16 +53,17 @@ function Register() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 fade-in">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="w-12 h-12 object-contain rounded-lg"
-              />
-            ) : (
+            {logoFailed ? (
               <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">悟</span>
               </div>
+            ) : (
+              <img 
+                src={`/uploads/logo.png?t=${Date.now()}`}
+                alt="Logo" 
+                className="w-12 h-12 object-contain rounded-lg"
+                onError={() => setLogoFailed(true)}
+              />
             )}
           </Link>
           <h2 className="text-3xl font-bold text-gray-800">创建账号</h2>
