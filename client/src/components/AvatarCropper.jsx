@@ -174,6 +174,20 @@ function AvatarCropper({ image, onCancel, onCrop }) {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onTouchMove={(e) => {
+                if (!isDragging) return;
+                const touch = e.touches[0];
+                const canvas = previewCanvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left - CONTAINER_SIZE / 2;
+                const y = touch.clientY - rect.top - CONTAINER_SIZE / 2;
+                setPosition({ x, y });
+              }}
+              onTouchEnd={() => setIsDragging(false)}
             />
           </div>
 

@@ -15,7 +15,13 @@ dist-ssr/
 .cache/
 *-lock.json
 backup*
+*_backup/
+client_backup/
+server_backup/
 .ssh/
 server/uploads/
 client/dist-new/
 *.patch
+nginx-ssl.conf
+nginx.conf.backup
+*.backup

@@ -4,6 +4,8 @@ const Resource = require('../models/Resource');
 const Item = require('../models/Item');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
@@ -28,7 +30,11 @@ router.get('/list', async (req, res) => {
 
     const total = await User.countDocuments(query);
 
-    res.json({ users, total, page: parseInt(page), limit: parseInt(limit) });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await User.countDocuments({ createdAt: { $gte: today } });
+
+    res.json({ users, total, page: parseInt(page), limit: parseInt(limit), todayCount });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }
@@ -68,11 +74,14 @@ router.put('/profile', auth, upload.single('avatar'), async (req, res) => {
     });
 
     if (req.file) {
-      if (req.body.field === 'background') {
-        updates.background = `/uploads/${req.file.filename}`;
-      } else {
-        updates.avatar = `/uploads/${req.file.filename}`;
+      const currentUser = await User.findById(req.user._id);
+      if (currentUser.avatar && currentUser.avatar.startsWith('/uploads/')) {
+        const oldPath = path.join(__dirname, '..', currentUser.avatar);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
       }
+      updates.avatar = `/uploads/${req.file.filename}`;
     }
 
     const user = await User.findByIdAndUpdate(

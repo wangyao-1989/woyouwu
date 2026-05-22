@@ -58,13 +58,14 @@ function AdminSettings() {
         },
       });
 
-      setMessage(res.data.message || 'Logo上传成功！请刷新页面查看效果');
+      setMessage(res.data.message || 'Logo上传成功！');
       setMessageType('success');
       setCurrentLogo(`/uploads/logo.png?t=${Date.now()}`);
-      
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      setSelectedFile(null);
+      setPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
       setMessage(error.response?.data?.message || 'Logo上传失败');
       setMessageType('error');

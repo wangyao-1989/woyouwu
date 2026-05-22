@@ -286,6 +286,8 @@ router.post('/:id/return', auth, async (req, res) => {
       return res.status(403).json({ message: '无权限操作' });
     }
 
+    const borrowerId = item.borrower;
+
     const borrowRecord = item.borrowHistory.find(
       h => h.borrower.toString() === item.borrower?.toString() && h.status === 'approved' && !h.actualReturnDate
     );
@@ -302,9 +304,9 @@ router.post('/:id/return', auth, async (req, res) => {
 
     await item.save();
 
-    if (item.borrower) {
+    if (borrowerId) {
       const notifyMessage = new Message({
-        recipient: item.borrower,
+        recipient: borrowerId,
         sender: req.user._id,
         senderName: req.user.nickname,
         senderAvatar: req.user.avatar,

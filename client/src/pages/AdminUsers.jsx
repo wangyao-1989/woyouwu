@@ -16,10 +16,10 @@ function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/users/admin/list?page=${page}&limit=20`);
+      const res = await axios.get(`/api/users/list?page=${page}&limit=20`);
       setUsers(res.data.users);
       setTotal(res.data.total);
-      setTodayCount(res.data.todayCount);
+      setTodayCount(res.data.todayCount || 0);
     } catch (error) {
       console.error('Failed to fetch users');
     } finally {

@@ -9,7 +9,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: '请先登录' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'woyouwu_jwt_secret_key_2026');
     const user = await User.findById(decoded.userId);
 
     if (!user) {
@@ -29,7 +29,7 @@ const optionalAuth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'woyouwu_jwt_secret_key_2026');
       const user = await User.findById(decoded.userId);
       if (user) {
         req.user = user;
