@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 // 示例内容数据
 const mockContent = [
@@ -73,14 +71,8 @@ const mockContent = [
 ];
 
 function Home() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
-
-  useEffect(() => {
-    // 如果用户已登录，可以重定向到个人页面，但这里我们保持首页作为探索页面
-  }, []);
 
   const getTypeStyle = (type) => {
     switch (type) {
@@ -124,12 +116,12 @@ function Home() {
                 来自真实用户的随机发现，每次访问都有新惊喜。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <button 
-                  onClick={() => navigate('/items/create')}
+                <Link
+                  to="/items/create"
                   className="px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
                 >
                   我要发布 ✨
-                </button>
+                </Link>
                 <button 
                   onClick={() => setActiveFilter('all')}
                   className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-all scale-hover"
@@ -144,7 +136,7 @@ function Home() {
                 <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
                 <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
                 <div className="bg-gradient-to-br from-primary-50 via-white to-idea-bg p-8 rounded-3xl border border-gray-100 shadow-wowoo">
-                  <svg viewBox="0 0 300 250" className="w-full h-auto">
+                  <svg aria-hidden="true" viewBox="0 0 300 250" className="w-full h-auto">
                     {/* 盒子插画 */}
                     <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
                     <rect x="50" y="100" width="200" height="30" fill="#e89f4a" rx="8" />
@@ -196,8 +188,9 @@ function Home() {
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
+                aria-label="网格视图"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </button>
@@ -208,8 +201,9 @@ function Home() {
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
+                aria-label="列表视图"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
@@ -236,6 +230,8 @@ function Home() {
                         <img
                           src={item.image}
                           alt={item.title}
+                          width={640}
+                          height={360}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
@@ -261,19 +257,21 @@ function Home() {
                           <img
                             src={item.author.avatar}
                             alt={item.author.nickname}
+                            width={24}
+                            height={24}
                             className="w-6 h-6 rounded-full bg-gray-200"
                           />
                           <span className="text-sm text-gray-500">{item.author.nickname}</span>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
                           <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                             {item.likes}
                           </span>
                           <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                             {item.comments}
@@ -301,6 +299,8 @@ function Home() {
                           <img
                             src={item.image}
                             alt={item.title}
+                            width={128}
+                            height={96}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
@@ -326,19 +326,21 @@ function Home() {
                             <img
                               src={item.author.avatar}
                               alt={item.author.nickname}
+                              width={24}
+                              height={24}
                               className="w-6 h-6 rounded-full bg-gray-200"
                             />
                             <span className="text-sm text-gray-500">{item.author.nickname}</span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-400">
                             <span className="flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                               </svg>
                               {item.likes}
                             </span>
                             <span className="flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
                               {item.comments}
@@ -361,7 +363,7 @@ function Home() {
             <p className="text-sm text-gray-500">&copy; 2026 我有物. All rights reserved.</p>
             <div className="flex items-center space-x-4 mt-4 md:mt-0">
               <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 鲁ICP备2026026388号
