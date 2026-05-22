@@ -75,7 +75,7 @@ function AdminSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-paper">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">系统设置</h1>
@@ -92,7 +92,7 @@ function AdminSettings() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-2xl card-ring p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">网站Logo</h2>
           <p className="text-gray-600 mb-4">上传您的网站Logo，建议尺寸为200x200像素</p>
           
@@ -147,7 +147,7 @@ function AdminSettings() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="bg-white rounded-2xl card-ring p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">其他设置</h2>
           <p className="text-gray-600">更多系统设置功能开发中...</p>
         </div>

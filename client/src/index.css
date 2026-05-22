@@ -9,43 +9,46 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #ffffff;
-  color: #1f1f1f;
+  background-color: #faf7f2;
+  color: #1a1817;
+  line-height: 1.6;
 }
 
-/* Wowoo style custom scrollbar */
+::selection {
+  background-color: rgba(217, 130, 43, 0.2);
+  color: #1a1817;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f8f8f8;
+  background: #f3efe8;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d1d1;
+  background: #d4ccc0;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #b1b1b1;
+  background: #b8afa3;
 }
 
-/* Wowoo animations */
 .fade-in {
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -54,17 +57,31 @@ body {
 }
 
 .scale-hover {
-  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .scale-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(26,24,23,0.08), 0 2px 6px rgba(26,24,23,0.04);
 }
 
-/* Handwriting-style effect for headings */
 .wowoo-heading {
-  font-family: 'Georgia', 'Cochin', serif;
-  font-style: italic;
-  letter-spacing: -0.02em;
+  font-family: Georgia, 'Noto Serif SC', 'Source Han Serif SC', 'STSong', serif;
+  letter-spacing: -0.015em;
+}
+
+.gradient-hero {
+  background: linear-gradient(135deg, #faf7f2 0%, #f3efe8 40%, #fce8d9 70%, #faf7f2 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(180deg, #faf7f2 0%, #f3efe8 100%);
+}
+
+.card-ring {
+  box-shadow: 0 0 0 1px rgba(26,24,23,0.05), 0 2px 8px rgba(26,24,23,0.06);
+}
+
+.card-ring-hover {
+  box-shadow: 0 0 0 1px rgba(26,24,23,0.08), 0 8px 24px rgba(26,24,23,0.1);
 }

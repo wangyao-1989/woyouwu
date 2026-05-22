@@ -77,11 +77,11 @@ function Home() {
   const getTypeStyle = (type) => {
     switch (type) {
       case 'creation':
-        return { bg: 'bg-creation-bg', text: 'text-creation-text', label: '创作' };
+        return { bg: 'bg-teal-50', text: 'text-teal-700', label: '创作' };
       case 'idea':
-        return { bg: 'bg-idea-bg', text: 'text-idea-text', label: '灵感' };
+        return { bg: 'bg-amber-50', text: 'text-amber-700', label: '灵感' };
       case 'stuff':
-        return { bg: 'bg-stuff-bg', text: 'text-stuff-text', label: '好物' };
+        return { bg: 'bg-clay-50', text: 'text-clay-700', label: '好物' };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
     }
@@ -102,9 +102,9 @@ function Home() {
     : mockContent.filter(item => item.type === activeFilter);
 
   return (
-    <div className="min-h-screen bg-white fade-in">
+    <div className="min-h-screen bg-paper fade-in">
       {/* 主视觉区域 */}
-      <section className="relative py-16 px-4">
+      <section className="relative py-16 px-4 gradient-hero">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
@@ -135,7 +135,7 @@ function Home() {
               <div className="relative">
                 <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
                 <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
-                <div className="bg-gradient-to-br from-primary-50 via-white to-idea-bg p-8 rounded-3xl border border-gray-100 shadow-wowoo">
+                <div className="bg-gradient-to-br from-amber-50 via-paper to-teal-50 p-8 rounded-3xl border border-gray-200 shadow-wowoo">
                   <svg aria-hidden="true" viewBox="0 0 300 250" className="w-full h-auto">
                     {/* 盒子插画 */}
                     <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
@@ -223,7 +223,7 @@ function Home() {
                   <Link
                     key={item.id}
                     to={`/items/${item.id}`}
-                    className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-wowoo hover:shadow-wowoo-lg scale-hover group"
+                    className="bg-white rounded-2xl card-ring hover:card-ring-hover overflow-hidden transition-all duration-300 scale-hover group"
                   >
                     {item.image ? (
                       <div className="aspect-video overflow-hidden">
@@ -291,7 +291,7 @@ function Home() {
                   <Link
                     key={item.id}
                     to={`/items/${item.id}`}
-                    className="bg-white border border-gray-100 rounded-2xl p-5 shadow-wowoo hover:shadow-wowoo-lg scale-hover group"
+                    className="bg-white rounded-2xl card-ring hover:card-ring-hover p-5 transition-all duration-300 scale-hover group"
                   >
                     <div className="flex gap-5">
                       {item.image ? (

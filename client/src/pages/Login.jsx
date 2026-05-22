@@ -28,7 +28,7 @@ function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 fade-in">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-wowoo-lg p-8 fade-in border border-gray-100">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
             {logoFailed ? (
