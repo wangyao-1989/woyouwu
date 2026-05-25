@@ -61,8 +61,8 @@ router.post('/', auth, async (req, res) => {
       category,
       description,
       detail: detail || '',
-      refLinks: refLinks ? JSON.parse(refLinks) : [],
-      tags: tags ? JSON.parse(tags) : [],
+      refLinks: Array.isArray(refLinks) ? refLinks.filter(link => typeof link === 'string' && link.trim()) : [],
+      tags: Array.isArray(tags) ? tags.filter(tag => typeof tag === 'string' && tag.trim()) : [],
       status: status || '纯想法',
       owner: req.user._id,
       ownerName: req.user.nickname
@@ -99,8 +99,8 @@ router.put('/:id', auth, async (req, res) => {
       }
     });
 
-    if (req.body.refLinks) updates.refLinks = JSON.parse(req.body.refLinks);
-    if (req.body.tags) updates.tags = JSON.parse(req.body.tags);
+    if (req.body.refLinks) updates.refLinks = Array.isArray(req.body.refLinks) ? req.body.refLinks.filter(link => typeof link === 'string' && link.trim()) : [];
+    if (req.body.tags) updates.tags = Array.isArray(req.body.tags) ? req.body.tags.filter(tag => typeof tag === 'string' && tag.trim()) : [];
 
     const updatedInspiration = await Inspiration.findByIdAndUpdate(
       req.params.id,
