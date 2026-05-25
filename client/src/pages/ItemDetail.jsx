@@ -99,9 +99,19 @@ function ItemDetail() {
 
   const getCategoryIcon = (category) => {
     const icons = {
+      '数码电子': '📱',
+      '家居生活': '🏠',
+      '服饰配饰': '👗',
+      '图书文具': '📖',
+      '运动户外': '⚽',
+      '母婴用品': '🍼',
+      '美妆护肤': '💄',
+      '食品饮料': '🍜',
+      '工具器械': '🔧',
       '工具': '🔧',
       '衣物': '👕',
       '药物': '💊',
+      '会员卡券': '💳',
       '会员卡': '💳',
       '其他': '📦'
     };
@@ -168,6 +178,27 @@ function ItemDetail() {
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 mb-1">备注</h3>
                 <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{item.remark}</p>
+              </div>
+            )}
+
+            {(item.condition || item.borrowStartDate || item.borrowEndDate) && (
+              <div className="flex flex-wrap gap-3 mb-6">
+                {item.condition && (
+                  <span className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {item.condition}
+                  </span>
+                )}
+                {(item.borrowStartDate || item.borrowEndDate) && (
+                  <span className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    可借{item.borrowStartDate ? ` ${new Date(item.borrowStartDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}` : ''}{item.borrowStartDate && item.borrowEndDate ? ' ~' : ''}{item.borrowEndDate ? ` ${new Date(item.borrowEndDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })}` : item.borrowStartDate ? ' 起' : ''}
+                  </span>
+                )}
               </div>
             )}
 

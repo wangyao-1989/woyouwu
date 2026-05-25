@@ -4,6 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Icon from './Icon';
 
+const publishOptions = [
+  { label: '闲置交换', icon: '📦', to: '/items/create' },
+  { label: '项目作品', icon: '🎨', to: '/projects/create' },
+  { label: '文章故事', icon: '📝', to: '/articles/create' },
+  { label: '灵感碎片', icon: '💡', to: '/inspirations/create' },
+  { label: '资源分享', icon: '📁', to: '/resources/create' },
+];
+
 function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -12,7 +20,9 @@ function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [logoFailed, setLogoFailed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showPublishDropdown, setShowPublishDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const publishDropdownRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -26,6 +36,9 @@ function Navbar() {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
+      }
+      if (publishDropdownRef.current && !publishDropdownRef.current.contains(event.target)) {
+        setShowPublishDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -62,7 +75,7 @@ function Navbar() {
   };
 
   return (
-    <nav className="bg-paper border-b border-gray-100 sticky top-0 left-0 right-0 z-50">
+    <nav className="glass sticky top-0 left-0 right-0 z-50 border-b border-[#E8E0D5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -79,44 +92,75 @@ function Navbar() {
                   onError={() => setLogoFailed(true)}
                 />
               )}
+              <span className="text-xl font-kai text-[#4A3728]">我有物</span>
             </Link>
             <div className="hidden md:flex ml-10 space-x-1">
               <Link 
                 to="/" 
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`tag-capsule transition-all duration-300 ${
                   isActive('/') 
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
                 }`}
               >
-                探索
+                首页
               </Link>
               <Link 
                 to="/items" 
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`tag-capsule transition-all duration-300 ${
                   isActive('/items') 
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
                 }`}
               >
-                创作
+                闲置交换
+              </Link>
+              <Link 
+                to="/projects" 
+                className={`tag-capsule transition-all duration-300 ${
+                  isActive('/projects') 
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
+                }`}
+              >
+                项目作品
+              </Link>
+              <Link 
+                to="/articles" 
+                className={`tag-capsule transition-all duration-300 ${
+                  isActive('/articles') 
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
+                }`}
+              >
+                文章故事
+              </Link>
+              <Link 
+                to="/inspirations" 
+                className={`tag-capsule transition-all duration-300 ${
+                  isActive('/inspirations') 
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
+                }`}
+              >
+                灵感碎片
               </Link>
               <Link 
                 to="/resources" 
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`tag-capsule transition-all duration-300 ${
                   isActive('/resources') 
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
                 }`}
               >
-                灵感
+                资源
               </Link>
               <Link 
                 to="/users" 
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`tag-capsule transition-all duration-300 ${
                   isActive('/users') 
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-[#4A3728] text-white' 
+                    : 'text-[#8B7355] hover:text-[#4A3728] hover:bg-white border border-[#E8E0D5]'
                 }`}
               >
                 社区
@@ -134,7 +178,7 @@ function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索创作、灵感、用户..."
-                  className="w-64 pl-10 pr-4 py-2 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
+                  className="w-64 pl-10 pr-4 py-2 bg-white/60 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] focus:bg-white/90 transition-all"
                 />
                 <Icon name="search" className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
@@ -142,15 +186,36 @@ function Navbar() {
 
             {user ? (
               <>
-                <Link 
-                  to="/items/create" 
-                  className="inline-flex items-center px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg"
-                >
-                  <Icon name="plus" className="w-5 h-5 mr-1" />
-                  发布
-                </Link>
+                <div className="relative" ref={publishDropdownRef}>
+                  <button
+                    onClick={() => setShowPublishDropdown(!showPublishDropdown)}
+                    className="btn-primary text-sm py-2 px-5 flex items-center"
+                  >
+                    <Icon name="plus" className="w-5 h-5 mr-1" />
+                    发布
+                    <svg aria-hidden="true" className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
-                <Link to="/messages" className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all" aria-label="通知">
+                  {showPublishDropdown && (
+                    <div className="absolute right-0 mt-2 w-44 bg-white rounded-card border border-[#E8E0D5] shadow-card py-2 z-50">
+                      {publishOptions.map(opt => (
+                        <Link
+                          key={opt.label}
+                          to={opt.to}
+                          onClick={() => setShowPublishDropdown(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#4A3728] hover:bg-[#F5F0E8] transition-colors"
+                        >
+                          <span className="text-lg">{opt.icon}</span>
+                          <span>{opt.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Link to="/messages" className="relative p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-white/70 rounded-btn transition-all" aria-label="通知">
                   <Icon name="bell" className="w-6 h-6" />
                   {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
@@ -162,7 +227,7 @@ function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="flex items-center space-x-2 p-1 rounded-xl hover:bg-gray-50 transition-all"
+                    className="flex items-center space-x-2 p-1 rounded-btn hover:bg-white/70 transition-all"
                     aria-label="用户菜单"
                   >
                     <img
@@ -176,7 +241,7 @@ function Navbar() {
                   </button>
 
                   {showDropdown && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-card border border-[#E8E0D5] shadow-card py-2 z-50">
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">{user.nickname}</p>
                         <p className="text-xs text-gray-500">@{user.username}</p>
@@ -187,6 +252,13 @@ function Navbar() {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         个人资料
+                      </Link>
+                      <Link
+                        to="/profile/edit"
+                        onClick={() => setShowDropdown(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        简历编辑
                       </Link>
                       {user.role === 'admin' && (
                         <>
@@ -220,10 +292,10 @@ function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" className="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium rounded-xl hover:bg-gray-50 transition-all">
+                <Link to="/login" className="text-[#8B7355] hover:text-[#4A3728] tag-capsule transition-all border border-[#E8E0D5] hover:bg-white">
                   登录
                 </Link>
-                <Link to="/register" className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-all shadow-wowoo">
+                <Link to="/register" className="btn-primary text-sm py-2 px-5">
                   注册
                 </Link>
               </>

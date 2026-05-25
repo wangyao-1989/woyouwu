@@ -13,7 +13,11 @@ const resourceRoutes = require('./routes/resource');
 const messageRoutes = require('./routes/message');
 const postRoutes = require('./routes/post');
 const contentRoutes = require('./routes/content');
+const projectRoutes = require('./routes/project');
+const articleRoutes = require('./routes/article');
+const inspirationRoutes = require('./routes/inspiration');
 const adminRoutes = require('./routes/admin');
+const aiRoutes = require('./routes/ai');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -38,7 +42,11 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/contents', contentRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/articles', articleRoutes);
+app.use('/api/inspirations', inspirationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/', (req, res) => {
   res.send('woyouwu API is running');

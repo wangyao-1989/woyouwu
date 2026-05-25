@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
 // 示例内容数据
 const mockContent = [
@@ -73,6 +74,27 @@ const mockContent = [
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
+  const [videos, setVideos] = useState([]);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const videoIntervalRef = useRef(null);
+
+  useEffect(() => {
+    axios.get('/api/projects', { params: { hasVideo: 'true', limit: 20 } })
+      .then(res => {
+        if (res.data.projects && res.data.projects.length > 0) {
+          setVideos(res.data.projects.filter(p => p.video && p.video.trim()));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (videos.length <= 1) return;
+    videoIntervalRef.current = setInterval(() => {
+      setCurrentVideoIndex(prev => (prev + 1) % videos.length);
+    }, 8000);
+    return () => clearInterval(videoIntervalRef.current);
+  }, [videos]);
 
   const getTypeStyle = (type) => {
     switch (type) {
@@ -130,32 +152,108 @@ function Home() {
                 </button>
               </div>
             </div>
-            <div className="flex-1">
-              {/* 装饰插画区域 */}
-              <div className="relative">
-                <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
-                <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
-                <div className="bg-gradient-to-br from-amber-50 via-paper to-teal-50 p-8 rounded-3xl border border-gray-200 shadow-wowoo">
-                  <svg aria-hidden="true" viewBox="0 0 300 250" className="w-full h-auto">
-                    {/* 盒子插画 */}
-                    <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
-                    <rect x="50" y="100" width="200" height="30" fill="#e89f4a" rx="8" />
-                    <rect x="130" y="85" width="40" height="25" fill="#d48a3c" rx="4" />
-                    
-                    {/* 飞散的物品 */}
-                    <circle cx="100" cy="70" r="20" fill="#dae8fc" />
-                    <circle cx="200" cy="60" r="15" fill="#d5e8d4" />
-                    <rect x="220" y="30" width="35" height="28" fill="#e1d5e7" rx="4" />
-                    
-                    {/* 装饰性闪光 */}
-                    <text x="85" y="68" fontSize="16">📷</text>
-                    <text x="188" y="58" fontSize="12">🌱</text>
-                    <text x="225" y="28" fontSize="14">📝</text>
-                    <text x="135" y="55" fontSize="14">✨</text>
-                    <text x="170" y="45" fontSize="12">✨</text>
-                  </svg>
+            <div className="flex-1 flex justify-center lg:justify-end">
+              {videos.length > 0 ? (
+                <div className="w-full max-w-xs">
+                  <div className="bg-white rounded-2xl card-ring overflow-hidden">
+                    <div className="aspect-[9/16] bg-black relative">
+                      {videos.map((v, i) => (
+                        <video
+                          key={v._id}
+                          src={v.video}
+                          muted
+                          loop
+                          playsInline
+                          autoPlay
+                          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="p-4">
+                      <Link
+                        to={`/projects/${videos[currentVideoIndex]?._id}`}
+                        className="text-sm font-medium text-gray-900 hover:text-primary-500 transition line-clamp-2"
+                      >
+                        {videos[currentVideoIndex]?.title || '项目作品'}
+                      </Link>
+                      {videos[currentVideoIndex]?.owner && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {videos[currentVideoIndex].owner.nickname || videos[currentVideoIndex].owner.username}
+                        </p>
+                      )}
+                      {(() => {
+                        const v = videos[currentVideoIndex];
+                        if (!v || !v.video) return null;
+                        if (v.videoSource === '转载') {
+                          return (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                                🔗 转载
+                              </span>
+                              {v.videoSourceLink && (
+                                <a
+                                  href={v.videoSourceLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block text-[10px] text-gray-400 hover:text-amber-600 mt-1 truncate"
+                                >
+                                  来源：{v.videoSourceLink}
+                                </a>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                              ✨ 原创
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    {videos.length > 1 && (
+                      <div className="flex justify-center gap-1.5 pb-3">
+                        {videos.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setCurrentVideoIndex(i);
+                              if (videoIntervalRef.current) {
+                                clearInterval(videoIntervalRef.current);
+                                videoIntervalRef.current = setInterval(() => {
+                                  setCurrentVideoIndex(prev => (prev + 1) % videos.length);
+                                }, 8000);
+                              }
+                            }}
+                            className={`w-2 h-2 rounded-full transition-all ${i === currentVideoIndex ? 'bg-primary-500 w-5' : 'bg-gray-300 hover:bg-gray-400'}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="relative">
+                  <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
+                  <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
+                  <div className="bg-gradient-to-br from-amber-50 via-paper to-teal-50 p-8 rounded-3xl border border-gray-200 shadow-wowoo">
+                    <svg aria-hidden="true" viewBox="0 0 300 250" className="w-full h-auto">
+                      <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
+                      <rect x="50" y="100" width="200" height="30" fill="#e89f4a" rx="8" />
+                      <rect x="130" y="85" width="40" height="25" fill="#d48a3c" rx="4" />
+                      <circle cx="100" cy="70" r="20" fill="#dae8fc" />
+                      <circle cx="200" cy="60" r="15" fill="#d5e8d4" />
+                      <rect x="220" y="30" width="35" height="28" fill="#e1d5e7" rx="4" />
+                      <text x="85" y="68" fontSize="16">📷</text>
+                      <text x="188" y="58" fontSize="12">🌱</text>
+                      <text x="225" y="28" fontSize="14">📝</text>
+                      <text x="135" y="55" fontSize="14">✨</text>
+                      <text x="170" y="45" fontSize="12">✨</text>
+                    </svg>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

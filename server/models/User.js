@@ -23,6 +23,27 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     trim: true
   },
+  smsVerified: {
+    type: Boolean,
+    default: false
+  },
+  registerIp: {
+    type: String,
+    default: ''
+  },
+  status: {
+    type: String,
+    enum: ['active', 'muted', 'banned'],
+    default: 'active'
+  },
+  muteExpiresAt: {
+    type: Date,
+    default: null
+  },
+  banReason: {
+    type: String,
+    default: ''
+  },
   password: {
     type: String,
     required: true,
@@ -38,10 +59,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  realName: {
+    type: String,
+    default: '',
+    maxlength: 20
+  },
   bio: {
     type: String,
     default: '',
-    maxlength: 500
+    maxlength: 60
   },
   background: {
     type: String,
@@ -95,6 +121,26 @@ const userSchema = new mongoose.Schema({
       enum: ['default', 'compact', 'wide'],
       default: 'default'
     }
+  },
+  interests: [{
+    type: String,
+    maxlength: 20
+  }],
+  experience: [{
+    period: { type: String, default: '' },
+    organization: { type: String, default: '' },
+    position: { type: String, default: '' },
+    description: { type: String, default: '' }
+  }],
+  education: [{
+    school: { type: String, default: '' },
+    major: { type: String, default: '' },
+    degree: { type: String, default: '' },
+    period: { type: String, default: '' }
+  }],
+  isPublic: {
+    type: Boolean,
+    default: false
   },
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,

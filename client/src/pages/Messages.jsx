@@ -100,7 +100,7 @@ function Messages() {
       case 'resource_comment':
         return 'bg-secondary-50 border-secondary-200';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-[#F5F0E8] border-gray-200';
     }
   };
 
@@ -109,18 +109,18 @@ function Messages() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">消息通知</h1>
+        <h1 className="text-3xl font-bold text-gray-800 heading-md ">消息通知</h1>
         {unreadCount > 0 && (
           <button
             onClick={handleMarkAllAsRead}
-            className="px-4 py-2 text-sm text-primary-600 hover:text-primary-700"
+            className="rounded-btn px-4 py-2 text-sm text-warm-900 hover:text-warm-700"
           >
             全部标为已读
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg mb-6">
+      <div className="bg-white rounded-card border-2 border-gray-200 shadow-card mb-6">
         <div className="flex border-b">
           {[
             { key: 'all', label: '全部' },
@@ -132,7 +132,7 @@ function Messages() {
               onClick={() => setFilter(tab.key)}
               className={`px-6 py-4 font-medium ${
                 filter === tab.key
-                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  ? 'text-warm-900 border-b-2 border-warm-900'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -149,10 +149,10 @@ function Messages() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-warm-900"></div>
         </div>
       ) : messages.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+        <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-12 text-center">
           <p className="text-gray-500 text-lg">暂无消息</p>
         </div>
       ) : (
@@ -161,10 +161,9 @@ function Messages() {
             <div
               key={message._id}
               onClick={() => handleMessageClick(message)}
-              className={`bg-white rounded-xl shadow-sm p-4 cursor-pointer hover:shadow-md transition ${getMessageColor(message.type)} border ${
-                !message.isRead ? 'border-l-4' : ''
+              className={`bg-white sketch-border-sm p-4 cursor-pointer shadow-card-hover scale-hover transition ${getMessageColor(message.type)} border-2 ${
+                !message.isRead ? 'border-l-warm-900' : ''
               }`}
-              style={{ borderLeftColor: !message.isRead ? '#ef4444' : undefined }}
             >
               <div className="flex items-start space-x-4">
                 <span className="text-2xl">{getMessageIcon(message.type)}</span>
@@ -175,7 +174,7 @@ function Messages() {
                         {message.title}
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">{message.content}</p>
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-[#B8A899] mt-2">
                         {new Date(message.createdAt).toLocaleString()}
                       </p>
                     </div>
@@ -184,7 +183,7 @@ function Messages() {
                         e.stopPropagation();
                         handleDelete(message._id);
                       }}
-                      className="text-gray-400 hover:text-red-500 p-1"
+                      className="text-[#B8A899] hover:text-red-500 p-1"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

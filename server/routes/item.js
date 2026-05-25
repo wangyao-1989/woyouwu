@@ -9,10 +9,11 @@ const router = express.Router();
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { category, status, location, search, sort = '-createdAt' } = req.query;
+    const { type, category, status, location, search, sort = '-createdAt' } = req.query;
     
     const query = {};
     
+    if (type) query.type = type;
     if (category) query.category = category;
     if (status) query.status = status;
     if (location) query.location = { $regex: location, $options: 'i' };
@@ -58,10 +59,10 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', auth, upload.array('images', 10), async (req, res) => {
   try {
-    const { name, category, remark, location } = req.body;
+    const { type, name, category, status, remark, location, link, condition, borrowStartDate, borrowEndDate } = req.body;
 
-    if (!name || !category) {
-      return res.status(400).json({ message: '物品名称和类别不能为空' });
+    if (!name) {
+      return res.status(400).json({ message: '物品名称不能为空' });
     }
 
     if (!req.files || req.files.length === 0) {
@@ -71,11 +72,17 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
     const images = req.files.map(file => `/uploads/${file.filename}`);
 
     const item = new Item({
+      type: type || 'stuff',
       name,
       images,
       category,
+      status,
+      condition: condition || '',
+      borrowStartDate: borrowStartDate || null,
+      borrowEndDate: borrowEndDate || null,
       remark,
       location,
+      link,
       owner: req.user._id,
       ownerName: req.user.nickname,
       contactWechat: req.user.contactWechat,
@@ -106,7 +113,7 @@ router.put('/:id', auth, upload.array('images', 10), async (req, res) => {
     }
 
     const updates = {};
-    const allowedFields = ['name', 'category', 'remark', 'location', 'status'];
+    const allowedFields = ['type', 'name', 'category', 'status', 'remark', 'location', 'link', 'condition', 'borrowStartDate', 'borrowEndDate'];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {

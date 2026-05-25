@@ -12,8 +12,11 @@ function Profile() {
   const [profileUser, setProfileUser] = useState(null);
   const [userItems, setUserItems] = useState([]);
   const [userResources, setUserResources] = useState([]);
+  const [userProjects, setUserProjects] = useState([]);
+  const [userArticles, setUserArticles] = useState([]);
+  const [userInspirations, setUserInspirations] = useState([]);
   const [userPosts, setUserPosts] = useState([]);
-  const [stats, setStats] = useState({ items: 0, resources: 0, followers: 0, following: 0, posts: 0 });
+  const [stats, setStats] = useState({ items: 0, resources: 0, projects: 0, articles: 0, inspirations: 0, followers: 0, following: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
   const [isEditing, setIsEditing] = useState(false);
@@ -76,16 +79,28 @@ function Profile() {
         }
       });
 
-      const [itemsRes, resourcesRes, statsRes, postsRes] = await Promise.all([
+      const [itemsRes, resourcesRes, projectsRes, articlesRes, inspirationsRes, statsRes, postsRes] = await Promise.all([
         axios.get(`/api/users/${profileId}/items`),
         axios.get(`/api/users/${profileId}/resources`),
+        axios.get(`/api/users/${profileId}/projects`),
+        axios.get(`/api/users/${profileId}/articles`),
+        axios.get(`/api/users/${profileId}/inspirations`),
         axios.get(`/api/users/${profileId}/stats`),
         axios.get(`/api/posts/user/${profileId}`)
       ]);
       setUserItems(itemsRes.data);
       setUserResources(resourcesRes.data);
-      setUserPosts(postsRes.data.posts);
-      setStats({ ...statsRes.data, posts: postsRes.data.total });
+      setUserProjects(projectsRes.data);
+      setUserArticles(articlesRes.data);
+      setUserInspirations(inspirationsRes.data);
+      setUserPosts(postsRes.data.posts || postsRes.data);
+      setStats({
+        ...statsRes.data,
+        posts: postsRes.data.total || postsRes.data.length,
+        projects: projectsRes.data.length,
+        articles: articlesRes.data.length,
+        inspirations: inspirationsRes.data.length
+      });
 
       if (currentUser && !isOwnProfile) {
         const currentUserData = await axios.get(`/api/users/${currentUser.id}`);
@@ -145,9 +160,7 @@ function Profile() {
     formData.append('avatar', blob, 'avatar.jpg');
 
     try {
-      const res = await axios.put('/api/users/profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.put('/api/users/profile', formData);
       updateUser(res.data.user);
       setProfileUser(res.data.user);
       setCropImage(null);
@@ -178,9 +191,7 @@ function Profile() {
     formData.append('background', file);
 
     try {
-      const res = await axios.post('/api/users/background', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/users/background', formData);
       setProfileUser(res.data.user);
     } catch (error) {
       alert('背景图上传失败');
@@ -229,9 +240,7 @@ function Profile() {
     }
 
     try {
-      const res = await axios.post('/api/posts', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/posts', formData);
       setUserPosts([res.data.post, ...userPosts]);
       setPostContent('');
       setPostImage(null);
@@ -258,11 +267,44 @@ function Profile() {
   };
 
   const handleDeletePost = async (postId) => {
-    if (!confirm('确定删除这条动态吗？')) return;
+    if (!confirm('确定要删除这条动态吗？')) return;
     try {
       await axios.delete(`/api/posts/${postId}`);
-      setUserPosts(prev => prev.filter(post => post._id !== postId));
+      setUserPosts(prev => prev.filter(p => p._id !== postId));
       setStats(prev => ({ ...prev, posts: prev.posts - 1 }));
+    } catch (error) {
+      alert('删除失败');
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!confirm('确定要删除这个项目吗？')) return;
+    try {
+      await axios.delete(`/api/projects/${projectId}`);
+      setUserProjects(prev => prev.filter(p => p._id !== projectId));
+      setStats(prev => ({ ...prev, projects: prev.projects - 1 }));
+    } catch (error) {
+      alert('删除失败');
+    }
+  };
+
+  const handleDeleteArticle = async (articleId) => {
+    if (!confirm('确定要删除这篇文章吗？')) return;
+    try {
+      await axios.delete(`/api/articles/${articleId}`);
+      setUserArticles(prev => prev.filter(p => p._id !== articleId));
+      setStats(prev => ({ ...prev, articles: prev.articles - 1 }));
+    } catch (error) {
+      alert('删除失败');
+    }
+  };
+
+  const handleDeleteInspiration = async (inspirationId) => {
+    if (!confirm('确定要删除这个灵感吗？')) return;
+    try {
+      await axios.delete(`/api/inspirations/${inspirationId}`);
+      setUserInspirations(prev => prev.filter(p => p._id !== inspirationId));
+      setStats(prev => ({ ...prev, inspirations: prev.inspirations - 1 }));
     } catch (error) {
       alert('删除失败');
     }
@@ -277,14 +319,14 @@ function Profile() {
       case '维修中':
         return 'bg-yellow-100 text-yellow-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-[#F0E8DD] text-gray-800';
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-warm-900"></div>
       </div>
     );
   }
@@ -298,8 +340,8 @@ function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 fade-in">
-      <div className="relative h-48 sm:h-64 bg-gradient-to-r from-primary-500 to-secondary-500">
+    <div className="min-h-screen bg-[#F5F0E8] fade-in ">
+      <div className="relative h-48 sm:h-64 bg-gradient-to-r from-warm-900 to-[#8B7355]">
         {profileUser.background && (
           <img
             src={profileUser.background}
@@ -308,7 +350,7 @@ function Profile() {
           />
         )}
         {isOwnProfile && (
-          <label className="absolute bottom-4 right-4 px-3 py-1.5 bg-black/50 text-white text-sm rounded-lg cursor-pointer hover:bg-black/70 transition">
+          <label className="absolute bottom-4 right-4 px-3 py-1.5 bg-black/50 text-white text-sm rounded-btn cursor-pointer hover:bg-black/70 transition">
             更换背景
             <input type="file" className="hidden" accept="image/*" onChange={handleBackgroundChange} />
           </label>
@@ -316,7 +358,7 @@ function Profile() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-10">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-card border-2 border-gray-200 shadow-card overflow-hidden">
           <div className="p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
               <div className="relative">
@@ -326,7 +368,7 @@ function Profile() {
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gray-200"
                 />
                 {isOwnProfile && (
-                  <label className="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-primary-700 shadow-lg">
+                  <label className="absolute bottom-0 right-0 w-10 h-10 bg-warm-900 text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-warm-700 shadow-lg">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -353,7 +395,7 @@ function Profile() {
                     </span>
                   )}
                   {profileUser.website && (
-                    <a href={profileUser.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm text-primary-600 hover:underline">
+                    <a href={profileUser.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm text-warm-900 hover:underline">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                       </svg>
@@ -370,13 +412,13 @@ function Profile() {
                       <>
                         <Link
                           to="/admin/settings"
-                          className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                          className="rounded-btn px-6 py-2 bg-purple-600 text-white hover:bg-purple-700 transition"
                         >
                           系统设置
                         </Link>
                         <Link
                           to="/admin/users"
-                          className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                          className="rounded-btn px-6 py-2 bg-gray-600 text-white hover:bg-gray-700 transition"
                         >
                           用户管理
                         </Link>
@@ -384,18 +426,24 @@ function Profile() {
                     )}
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                      className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 transition shadow-sketch"
                     >
                       编辑资料
                     </button>
+                    <Link
+                      to="/profile/edit"
+                      className="rounded-btn px-6 py-2 bg-[#F5F0E8] text-[#4A3728] border border-[#C8BAAA] hover:bg-[#E8DCD0] transition"
+                    >
+                      简历编辑
+                    </Link>
                   </>
                 ) : (
                   <button
                     onClick={handleFollow}
-                    className={`px-6 py-2 rounded-lg transition ${
+                    className={`rounded-btn px-6 py-2 transition ${
                       isFollowing
                         ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        : 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-warm-900 text-white hover:bg-warm-700 shadow-sketch'
                     }`}
                   >
                     {isFollowing ? '已关注' : '关注'}
@@ -408,6 +456,18 @@ function Profile() {
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-800">{stats.posts}</p>
                 <p className="text-sm text-gray-500">动态</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{stats.projects}</p>
+                <p className="text-sm text-gray-500">项目</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{stats.articles}</p>
+                <p className="text-sm text-gray-500">文章</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{stats.inspirations}</p>
+                <p className="text-sm text-gray-500">灵感</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-800">{stats.items}</p>
@@ -432,7 +492,7 @@ function Profile() {
                 <h3 className="text-sm font-medium text-gray-700 mb-2">技能标签</h3>
                 <div className="flex flex-wrap gap-2">
                   {profileUser.skills.map((skill, index) => (
-                    <span key={index} className="px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-sm">
+                    <span key={index} className="px-3 py-1 bg-[#F5F0E8] text-warm-900 rounded-full text-sm">
                       {skill}
                     </span>
                   ))}
@@ -474,7 +534,7 @@ function Profile() {
           </div>
 
           {isOwnProfile && (
-            <div className="border-t bg-gray-50 p-4">
+            <div className="border-t bg-[#F5F0E8] p-4">
               <div className="flex gap-4">
                 <img
                   src={currentUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${currentUser?.nickname}`}
@@ -486,12 +546,12 @@ function Profile() {
                     value={postContent}
                     onChange={(e) => setPostContent(e.target.value)}
                     placeholder="分享你的想法..."
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900 resize-none"
                     rows={3}
                     maxLength={2000}
                   />
                   <div className="flex justify-between items-center mt-3">
-                    <label className="flex items-center text-sm text-gray-500 cursor-pointer hover:text-primary-600 transition">
+                    <label className="flex items-center text-sm text-gray-500 cursor-pointer hover:text-warm-900 transition">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -501,7 +561,7 @@ function Profile() {
                     <button
                       onClick={handlePostSubmit}
                       disabled={!postContent.trim() && !postImage}
-                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 transition shadow-sketch disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       发布动态
                     </button>
@@ -517,18 +577,48 @@ function Profile() {
                 onClick={() => setActiveTab('posts')}
                 className={`flex-1 px-6 py-4 font-medium transition ${
                   activeTab === 'posts'
-                    ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
                 }`}
               >
                 动态 ({stats.posts})
               </button>
               <button
+                onClick={() => setActiveTab('projects')}
+                className={`flex-1 px-6 py-4 font-medium transition ${
+                  activeTab === 'projects'
+                    ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
+                }`}
+              >
+                项目 ({stats.projects})
+              </button>
+              <button
+                onClick={() => setActiveTab('articles')}
+                className={`flex-1 px-6 py-4 font-medium transition ${
+                  activeTab === 'articles'
+                    ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
+                }`}
+              >
+                文章 ({stats.articles})
+              </button>
+              <button
+                onClick={() => setActiveTab('inspirations')}
+                className={`flex-1 px-6 py-4 font-medium transition ${
+                  activeTab === 'inspirations'
+                    ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
+                }`}
+              >
+                灵感 ({stats.inspirations})
+              </button>
+              <button
                 onClick={() => setActiveTab('items')}
                 className={`flex-1 px-6 py-4 font-medium transition ${
                   activeTab === 'items'
-                    ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
                 }`}
               >
                 物品 ({stats.items})
@@ -538,7 +628,7 @@ function Profile() {
                 className={`flex-1 px-6 py-4 font-medium transition ${
                   activeTab === 'resources'
                     ? 'text-secondary-600 border-b-2 border-secondary-600 bg-secondary-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
                 }`}
               >
                 资源 ({stats.resources})
@@ -553,7 +643,7 @@ function Profile() {
                   {userPosts.map((post) => (
                     <div
                       key={post._id}
-                      className="bg-gray-50 rounded-xl p-4"
+                      className="bg-[#F5F0E8] rounded-xl p-4"
                     >
                       <div className="flex items-start gap-4">
                         <img
@@ -565,12 +655,12 @@ function Profile() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-800">{post.author?.nickname}</span>
-                              <span className="text-xs text-gray-400">· {new Date(post.createdAt).toLocaleDateString()}</span>
+                              <span className="text-xs text-[#B8A899]">· {new Date(post.createdAt).toLocaleDateString()}</span>
                             </div>
                             {isOwnProfile && (
                               <button
                                 onClick={() => handleDeletePost(post._id)}
-                                className="text-gray-400 hover:text-red-500 transition"
+                                className="text-[#B8A899] hover:text-red-500 transition"
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -583,7 +673,7 @@ function Profile() {
                             <img src={post.image} alt="" className="mt-4 max-w-full rounded-lg" />
                           )}
                           <div className="flex items-center gap-6 mt-4 text-sm text-gray-500">
-                            <button className="hover:text-primary-600 transition">
+                            <button className="hover:text-warm-900 transition">
                               <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
@@ -611,15 +701,122 @@ function Profile() {
                   </svg>
                   <p className="text-gray-500">暂无动态</p>
                   {isOwnProfile && (
-                    <p className="text-gray-400 text-sm mt-1">分享你的第一个动态吧！</p>
+                    <p className="text-[#B8A899] text-sm mt-1">分享你的第一个动态吧！</p>
                   )}
+                </div>
+              )
+            ) : activeTab === 'projects' ? (
+              userProjects.length > 0 ? (
+                <div className="space-y-3">
+                  {userProjects.map((project) => (
+                    <div key={project._id} className="bg-[#F5F0E8] rounded-xl p-4 flex items-center gap-4">
+                      {project.cover && (
+                        <img src={project.cover} alt={project.title} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/projects/${project._id}`} className="font-medium text-gray-800 hover:text-[#4A3728] transition truncate block">
+                          {project.title}
+                        </Link>
+                        <p className="text-sm text-gray-500 mt-0.5">{project.category} · {new Date(project.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      {isOwnProfile && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Link to={`/projects/edit/${project._id}`} className="p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-[#E8DCD0] rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </Link>
+                          <button onClick={() => handleDeleteProject(project._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">暂无项目作品</p>
+                </div>
+              )
+            ) : activeTab === 'articles' ? (
+              userArticles.length > 0 ? (
+                <div className="space-y-3">
+                  {userArticles.map((article) => (
+                    <div key={article._id} className="bg-[#F5F0E8] rounded-xl p-4 flex items-center gap-4">
+                      {article.cover && (
+                        <img src={article.cover} alt={article.title} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/articles/${article._id}`} className="font-medium text-gray-800 hover:text-[#4A3728] transition truncate block">
+                          {article.title}
+                        </Link>
+                        <p className="text-sm text-gray-500 mt-0.5">{article.category} · {new Date(article.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      {isOwnProfile && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Link to={`/articles/edit/${article._id}`} className="p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-[#E8DCD0] rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </Link>
+                          <button onClick={() => handleDeleteArticle(article._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">暂无文章故事</p>
+                </div>
+              )
+            ) : activeTab === 'inspirations' ? (
+              userInspirations.length > 0 ? (
+                <div className="space-y-3">
+                  {userInspirations.map((insp) => (
+                    <div key={insp._id} className="bg-[#F5F0E8] rounded-xl p-4 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/inspirations/${insp._id}`} className="font-medium text-gray-800 hover:text-[#4A3728] transition truncate block">
+                          {insp.title}
+                        </Link>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {insp.category} · {insp.status} · {new Date(insp.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {isOwnProfile && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Link to={`/inspirations/edit/${insp._id}`} className="p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-[#E8DCD0] rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </Link>
+                          <button onClick={() => handleDeleteInspiration(insp._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">暂无灵感碎片</p>
                 </div>
               )
             ) : activeTab === 'items' ? (
               userItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userItems.map((item) => (
-                    <Link key={item._id} to={`/items/${item._id}`} className="group bg-gray-50 rounded-xl overflow-hidden hover:shadow-lg transition">
+                    <Link key={item._id} to={`/items/${item._id}`} className="group bg-[#F5F0E8] rounded-xl overflow-hidden hover:shadow-lg transition">
                       <div className="relative">
                         <img
                           src={item.images[0] || 'https://via.placeholder.com/300x200'}
@@ -648,8 +845,8 @@ function Profile() {
             ) : userResources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {userResources.map((resource) => (
-                  <Link key={resource._id} to={`/resources/${resource._id}`} className="group bg-gray-50 rounded-xl p-4 hover:shadow-lg transition">
-                    <h3 className="font-medium text-gray-800 truncate group-hover:text-primary-600">{resource.title}</h3>
+                  <Link key={resource._id} to={`/resources/${resource._id}`} className="group bg-[#F5F0E8] rounded-xl p-4 hover:shadow-lg transition">
+                    <h3 className="font-medium text-gray-800 truncate group-hover:text-warm-900">{resource.title}</h3>
                     <p className="text-sm text-gray-500 mt-1">{resource.type}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {resource.tags?.slice(0, 3).map((tag, index) => (
@@ -675,10 +872,10 @@ function Profile() {
 
       {isEditing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-800">编辑个人资料</h3>
-              <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setIsEditing(false)} className="text-[#B8A899] hover:text-gray-600">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -693,7 +890,7 @@ function Profile() {
                   name="nickname"
                   value={editForm.nickname}
                   onChange={handleEditChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                 />
               </div>
 
@@ -705,10 +902,10 @@ function Profile() {
                   onChange={handleEditChange}
                   rows={3}
                   maxLength={500}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900 resize-none"
                   placeholder="介绍一下自己吧..."
                 />
-                <p className="text-xs text-gray-400 mt-1">{editForm.bio.length}/500</p>
+                <p className="text-xs text-[#B8A899] mt-1">{editForm.bio.length}/500</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -719,7 +916,7 @@ function Profile() {
                     name="location"
                     value={editForm.location}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="如：北京"
                   />
                 </div>
@@ -730,7 +927,7 @@ function Profile() {
                     name="website"
                     value={editForm.website}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="https://..."
                   />
                 </div>
@@ -740,9 +937,9 @@ function Profile() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">技能标签</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {editForm.skills.map((skill, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-sm">
+                    <span key={index} className="inline-flex items-center px-3 py-1 bg-[#F5F0E8] text-warm-900 rounded-full text-sm">
                       {skill}
-                      <button onClick={() => handleRemoveSkill(skill)} className="ml-2 text-primary-400 hover:text-primary-600">×</button>
+                      <button onClick={() => handleRemoveSkill(skill)} className="ml-2 text-[#C8BAAA] hover:text-warm-900">×</button>
                     </span>
                   ))}
                 </div>
@@ -752,12 +949,12 @@ function Profile() {
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="flex-1 px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="添加技能标签"
                   />
                   <button
                     onClick={handleAddSkill}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="rounded-btn px-4 py-2 bg-[#F0E8DD] text-gray-700 hover:bg-gray-200"
                   >
                     添加
                   </button>
@@ -772,7 +969,7 @@ function Profile() {
                     name="social.github"
                     value={editForm.socialLinks.github}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="GitHub 链接"
                   />
                   <input
@@ -780,7 +977,7 @@ function Profile() {
                     name="social.weibo"
                     value={editForm.socialLinks.weibo}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="微博链接"
                   />
                   <input
@@ -788,7 +985,7 @@ function Profile() {
                     name="social.bilibili"
                     value={editForm.socialLinks.bilibili}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="B站链接"
                   />
                   <input
@@ -796,7 +993,7 @@ function Profile() {
                     name="social.zhihu"
                     value={editForm.socialLinks.zhihu}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="知乎链接"
                   />
                 </div>
@@ -810,7 +1007,7 @@ function Profile() {
                     name="contactWechat"
                     value={editForm.contactWechat}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="微信号"
                   />
                   <input
@@ -818,7 +1015,7 @@ function Profile() {
                     name="contactPhone"
                     value={editForm.contactPhone}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="电话"
                   />
                   <input
@@ -826,7 +1023,7 @@ function Profile() {
                     name="contactEmail"
                     value={editForm.contactEmail}
                     onChange={handleEditChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
                     placeholder="邮箱"
                   />
                 </div>
@@ -836,13 +1033,13 @@ function Profile() {
             <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                className="rounded-btn px-6 py-2 bg-[#F0E8DD] text-gray-700 hover:bg-gray-200"
               >
                 取消
               </button>
               <button
                 onClick={handleSaveProfile}
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 shadow-sketch"
               >
                 保存更改
               </button>

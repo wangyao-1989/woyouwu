@@ -52,9 +52,7 @@ function CreateContent() {
         formData.append('images', image);
       });
 
-      const res = await axios.post('/api/contents', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/contents', formData);
 
       alert('发布成功！');
       navigate('/');

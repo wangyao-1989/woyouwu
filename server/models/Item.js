@@ -34,6 +34,11 @@ const borrowRecordSchema = new mongoose.Schema({
 });
 
 const itemSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['achievement', 'idea', 'project', 'article', 'stuff'],
+    default: 'stuff'
+  },
   name: {
     type: String,
     required: true,
@@ -46,8 +51,26 @@ const itemSchema = new mongoose.Schema({
   }],
   category: {
     type: String,
-    enum: ['工具', '衣物', '药物', '会员卡', '其他'],
-    required: true
+    trim: true,
+    default: ''
+  },
+  condition: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  borrowStartDate: {
+    type: Date,
+    default: null
+  },
+  borrowEndDate: {
+    type: Date,
+    default: null
+  },
+  link: {
+    type: String,
+    trim: true,
+    default: ''
   },
   remark: {
     type: String,
@@ -77,8 +100,8 @@ const itemSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['可借用', '已借出', '维修中'],
-    default: '可借用'
+    enum: ['available', 'given', 'exchanged', 'borrowed', '可借用', '已借出', '维修中'],
+    default: 'available'
   },
   location: {
     type: String,

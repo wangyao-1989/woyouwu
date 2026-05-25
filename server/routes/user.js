@@ -2,6 +2,9 @@ const express = require('express');
 const User = require('../models/User');
 const Resource = require('../models/Resource');
 const Item = require('../models/Item');
+const Project = require('../models/Project');
+const Article = require('../models/Article');
+const Inspiration = require('../models/Inspiration');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const fs = require('fs');
@@ -35,6 +38,81 @@ router.get('/list', async (req, res) => {
     const todayCount = await User.countDocuments({ createdAt: { $gte: today } });
 
     res.json({ users, total, page: parseInt(page), limit: parseInt(limit), todayCount });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/me/resume', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password -email -phone');
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+
+    res.json({
+      avatar: user.avatar,
+      realName: user.realName,
+      bio: user.bio,
+      skills: user.skills,
+      experience: user.experience,
+      education: user.education,
+      socialLinks: user.socialLinks,
+      contactEmail: user.contactEmail,
+      location: user.location,
+      interests: user.interests,
+      isPublic: user.isPublic
+    });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.put('/me/resume', auth, async (req, res) => {
+  try {
+    const allowedFields = [
+      'realName', 'bio', 'skills', 'experience', 'education',
+      'socialLinks', 'contactEmail', 'location', 'interests', 'isPublic'
+    ];
+
+    const updates = {};
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        try {
+          if (field === 'skills' || field === 'interests' || field === 'experience' || field === 'education' || field === 'socialLinks') {
+            updates[field] = typeof req.body[field] === 'string' ? JSON.parse(req.body[field]) : req.body[field];
+          } else if (field === 'isPublic') {
+            updates[field] = req.body[field] === true || req.body[field] === 'true';
+          } else {
+            updates[field] = req.body[field];
+          }
+        } catch (e) {
+          updates[field] = req.body[field];
+        }
+      }
+    });
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true }
+    ).select('-password -email -phone');
+
+    res.json({ message: '简历更新成功', user });
+  } catch (error) {
+    console.error('Resume update error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.put('/me/resume/visibility', auth, async (req, res) => {
+  try {
+    const { isPublic } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { isPublic: isPublic === true || isPublic === 'true' } },
+      { new: true }
+    ).select('-password -email -phone');
+
+    res.json({ message: '可见性已更新', isPublic: user.isPublic });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }
@@ -185,10 +263,70 @@ router.get('/:id/items', async (req, res) => {
   }
 });
 
+router.get('/:id/projects', async (req, res) => {
+  try {
+    const projects = await Project.find({ owner: req.params.id })
+      .populate('owner', 'username nickname avatar')
+      .sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/:id/articles', async (req, res) => {
+  try {
+    const articles = await Article.find({ owner: req.params.id })
+      .populate('owner', 'username nickname avatar')
+      .sort({ createdAt: -1 });
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/:id/inspirations', async (req, res) => {
+  try {
+    const inspirations = await Inspiration.find({ owner: req.params.id })
+      .populate('owner', 'username nickname avatar')
+      .sort({ createdAt: -1 });
+    res.json(inspirations);
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 router.get('/favorites', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('favorites');
     res.json(user.favorites || []);
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/:id/resume', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -email -phone');
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+
+    if (!user.isPublic) {
+      return res.status(403).json({ message: '该用户简历未公开' });
+    }
+
+    res.json({
+      nickname: user.nickname,
+      avatar: user.avatar,
+      realName: user.realName,
+      bio: user.bio,
+      skills: user.skills,
+      experience: user.experience,
+      education: user.education,
+      socialLinks: user.socialLinks,
+      contactEmail: user.contactEmail,
+      location: user.location,
+      interests: user.interests
+    });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }

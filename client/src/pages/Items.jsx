@@ -6,7 +6,7 @@ import ContentCard from '../components/ContentCard';
 const mockItems = [
   {
     id: 1,
-    type: 'creation',
+    type: 'project',
     title: '我的个人网站2024全新改版',
     description: '使用Next.js + Tailwind构建，干净现代的作品集展示我的作品。',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
@@ -48,7 +48,7 @@ const mockItems = [
   },
   {
     id: 4,
-    type: 'creation',
+    type: 'project',
     title: '研究摘要：城市绿地空间',
     description: '基于五年调查数据的城市绿地空间数据分析。',
     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
@@ -128,26 +128,28 @@ function Items() {
   };
 
   return (
-    <div className="min-h-screen bg-paper fade-in">
+    <div className="min-h-screen bg-[#F5F0E8] fade-in">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6 wowoo-heading">探索创作</h1>
+          <h1 className="heading-xl mb-6">探索创作</h1>
           
           {/* Filter Controls */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-wowoo mb-6">
+          <div className="bg-white rounded-card border border-[#E8E0D5] shadow-card p-5 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">类型</label>
                 <select
                   value={filters.type}
                   onChange={(e) => handleFilterChange('type', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
                 >
                   <option value="">所有类型</option>
-                  <option value="creation">创作</option>
-                  <option value="idea">灵感</option>
-                  <option value="stuff">物品</option>
+                  <option value="achievement">个人成果</option>
+                  <option value="idea">灵感碎片</option>
+                  <option value="project">项目/作品</option>
+                  <option value="article">文章/故事</option>
+                  <option value="stuff">闲置交换</option>
                 </select>
               </div>
 
@@ -156,7 +158,7 @@ function Items() {
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
                 >
                   <option value="">所有分类</option>
                   <option value="网页设计">网页设计</option>
@@ -172,7 +174,7 @@ function Items() {
                 <select
                   value={filters.sort}
                   onChange={(e) => handleFilterChange('sort', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
                 >
                   <option value="-createdAt">最新优先</option>
                   <option value="createdAt">最早优先</option>
@@ -190,7 +192,7 @@ function Items() {
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     placeholder="搜索物品、灵感、创作..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
                   />
                   <svg aria-hidden="true" className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -205,7 +207,7 @@ function Items() {
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">{items.length} 个结果</span>
             </div>
-            <div className="flex items-center space-x-2 bg-gray-50 rounded-xl p-1">
+            <div className="flex items-center space-x-2 bg-[#F5F0E8] rounded-btn p-1">
               <button
                 onClick={() => {
                   setViewMode('grid');
@@ -213,10 +215,10 @@ function Items() {
                   params.set('view', 'grid');
                   setSearchParams(params);
                 }}
-                className={`p-2 rounded-lg transition-all ${
+                className={`rounded-btn p-2 transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'bg-white text-[#4A3728] shadow-sm'
+                    : 'text-[#B8A899] hover:text-[#4A3728]'
                 }`}
                 aria-label="网格视图"
               >
@@ -231,10 +233,10 @@ function Items() {
                   params.set('view', 'list');
                   setSearchParams(params);
                 }}
-                className={`p-2 rounded-lg transition-all ${
+                className={`rounded-btn p-2 transition-all ${
                   viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'bg-white text-[#4A3728] shadow-sm'
+                    : 'text-[#B8A899] hover:text-[#4A3728]'
                 }`}
                 aria-label="列表视图"
               >

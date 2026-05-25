@@ -66,7 +66,15 @@ router.get('/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.post('/', auth, upload.array('images', 10), async (req, res) => {
+router.post('/', auth, (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: '文件大小不能超过 20MB' });
+      return res.status(400).json({ message: err.message || '文件上传失败' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { title, type, link, description, tags } = req.body;
 
@@ -99,7 +107,15 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
   }
 });
 
-router.put('/:id', auth, upload.array('images', 10), async (req, res) => {
+router.put('/:id', auth, (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: '文件大小不能超过 20MB' });
+      return res.status(400).json({ message: err.message || '文件上传失败' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const resource = await Resource.findById(req.params.id);
 

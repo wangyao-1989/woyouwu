@@ -52,11 +52,7 @@ function AdminSettings() {
     formData.append('logo', selectedFile);
 
     try {
-      const res = await axios.post('/api/admin/upload-logo', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const res = await axios.post('/api/admin/upload-logo', formData);
 
       setMessage(res.data.message || 'Logo上传成功！');
       setMessageType('success');
@@ -75,34 +71,34 @@ function AdminSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen bg-[#F5F0E8] ">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">系统设置</h1>
+          <h1 className="text-3xl font-bold text-gray-900 heading-md ">系统设置</h1>
           <p className="text-gray-600 mt-2">管理网站的基本设置</p>
         </div>
 
         {message && (
-          <div className={`mb-6 p-4 rounded-xl ${
+          <div className={`mb-6 p-4 sketch-border-sm border-2 ${
             messageType === 'success' 
-              ? 'bg-green-50 text-green-700 border border-green-200' 
-              : 'bg-red-50 text-red-700 border border-red-200'
+              ? 'bg-green-50 text-green-700 border-green-200' 
+              : 'bg-red-50 text-red-700 border-red-200'
           }`}>
             {message}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl card-ring p-6 mb-6">
+        <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">网站Logo</h2>
           <p className="text-gray-600 mb-4">上传您的网站Logo，建议尺寸为200x200像素</p>
           
           <div className="mb-6">
             <p className="text-sm font-medium text-gray-700 mb-2">当前Logo：</p>
-            <div className="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+            <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
               {currentLogo ? (
                 <img src={currentLogo} alt="当前Logo" className="w-full h-full object-contain" />
               ) : (
-                <span className="text-gray-400 text-sm">暂无Logo</span>
+                <span className="text-[#B8A899] text-sm">暂无Logo</span>
               )}
             </div>
           </div>
@@ -119,7 +115,7 @@ function AdminSettings() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="rounded-btn px-4 py-2 bg-[#F0E8DD] text-gray-700 hover:bg-gray-200 transition-colors"
               >
                 选择图片
               </button>
@@ -132,7 +128,7 @@ function AdminSettings() {
           {preview && (
             <div className="mb-6">
               <p className="text-sm font-medium text-gray-700 mb-2">预览：</p>
-              <div className="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
                 <img src={preview} alt="预览" className="w-full h-full object-contain" />
               </div>
             </div>
@@ -141,19 +137,19 @@ function AdminSettings() {
           <button
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
-            className="px-6 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-btn px-6 py-3 bg-warm-900 text-white font-medium hover:bg-warm-700 transition-colors shadow-sketch disabled:opacity-50 disabled:cursor-not-allowed wobble"
           >
             {uploading ? '上传中...' : '上传Logo'}
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl card-ring p-6">
+        <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">其他设置</h2>
           <p className="text-gray-600">更多系统设置功能开发中...</p>
         </div>
 
         <div className="mt-6">
-          <Link to="/profile" className="text-primary-600 hover:text-primary-700">
+          <Link to="/profile" className="text-warm-900 hover:text-warm-700">
             ← 返回个人资料
           </Link>
         </div>
