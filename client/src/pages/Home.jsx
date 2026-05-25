@@ -157,7 +157,7 @@ function Home() {
               {videos.length > 0 ? (
                 <div className="w-full max-w-xs">
                   <div className="bg-white rounded-2xl card-ring overflow-hidden">
-                    <div className="aspect-[9/16] bg-black relative">
+                    <div className="aspect-square bg-black relative">
                       {videos.map((v, i) => (
                         <video
                           key={v._id}

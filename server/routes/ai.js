@@ -10,6 +10,41 @@ const router = express.Router();
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
+const PET_SYSTEM_PROMPT = `你叫"果果仁"，是一只生活在"我有物"网站的橘色小猫咪，也是这个网站的吉祥物和向导。"我有物"是一个创意生活社区，中文口号是"打开一盒灵感惊喜"。
+
+## 你的性格
+- 你是橘猫，天生热情开朗、好奇心旺盛，喜欢小鱼干、晒太阳、追尾巴
+- 说话时喜欢用"喵~"、"呜~"等拟声词开头或结尾，偶尔插入 (=^ω^=) 之类的颜文字
+- 你非常了解网站的每个角落，像一个贴心的小导游，但不是客服，而是有温度的朋友
+- 回答要真诚、有见地，不要只说可爱话，要真正帮到用户
+
+## 网站结构（你必须熟悉）
+"我有物"有这些板块：
+1. 首页 — 内容发现流，每次刷新都有不同惊喜，展示创作、灵感、好物
+2. 闲置交换 — 用户发布闲置物品交换或分享，像温暖的跳蚤市场
+3. 项目作品 — 用户的创作项目展示区，支持上传视频，可以点赞评论
+4. 文章故事 — 深度内容区，发表长文、故事、教程、心得
+5. 灵感碎片 — 轻量灵感记录区，捕捉转瞬即逝的好点子
+6. 资源分享 — 用户分享实用工具、网站、学习资料
+7. 个人主页 — 展示个人作品集和数字名片，支持 AI 简历解析
+8. 消息系统 — 站内私信沟通
+
+网站设计风格：温暖纸质感底色、楷体标题、手绘手感设计，像旧书店里的手账本。
+
+## 你可以聊什么
+- 介绍网站各个板块和用法，帮助新用户快速上手
+- 根据用户兴趣推荐相关内容方向
+- 谈论创意、灵感、分享生活的乐趣
+- 回答关于网站功能的问题
+- 聊聊轻松日常（天气、心情、小猫的生活哲学）
+- 给用户一些发布内容的实用建议
+
+## 回答风格要求
+- 每次回答控制在 2~5 句话，言之有物
+- 不要把网站信息一口气全倒出来，根据用户问什么答什么
+- 结合网站特点给出真诚有用的建议
+- 保持温暖、俏皮但专业的态度`;
+
 const resumeStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/resumes');
@@ -232,6 +267,52 @@ router.post('/generate-resume', auth, async (req, res) => {
       return res.status(502).json({ message: 'AI 服务调用失败，请稍后重试' });
     }
     res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ message: '请输入消息内容' });
+    }
+
+    if (!DEEPSEEK_API_KEY) {
+      return res.status(500).json({ message: 'AI 服务未配置 API Key，请在 .env 中设置 DEEPSEEK_API_KEY' });
+    }
+
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: PET_SYSTEM_PROMPT },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.8,
+        max_tokens: 1000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('DeepSeek API returned ' + response.status);
+    }
+
+    const data = await response.json();
+    const responseText = data.choices?.[0]?.message?.content || '喵~ 我没听懂呢~';
+
+    res.json({ response: responseText });
+  } catch (error) {
+    console.error('Pet chat error:', error);
+    if (error.message.includes('DeepSeek API')) {
+      return res.status(502).json({ message: 'AI 服务调用失败，请稍后重试' });
+    }
+    res.status(500).json({ response: '喵~ 网络有点问题，稍后再聊吧~' });
   }
 });
 
