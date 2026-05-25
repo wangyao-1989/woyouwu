@@ -18,6 +18,7 @@ const articleRoutes = require('./routes/article');
 const inspirationRoutes = require('./routes/inspiration');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
+const newsRoutes = require('./routes/news');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/articles', articleRoutes);
 app.use('/api/inspirations', inspirationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/news', newsRoutes);
 
 app.get('/', (req, res) => {
   res.send('woyouwu API is running');

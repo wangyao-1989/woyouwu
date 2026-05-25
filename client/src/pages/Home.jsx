@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import NewsCorner from '../components/NewsCorner';
 
 // 示例内容数据
 const mockContent = [
@@ -258,6 +259,9 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* 资讯好望角 */}
+      <NewsCorner />
 
       {/* 筛选和视图控制 */}
       <section className="px-4 pb-6">
