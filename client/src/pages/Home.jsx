@@ -3,80 +3,14 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import NewsCorner from '../components/NewsCorner';
 
-// 示例内容数据
-const mockContent = [
-  {
-    id: 1,
-    type: 'creation',
-    title: '我的个人网站 2024 全新改版',
-    description: '使用 Next.js + Tailwind 构建，干净现代的设计展示我的作品。',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'helen.dev',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=helen'
-    },
-    likes: 45,
-    comments: 8
-  },
-  {
-    id: 2,
-    type: 'idea',
-    title: '如果我们能把回忆变成可分享的文件呢？',
-    description: '洗澡时冒出的想法，不只是照片，还有感觉、想法、声音和瞬间。',
-    image: null,
-    author: {
-      nickname: 'raymond',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=raymond'
-    },
-    likes: 78,
-    comments: 12
-  },
-  {
-    id: 3,
-    type: 'stuff',
-    title: '富士拍立得 Mini 8 交换',
-    description: '成色不错，想交换书或者文具！',
-    image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'sarah.k',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=sarah'
-    },
-    likes: 12,
-    comments: 3
-  },
-  {
-    id: 4,
-    type: 'creation',
-    title: '研究报告：城市绿地空间分析',
-    description: '基于五年调查数据的城市绿地空间数据可视化分析。',
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'researcher',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=researcher'
-    },
-    likes: 36,
-    comments: 5
-  },
-  {
-    id: 5,
-    type: 'idea',
-    title: '一个没有压力的阅读社区',
-    description: '一个帮助人们收集和分享读书笔记的网站，不需要"完成"任何东西。',
-    image: null,
-    author: {
-      nickname: 'celine',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=celine'
-    },
-    likes: 21,
-    comments: 4
-  }
-];
-
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [videos, setVideos] = useState([]);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [items, setItems] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState(null);
   const videoIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -90,11 +24,31 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    if (videos.length <= 1) return;
+    setItemsLoading(true);
+    setItemsError(null);
+    axios.get('/api/items')
+      .then(res => {
+        console.log('[Home] API response type:', typeof res.data, 'isArray:', Array.isArray(res.data), 'raw:', res.data);
+        const data = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        console.log('[Home] items count:', data.length);
+        setItems(data);
+        setItemsLoading(false);
+      })
+      .catch(err => {
+        console.error('[Home] Failed to fetch items:', err);
+        setItemsError('加载物品失败：' + (err.message || '网络错误'));
+        setItemsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (videos.length === 0) return;
     videoIntervalRef.current = setInterval(() => {
       setCurrentVideoIndex(prev => (prev + 1) % videos.length);
-    }, 8000);
-    return () => clearInterval(videoIntervalRef.current);
+    }, 5000);
+    return () => {
+      if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
+    };
   }, [videos]);
 
   const getTypeStyle = (type) => {
@@ -104,208 +58,160 @@ function Home() {
       case 'idea':
         return { bg: 'bg-amber-50', text: 'text-amber-700', label: '灵感' };
       case 'stuff':
-        return { bg: 'bg-clay-50', text: 'text-clay-700', label: '好物' };
+        return { bg: 'bg-orange-50', text: 'text-orange-700', label: '好物' };
+      case 'article':
+        return { bg: 'bg-blue-50', text: 'text-blue-700', label: '文章' };
+      case 'project':
+        return { bg: 'bg-purple-50', text: 'text-purple-700', label: '项目' };
+      case 'achievement':
+        return { bg: 'bg-green-50', text: 'text-green-700', label: '成就' };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
     }
   };
 
   const getFilterLabel = (filter) => {
-    switch (filter) {
-      case 'all': return '全部';
-      case 'creation': return '创作';
-      case 'idea': return '灵感';
-      case 'stuff': return '好物';
-      default: return filter;
-    }
+    const filters = { all: '全部', stuff: '好物', achievement: '成果', idea: '灵感', project: '项目', article: '文章' };
+    return filters[filter] || filter;
   };
 
   const filteredContent = activeFilter === 'all' 
-    ? mockContent 
-    : mockContent.filter(item => item.type === activeFilter);
+    ? items 
+    : items.filter(item => item.type === activeFilter);
 
   return (
-    <div className="min-h-screen bg-paper fade-in">
+    <div className="min-h-screen bg-cream-50 fade-in">
       {/* 主视觉区域 */}
-      <section className="relative py-16 px-4 gradient-hero">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1 text-center lg:text-left">
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 wowoo-heading leading-tight">
-                打开一盒<br />
-                <span className="text-gray-700">灵感惊喜。</span>
+      <section className="relative bg-gradient-hero pt-8 pb-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl lg:text-5xl font-kai font-bold text-warm-900 mb-6 leading-tight tracking-wide">
+                把闲置变成灵感，<br/>
+                交换你的好物品
               </h1>
-              <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto lg:mx-0">
-                来自真实用户的随机发现，每次访问都有新惊喜。
+              <p className="text-lg text-warm-500 mb-8 leading-relaxed">
+                一个充满创意与温暖的社区。发布闲置好物、展示个人作品、分享灵感碎片，发现生活中的无限可能。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
                   to="/items/create"
-                  className="px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
+                  className="px-8 py-3.5 bg-warm-900 text-white text-lg font-semibold rounded-btn hover:bg-warm-700 transition shadow-float hover:shadow-wowoo"
                 >
-                  我要发布 ✨
+                  发布好物 ✨
                 </Link>
-                <button 
-                  onClick={() => setActiveFilter('all')}
-                  className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-all scale-hover"
+                <Link
+                  to="/items"
+                  className="px-8 py-3.5 bg-white text-warm-900 text-lg font-semibold rounded-btn border-2 border-warm-200 hover:border-warm-700 transition"
                 >
-                  刷新内容 ↻
-                </button>
+                  探索发现
+                </Link>
+              </div>
+              <div className="flex items-center justify-center lg:justify-start gap-8 mt-8 text-sm text-warm-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-warm-600 rounded-full"></span>
+                  安全可信
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-warm-600 rounded-full"></span>
+                  创意无限
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-warm-600 rounded-full"></span>
+                  真实社区
+                </span>
               </div>
             </div>
-            <div className="flex-1 flex justify-center lg:justify-end">
-              {videos.length > 0 ? (
-                <div className="w-full max-w-xs">
-                  <div className="bg-white rounded-2xl card-ring overflow-hidden">
-                    <div className="aspect-square bg-black relative">
-                      {videos.map((v, i) => (
-                        <video
-                          key={v._id}
-                          src={v.video}
-                          muted
-                          loop
-                          playsInline
-                          autoPlay
-                          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                        />
-                      ))}
-                    </div>
-                    <div className="p-4">
-                      <Link
-                        to={`/projects/${videos[currentVideoIndex]?._id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-primary-500 transition line-clamp-2"
-                      >
-                        {videos[currentVideoIndex]?.title || '项目作品'}
-                      </Link>
-                      {videos[currentVideoIndex]?.owner && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {videos[currentVideoIndex].owner.nickname || videos[currentVideoIndex].owner.username}
-                        </p>
-                      )}
-                      {(() => {
-                        const v = videos[currentVideoIndex];
-                        if (!v || !v.video) return null;
-                        if (v.videoSource === '转载') {
-                          return (
-                            <div className="mt-2 pt-2 border-t border-gray-100">
-                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                                🔗 转载
-                              </span>
-                              {v.videoSourceLink && (
-                                <a
-                                  href={v.videoSourceLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block text-[10px] text-gray-400 hover:text-amber-600 mt-1 truncate"
-                                >
-                                  来源：{v.videoSourceLink}
-                                </a>
-                              )}
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                              ✨ 原创
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    {videos.length > 1 && (
-                      <div className="flex justify-center gap-1.5 pb-3">
-                        {videos.map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              setCurrentVideoIndex(i);
-                              if (videoIntervalRef.current) {
-                                clearInterval(videoIntervalRef.current);
-                                videoIntervalRef.current = setInterval(() => {
-                                  setCurrentVideoIndex(prev => (prev + 1) % videos.length);
-                                }, 8000);
-                              }
-                            }}
-                            className={`w-2 h-2 rounded-full transition-all ${i === currentVideoIndex ? 'bg-primary-500 w-5' : 'bg-gray-300 hover:bg-gray-400'}`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+            <div className="relative">
+              <div className="relative aspect-square max-w-sm mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-br from-warm-100 via-cream-100 to-warm-100 rounded-[40%] animate-float blur-sm"></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                  {videos.length > 0 && (
+                    <video
+                      src={videos[currentVideoIndex].video}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="w-full h-auto object-cover rounded-2xl shadow-float"
+                    />
+                  )}
                 </div>
-              ) : (
-                <div className="relative">
-                  <div className="absolute -top-6 -left-6 w-8 h-8 bg-yellow-300 rounded-full opacity-60"></div>
-                  <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-pink-200 rounded-full opacity-60"></div>
-                  <div className="bg-gradient-to-br from-amber-50 via-paper to-teal-50 p-8 rounded-3xl border border-gray-200 shadow-wowoo">
-                    <svg aria-hidden="true" viewBox="0 0 300 250" className="w-full h-auto">
-                      <rect x="50" y="120" width="200" height="80" fill="#f6b26b" rx="8" />
-                      <rect x="50" y="100" width="200" height="30" fill="#e89f4a" rx="8" />
-                      <rect x="130" y="85" width="40" height="25" fill="#d48a3c" rx="4" />
-                      <circle cx="100" cy="70" r="20" fill="#dae8fc" />
-                      <circle cx="200" cy="60" r="15" fill="#d5e8d4" />
-                      <rect x="220" y="30" width="35" height="28" fill="#e1d5e7" rx="4" />
-                      <text x="85" y="68" fontSize="16">📷</text>
-                      <text x="188" y="58" fontSize="12">🌱</text>
-                      <text x="225" y="28" fontSize="14">📝</text>
-                      <text x="135" y="55" fontSize="14">✨</text>
-                      <text x="170" y="45" fontSize="12">✨</text>
-                    </svg>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 资讯好望角 */}
-      <NewsCorner />
+      {/* 视频卡片区域 */}
+      {videos.length > 0 && (
+        <section className="px-4 -mt-6 pb-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-warm-900">📽️ 社区视频</h2>
+              <div className="flex gap-1">
+                {videos.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentVideoIndex(i)}
+                    className={`w-2.5 h-2.5 rounded-full transition ${i === currentVideoIndex ? 'bg-warm-700' : 'bg-warm-200'}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {videos.map((project, i) => (
+                <Link
+                  key={project._id || project.id}
+                  to={`/projects/${project._id || project.id}`}
+                  className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${i === currentVideoIndex ? 'border-warm-700 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                  onClick={() => setCurrentVideoIndex(i)}
+                >
+                  <video
+                    src={project.video}
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                    <span className="text-white text-xs font-medium truncate block">{project.title}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* 筛选和视图控制 */}
-      <section className="px-4 pb-6">
+      {/* 筛选器 */}
+      <section className="px-4 pb-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center space-x-2">
-              {['all', 'creation', 'idea', 'stuff'].map((filter) => (
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {['all', 'stuff', 'achievement', 'idea', 'project', 'article'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-                    activeFilter === filter
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-4 py-2 rounded-btn text-sm font-medium transition ${activeFilter === filter ? 'bg-warm-900 text-white' : 'bg-white text-warm-500 hover:bg-warm-100'}`}
                 >
                   {getFilterLabel(filter)}
                 </button>
               ))}
             </div>
-            <div className="flex items-center space-x-2 bg-gray-50 rounded-xl p-1">
+            <div className="flex gap-1 bg-white rounded-btn p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                aria-label="网格视图"
+                className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-warm-100 text-warm-700' : 'text-warm-400'}`}
               >
-                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                aria-label="列表视图"
+                className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-warm-100 text-warm-700' : 'text-warm-400'}`}
               >
-                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
@@ -317,21 +223,41 @@ function Home() {
       {/* 内容网格 */}
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
-          {viewMode === 'grid' ? (
+          {itemsLoading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-500">正在加载物品...</p>
+            </div>
+          ) : itemsError ? (
+            <div className="text-center py-16">
+              <p className="text-red-500 mb-2">{itemsError}</p>
+              <button
+                onClick={() => { setItemsLoading(true); setItemsError(null); axios.get('/api/items').then(r => { setItems(Array.isArray(r.data) ? r.data : (r.data.items || [])); setItemsLoading(false); }).catch(e => { setItemsError('重试失败'); setItemsLoading(false); }); }}
+                className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition"
+              >
+                点击重试
+              </button>
+            </div>
+          ) : filteredContent.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-gray-500 mb-2">还没有人发布物品，来做第一个吧！</p>
+              <Link to="/items/create" className="text-primary-500 hover:underline">立即发布 ✨</Link>
+            </div>
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredContent.map((item) => {
                 const typeStyle = getTypeStyle(item.type);
                 return (
                   <Link
-                    key={item.id}
-                    to={`/items/${item.id}`}
+                    key={item._id}
+                    to={`/items/${item._id}`}
                     className="bg-white rounded-2xl card-ring hover:card-ring-hover overflow-hidden transition-all duration-300 scale-hover group"
                   >
-                    {item.image ? (
+                    {item.images && item.images[0] ? (
                       <div className="aspect-video overflow-hidden">
                         <img
-                          src={item.image}
-                          alt={item.title}
+                          src={item.images[0]}
+                          alt={item.name}
                           width={640}
                           height={360}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -349,34 +275,34 @@ function Home() {
                         {typeStyle.label}
                       </span>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2 leading-snug">
-                        {item.title}
+                        {item.name}
                       </h3>
                       <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                        {item.description}
+                        {item.remark}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <img
-                            src={item.author.avatar}
-                            alt={item.author.nickname}
+                            src={item.owner?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner?.nickname}`}
+                            alt={item.owner?.nickname}
                             width={24}
                             height={24}
                             className="w-6 h-6 rounded-full bg-gray-200"
                           />
-                          <span className="text-sm text-gray-500">{item.author.nickname}</span>
+                          <span className="text-sm text-gray-500">{item.owner?.nickname || item.owner?.username}</span>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
                           <span className="flex items-center">
                             <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
-                            {item.likes}
+                            {item.likes?.length || 0}
                           </span>
                           <span className="flex items-center">
                             <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            {item.comments}
+                            {item.comments?.length || 0}
                           </span>
                         </div>
                       </div>
@@ -386,21 +312,21 @@ function Home() {
               })}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {filteredContent.map((item) => {
                 const typeStyle = getTypeStyle(item.type);
                 return (
                   <Link
-                    key={item.id}
-                    to={`/items/${item.id}`}
+                    key={item._id}
+                    to={`/items/${item._id}`}
                     className="bg-white rounded-2xl card-ring hover:card-ring-hover p-5 transition-all duration-300 scale-hover group"
                   >
                     <div className="flex gap-5">
-                      {item.image ? (
+                      {item.images && item.images[0] ? (
                         <div className="w-32 h-24 rounded-xl overflow-hidden flex-shrink-0">
                           <img
-                            src={item.image}
-                            alt={item.title}
+                            src={item.images[0]}
+                            alt={item.name}
                             width={128}
                             height={96}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -418,34 +344,34 @@ function Home() {
                           {typeStyle.label}
                         </span>
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {item.title}
+                          {item.name}
                         </h3>
                         <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {item.description}
+                          {item.remark}
                         </p>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <img
-                              src={item.author.avatar}
-                              alt={item.author.nickname}
+                              src={item.owner?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner?.nickname}`}
+                              alt={item.owner?.nickname}
                               width={24}
                               height={24}
                               className="w-6 h-6 rounded-full bg-gray-200"
                             />
-                            <span className="text-sm text-gray-500">{item.author.nickname}</span>
+                            <span className="text-sm text-gray-500">{item.owner?.nickname || item.owner?.username}</span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-400">
                             <span className="flex items-center">
                               <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                               </svg>
-                              {item.likes}
+                              {item.likes?.length || 0}
                             </span>
                             <span className="flex items-center">
                               <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
-                              {item.comments}
+                              {item.comments?.length || 0}
                             </span>
                           </div>
                         </div>
@@ -459,21 +385,8 @@ function Home() {
         </div>
       </section>
 
-      <footer className="bg-gray-900 text-gray-400 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">&copy; 2026 我有物. All rights reserved.</p>
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition flex items-center">
-                <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                鲁ICP备2026026388号
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* 资讯角落 */}
+      <NewsCorner />
     </div>
   );
 }
