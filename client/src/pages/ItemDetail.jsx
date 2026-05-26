@@ -262,7 +262,7 @@ function ItemDetail() {
               <div className="space-y-3">
                 <Link
                   to={`/items/edit/${item._id}`}
-                  className="block w-full py-3 bg-secondary-600 text-white font-semibold rounded-lg hover:bg-secondary-700 transition text-center"
+                  className="block w-full py-3 bg-warm-600 text-white font-semibold rounded-lg hover:bg-warm-900 transition text-center"
                 >
                   编辑物品
                 </Link>

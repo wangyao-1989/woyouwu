@@ -3,79 +3,6 @@ import { useSearchParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import ContentCard from '../components/ContentCard';
 
-const mockItems = [
-  {
-    id: 1,
-    type: 'project',
-    title: '我的个人网站2024全新改版',
-    description: '使用Next.js + Tailwind构建，干净现代的作品集展示我的作品。',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
-    category: '网页设计',
-    location: '上海',
-    status: 'available',
-    author: { nickname: 'helen.dev', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=helen' },
-    likes: 45,
-    comments: 8,
-    createdAt: new Date()
-  },
-  {
-    id: 2,
-    type: 'idea',
-    title: '如果我们能把回忆变成可分享的文件呢？',
-    description: '洗澡时的一个想法。不只是照片，还有感觉、想法、声音和瞬间。',
-    image: null,
-    category: '创意',
-    location: '远程',
-    status: 'available',
-    author: { nickname: 'raymond', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=raymond' },
-    likes: 78,
-    comments: 12,
-    createdAt: new Date()
-  },
-  {
-    id: 3,
-    type: 'stuff',
-    title: '富士拍立得Mini8交换',
-    description: '成色不错。寻求书籍或文具交换！',
-    image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
-    category: '电子产品',
-    location: '北京',
-    status: 'available',
-    author: { nickname: 'sarah.k', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=sarah' },
-    likes: 12,
-    comments: 3,
-    createdAt: new Date()
-  },
-  {
-    id: 4,
-    type: 'project',
-    title: '研究摘要：城市绿地空间',
-    description: '基于五年调查数据的城市绿地空间数据分析。',
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
-    category: '研究',
-    location: '伦敦',
-    status: 'available',
-    author: { nickname: 'researcher', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=researcher' },
-    likes: 36,
-    comments: 5,
-    createdAt: new Date()
-  },
-  {
-    id: 5,
-    type: 'idea',
-    title: '一个没有压力的阅读社区',
-    description: '帮助人们收集和分享读书笔记的网页，不需要"完成"任何事情。',
-    image: null,
-    category: '社区',
-    location: '东京',
-    status: 'available',
-    author: { nickname: 'celine', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=celine' },
-    likes: 21,
-    comments: 4,
-    createdAt: new Date()
-  }
-];
-
 function Items() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,29 +17,23 @@ function Items() {
   });
 
   useEffect(() => {
-    // Mock API call
     setLoading(true);
-    setTimeout(() => {
-      let filtered = [...mockItems];
-      
-      if (filters.search) {
-        filtered = filtered.filter(item => 
-          item.title.includes(filters.search) ||
-          item.description.includes(filters.search)
-        );
-      }
-      
-      if (filters.category) {
-        filtered = filtered.filter(item => item.category === filters.category);
-      }
-      
-      if (filters.type) {
-        filtered = filtered.filter(item => item.type === filters.type);
-      }
-      
-      setItems(filtered);
-      setLoading(false);
-    }, 500);
+    const params = {};
+    if (filters.type) params.type = filters.type;
+    if (filters.category) params.category = filters.category;
+    if (filters.search) params.search = filters.search;
+    if (filters.sort) params.sort = filters.sort;
+
+    axios.get('/api/items', { params })
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        setItems(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setItems([]);
+        setLoading(false);
+      });
   }, [filters]);
 
   const handleFilterChange = (key, value) => {
@@ -263,7 +184,7 @@ function Items() {
           </div>
         ) : (
           viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map(item => (
                 <ContentCard key={item.id} item={item} viewMode="grid" />
               ))}

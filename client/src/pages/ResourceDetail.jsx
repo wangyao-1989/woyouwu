@@ -193,7 +193,7 @@ function ResourceDetail() {
               {resource.images.map((img, index) => (
                 <img
                   key={index}
-                  src={`http://localhost:5000${img}`}
+                  src={img}
                   alt={`Image ${index + 1}`}
                   className="w-full h-48 object-cover rounded-lg"
                 />

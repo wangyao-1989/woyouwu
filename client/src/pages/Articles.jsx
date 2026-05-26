@@ -191,10 +191,10 @@ function Articles() {
                 <Link
                   key={article._id}
                   to={`/articles/${article._id}`}
-                  className="bg-white rounded-card border border-[#E8E0D5] shadow-card overflow-hidden hover:shadow-lg transition group"
+                  className="bg-white rounded-card border border-[#E8E0D5] shadow-card overflow-hidden flex flex-col hover:shadow-lg transition group"
                 >
                   {article.cover ? (
-                    <div className="aspect-[3/4] overflow-hidden">
+                    <div className="aspect-video overflow-hidden">
                       <img
                         src={article.cover}
                         alt={article.title}
@@ -202,13 +202,13 @@ function Articles() {
                       />
                     </div>
                   ) : (
-                    <div className="aspect-[3/4] bg-gradient-to-br from-[#F5F0E8] to-[#E8E0D5] flex items-center justify-center">
+                    <div className="aspect-video bg-gradient-to-br from-[#F5F0E8] to-[#E8E0D5] flex items-center justify-center">
                       <svg className="w-12 h-12 text-[#C8BAAA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                       </svg>
                     </div>
                   )}
-                  <div className="p-5">
+                  <div className="p-5 flex flex-col flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getCategoryColor(article.category)}`}>
                         {article.category}
@@ -229,7 +229,7 @@ function Articles() {
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#E8E0D5]">
+                    <div className="mt-auto flex items-center justify-between pt-3 border-t border-[#E8E0D5]">
                       <div className="flex items-center space-x-1">
                         <img
                           src={article.owner?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${article.owner?.nickname || 'user'}`}

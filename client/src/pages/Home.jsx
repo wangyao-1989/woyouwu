@@ -3,80 +3,14 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import NewsCorner from '../components/NewsCorner';
 
-// 示例内容数据
-const mockContent = [
-  {
-    id: 1,
-    type: 'creation',
-    title: '我的个人网站 2024 全新改版',
-    description: '使用 Next.js + Tailwind 构建，干净现代的设计展示我的作品。',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'helen.dev',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=helen'
-    },
-    likes: 45,
-    comments: 8
-  },
-  {
-    id: 2,
-    type: 'idea',
-    title: '如果我们能把回忆变成可分享的文件呢？',
-    description: '洗澡时冒出的想法，不只是照片，还有感觉、想法、声音和瞬间。',
-    image: null,
-    author: {
-      nickname: 'raymond',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=raymond'
-    },
-    likes: 78,
-    comments: 12
-  },
-  {
-    id: 3,
-    type: 'stuff',
-    title: '富士拍立得 Mini 8 交换',
-    description: '成色不错，想交换书或者文具！',
-    image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'sarah.k',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=sarah'
-    },
-    likes: 12,
-    comments: 3
-  },
-  {
-    id: 4,
-    type: 'creation',
-    title: '研究报告：城市绿地空间分析',
-    description: '基于五年调查数据的城市绿地空间数据可视化分析。',
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&auto=format&fit=crop',
-    author: {
-      nickname: 'researcher',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=researcher'
-    },
-    likes: 36,
-    comments: 5
-  },
-  {
-    id: 5,
-    type: 'idea',
-    title: '一个没有压力的阅读社区',
-    description: '一个帮助人们收集和分享读书笔记的网站，不需要"完成"任何东西。',
-    image: null,
-    author: {
-      nickname: 'celine',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=celine'
-    },
-    likes: 21,
-    comments: 4
-  }
-];
-
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [videos, setVideos] = useState([]);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [items, setItems] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState(null);
   const videoIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -87,6 +21,24 @@ function Home() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setItemsLoading(true);
+    setItemsError(null);
+    axios.get('/api/items')
+      .then(res => {
+        console.log('[Home] API response type:', typeof res.data, 'isArray:', Array.isArray(res.data), 'raw:', res.data);
+        const data = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        console.log('[Home] items count:', data.length);
+        setItems(data);
+        setItemsLoading(false);
+      })
+      .catch(err => {
+        console.error('[Home] Failed to fetch items:', err);
+        setItemsError('加载物品失败：' + (err.message || '网络错误'));
+        setItemsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -104,7 +56,13 @@ function Home() {
       case 'idea':
         return { bg: 'bg-amber-50', text: 'text-amber-700', label: '灵感' };
       case 'stuff':
-        return { bg: 'bg-clay-50', text: 'text-clay-700', label: '好物' };
+        return { bg: 'bg-orange-50', text: 'text-orange-700', label: '好物' };
+      case 'article':
+        return { bg: 'bg-blue-50', text: 'text-blue-700', label: '文章' };
+      case 'project':
+        return { bg: 'bg-purple-50', text: 'text-purple-700', label: '项目' };
+      case 'achievement':
+        return { bg: 'bg-green-50', text: 'text-green-700', label: '成就' };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: '项目' };
     }
@@ -121,11 +79,11 @@ function Home() {
   };
 
   const filteredContent = activeFilter === 'all' 
-    ? mockContent 
-    : mockContent.filter(item => item.type === activeFilter);
+    ? items 
+    : items.filter(item => item.type === activeFilter);
 
   return (
-    <div className="min-h-screen bg-paper fade-in">
+    <div className="min-h-screen bg-cream-50 fade-in">
       {/* 主视觉区域 */}
       <section className="relative py-16 px-4 gradient-hero">
         <div className="max-w-6xl mx-auto">
@@ -317,21 +275,41 @@ function Home() {
       {/* 内容网格 */}
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
-          {viewMode === 'grid' ? (
+          {itemsLoading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-500">正在加载物品...</p>
+            </div>
+          ) : itemsError ? (
+            <div className="text-center py-16">
+              <p className="text-red-500 mb-2">{itemsError}</p>
+              <button
+                onClick={() => { setItemsLoading(true); setItemsError(null); axios.get('/api/items').then(r => { setItems(Array.isArray(r.data) ? r.data : (r.data.items || [])); setItemsLoading(false); }).catch(e => { setItemsError('重试失败'); setItemsLoading(false); }); }}
+                className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition"
+              >
+                点击重试
+              </button>
+            </div>
+          ) : filteredContent.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-gray-500 mb-2">还没有人发布物品，来做第一个吧！</p>
+              <Link to="/items/create" className="text-primary-500 hover:underline">立即发布 ✨</Link>
+            </div>
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredContent.map((item) => {
                 const typeStyle = getTypeStyle(item.type);
                 return (
                   <Link
-                    key={item.id}
-                    to={`/items/${item.id}`}
+                    key={item._id}
+                    to={`/items/${item._id}`}
                     className="bg-white rounded-2xl card-ring hover:card-ring-hover overflow-hidden transition-all duration-300 scale-hover group"
                   >
-                    {item.image ? (
+                    {item.images && item.images[0] ? (
                       <div className="aspect-video overflow-hidden">
                         <img
-                          src={item.image}
-                          alt={item.title}
+                          src={item.images[0]}
+                          alt={item.name}
                           width={640}
                           height={360}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -349,34 +327,34 @@ function Home() {
                         {typeStyle.label}
                       </span>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2 leading-snug">
-                        {item.title}
+                        {item.name}
                       </h3>
                       <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                        {item.description}
+                        {item.remark}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <img
-                            src={item.author.avatar}
-                            alt={item.author.nickname}
+                            src={item.owner?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner?.nickname}`}
+                            alt={item.owner?.nickname}
                             width={24}
                             height={24}
                             className="w-6 h-6 rounded-full bg-gray-200"
                           />
-                          <span className="text-sm text-gray-500">{item.author.nickname}</span>
+                          <span className="text-sm text-gray-500">{item.owner?.nickname || item.owner?.username}</span>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
                           <span className="flex items-center">
                             <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
-                            {item.likes}
+                            {item.likes?.length || 0}
                           </span>
                           <span className="flex items-center">
                             <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            {item.comments}
+                            {item.comments?.length || 0}
                           </span>
                         </div>
                       </div>
@@ -391,16 +369,16 @@ function Home() {
                 const typeStyle = getTypeStyle(item.type);
                 return (
                   <Link
-                    key={item.id}
-                    to={`/items/${item.id}`}
+                    key={item._id}
+                    to={`/items/${item._id}`}
                     className="bg-white rounded-2xl card-ring hover:card-ring-hover p-5 transition-all duration-300 scale-hover group"
                   >
                     <div className="flex gap-5">
-                      {item.image ? (
+                      {item.images && item.images[0] ? (
                         <div className="w-32 h-24 rounded-xl overflow-hidden flex-shrink-0">
                           <img
-                            src={item.image}
-                            alt={item.title}
+                            src={item.images[0]}
+                            alt={item.name}
                             width={128}
                             height={96}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -418,34 +396,34 @@ function Home() {
                           {typeStyle.label}
                         </span>
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {item.title}
+                          {item.name}
                         </h3>
                         <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {item.description}
+                          {item.remark}
                         </p>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <img
-                              src={item.author.avatar}
-                              alt={item.author.nickname}
+                              src={item.owner?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner?.nickname}`}
+                              alt={item.owner?.nickname}
                               width={24}
                               height={24}
                               className="w-6 h-6 rounded-full bg-gray-200"
                             />
-                            <span className="text-sm text-gray-500">{item.author.nickname}</span>
+                            <span className="text-sm text-gray-500">{item.owner?.nickname || item.owner?.username}</span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-400">
                             <span className="flex items-center">
                               <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                               </svg>
-                              {item.likes}
+                              {item.likes?.length || 0}
                             </span>
                             <span className="flex items-center">
                               <svg aria-hidden="true" className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
-                              {item.comments}
+                              {item.comments?.length || 0}
                             </span>
                           </div>
                         </div>
