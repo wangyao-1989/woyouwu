@@ -142,6 +142,16 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  pet: {
+    image: {
+      type: String,
+      default: ''
+    },
+    name: {
+      type: String,
+      default: '果果仁'
+    }
+  },
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Resource'

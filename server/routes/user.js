@@ -332,4 +332,82 @@ router.get('/:id/resume', async (req, res) => {
   }
 });
 
+router.post('/pet/image', auth, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请上传图片' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (user.pet.image && user.pet.image.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, '..', user.pet.image);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { 'pet.image': `/uploads/${req.file.filename}` } },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: '宠物图片更新成功', pet: updatedUser.pet });
+  } catch (error) {
+    console.error('Pet image update error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.put('/pet/name', auth, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || name.trim().length < 1 || name.trim().length > 20) {
+      return res.status(400).json({ message: '宠物名字长度必须在1-20个字符之间' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { 'pet.name': name.trim() } },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: '宠物名字更新成功', pet: updatedUser.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/pet/info', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('pet');
+    res.json({ pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.delete('/pet/image', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.pet.image && user.pet.image.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, '..', user.pet.image);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { 'pet.image': '' } },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: '宠物图片已删除', pet: updatedUser.pet });
+  } catch (error) {
+    console.error('Pet image delete error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;
