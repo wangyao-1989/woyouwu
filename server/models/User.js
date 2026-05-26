@@ -147,10 +147,20 @@ const userSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
+    walkGif: {
+      type: String,
+      default: ''
+    },
     name: {
       type: String,
       default: '果果仁'
-    }
+    },
+    videos: [{
+      filename: { type: String },
+      originalName: { type: String },
+      label: { type: String, default: '' },
+      createdAt: { type: Date, default: Date.now }
+    }]
   },
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,

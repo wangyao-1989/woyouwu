@@ -9,6 +9,9 @@ const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
+const { GIFEncoder, quantize, applyPalette } = require('gifenc');
+const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
@@ -407,6 +410,210 @@ router.delete('/pet/image', auth, async (req, res) => {
   } catch (error) {
     console.error('Pet image delete error:', error);
     res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/pet/video', auth, upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请上传视频' });
+    }
+
+    const { label } = req.body;
+    const user = await User.findById(req.user._id);
+
+    const videoEntry = {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      label: label || '',
+      createdAt: new Date()
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $push: { 'pet.videos': videoEntry } },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: '视频上传成功', pet: updatedUser.pet });
+  } catch (error) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('Pet video upload error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.get('/pet/videos', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('pet.videos');
+    res.json({ videos: user.pet.videos || [] });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.delete('/pet/video/:filename', auth, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const user = await User.findById(req.user._id);
+
+    const video = user.pet.videos.find(v => v.filename === filename);
+    if (video) {
+      const videoPath = path.join(__dirname, '../uploads', video.filename);
+      if (fs.existsSync(videoPath)) {
+        fs.unlinkSync(videoPath);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $pull: { 'pet.videos': { filename } } },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: '视频已删除', pet: updatedUser.pet });
+  } catch (error) {
+    console.error('Pet video delete error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/pet/walk-gif', auth, upload.single('walkGif'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请上传GIF' });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 'pet.walkGif': `/uploads/${req.file.filename}` },
+      { new: true }
+    ).select('-password');
+    res.json({ message: '走路动画上传成功', pet: updatedUser.pet });
+  } catch (error) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.delete('/pet/walk-gif', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.pet.walkGif) {
+      const oldPath = path.join(__dirname, '../uploads', path.basename(user.pet.walkGif));
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 'pet.walkGif': '' },
+      { new: true }
+    ).select('-password');
+    res.json({ message: '走路动画已删除', pet: updatedUser.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/pet/walk-gif/trim', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user.pet.walkGif) {
+      return res.status(400).json({ message: '请先上传走路GIF' });
+    }
+
+    const { startTime, endTime } = req.body;
+    const startSec = parseFloat(startTime);
+    const endSec = parseFloat(endTime);
+
+    if (isNaN(startSec) || isNaN(endSec) || startSec < 0 || endSec <= startSec) {
+      return res.status(400).json({ message: '请提供有效的时间范围' });
+    }
+
+    const inputPath = path.join(__dirname, '../uploads', path.basename(user.pet.walkGif));
+    if (!fs.existsSync(inputPath)) {
+      return res.status(404).json({ message: 'GIF文件不存在' });
+    }
+
+    const meta = await sharp(inputPath, { animated: true }).metadata();
+    const delays = Array.isArray(meta.delay) ? meta.delay : [meta.delay || 10];
+    const totalFrames = meta.pages || 1;
+
+    let timeAccum = 0;
+    let startFrame = 0;
+    let endFrame = totalFrames - 1;
+
+    for (let i = 0; i < totalFrames; i++) {
+      const frameDelay = (delays[i] || delays[0] || 10) / 100;
+      if (timeAccum + frameDelay > startSec && startFrame === 0) {
+        startFrame = i;
+      }
+      if (timeAccum + frameDelay >= endSec) {
+        endFrame = i;
+        break;
+      }
+      timeAccum += frameDelay;
+    }
+
+    if (endFrame <= startFrame) {
+      return res.status(400).json({ message: '裁剪范围太小，请调整时间' });
+    }
+
+    const frames = [];
+    const frameDelays = [];
+    let width = meta.width;
+    let height = meta.pageHeight || meta.height;
+
+    for (let i = startFrame; i <= endFrame; i++) {
+      const { data, info } = await sharp(inputPath, { animated: true, page: i })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      frames.push(data);
+      frameDelays.push(delays[i] || delays[0] || 10);
+      width = info.width;
+      height = info.height;
+    }
+
+    const palette = quantize(frames[0], 256, { format: 'rgba' });
+    const gif = GIFEncoder();
+
+    for (let i = 0; i < frames.length; i++) {
+      const indexed = applyPalette(frames[i], palette, 'rgba');
+      gif.writeFrame(indexed, width, height, {
+        palette,
+        delay: frameDelays[i],
+        transparent: true,
+      });
+    }
+
+    gif.finish();
+    const outputBuffer = Buffer.from(gif.bytes());
+
+    const ext = path.extname(user.pet.walkGif);
+    const newFilename = `${uuidv4()}${ext}`;
+    const outputPath = path.join(__dirname, '../uploads', newFilename);
+    fs.writeFileSync(outputPath, outputBuffer);
+
+    fs.unlinkSync(inputPath);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 'pet.walkGif': `/uploads/${newFilename}` },
+      { new: true }
+    ).select('-password');
+
+    res.json({
+      message: `GIF裁剪成功（保留第${startFrame + 1}-${endFrame + 1}帧，共${endFrame - startFrame + 1}帧）`,
+      pet: updatedUser.pet,
+    });
+  } catch (error) {
+    console.error('GIF trim error:', error);
+    res.status(500).json({ message: 'GIF裁剪失败：' + (error.message || '服务器错误') });
   }
 });
 

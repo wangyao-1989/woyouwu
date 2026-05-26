@@ -50,8 +50,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/news', newsRoutes);
 
-app.get('/', (req, res) => {
-  res.send('woyouwu API is running');
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 app.use(errorHandler);

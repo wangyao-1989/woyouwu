@@ -2,17 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const PET_POSITIONS = [
-  { bottom: '12px', right: '20px' },
-  { bottom: '60px', right: '120px' },
-  { bottom: '140px', right: '40px' },
-  { bottom: '30px', right: '220px' },
-  { bottom: '100px', right: '280px' },
-  { bottom: '50px', right: '160px' },
-  { bottom: '170px', right: '100px' },
-  { bottom: '12px', right: '300px' },
-];
-
 const PET_STATES = {
   IDLE: 'idle',
   BREATHING: 'breathing',
@@ -51,7 +40,7 @@ const ACTION_MESSAGES = {
 
 function PetWidget() {
   const { user: authUser, loading: authLoading } = useAuth();
-  const [posIndex, setPosIndex] = useState(0);
+
   const [petState, setPetState] = useState(PET_STATES.IDLE);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -60,41 +49,68 @@ function PetWidget() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isMoving, setIsMoving] = useState(false);
   const [faceIndex, setFaceIndex] = useState(0);
   const [tailWag, setTailWag] = useState(false);
   const [blinking, setBlinking] = useState(false);
   const [breathing, setBreathing] = useState(false);
   const [yawning, setYawning] = useState(false);
   const [scratchingEar, setScratchingEar] = useState(false);
-  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
   const [showThoughtBubble, setShowThoughtBubble] = useState(false);
   const [showHeadMessage, setShowHeadMessage] = useState('');
   const [isFrightened, setIsFrightened] = useState(false);
   const [isPlayingDead, setIsPlayingDead] = useState(false);
-  const [lastInteractionTime, setLastInteractionTime] = useState(Date.now());
-  const [isFollowingMouse, setIsFollowingMouse] = useState(false);
   const [petName, setPetName] = useState('果果仁');
   const [customPetImage, setCustomPetImage] = useState('');
+  const [walkGif, setWalkGif] = useState('');
   const [newPetName, setNewPetName] = useState('');
-  const [uploadMessage, setUploadMessage] = useState('');
   const [petInfoLoaded, setPetInfoLoaded] = useState(false);
-  
-  const chatEndRef = useRef(null);
+
+  const [wanderingEnabled, setWanderingEnabled] = useState(false);
+  const [petVideos, setPetVideos] = useState([]);
+  const [playingVideo, setPlayingVideo] = useState(null);
+  const [hearts, setHearts] = useState([]);
+  const [imageBounce, setImageBounce] = useState(false);
+  const [isWalking, setIsWalking] = useState(false);
+  const [facingRight, setFacingRight] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [gifTrimStart, setGifTrimStart] = useState('');
+  const [gifTrimEnd, setGifTrimEnd] = useState('');
+  const [trimming, setTrimming] = useState(false);
+
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
   const petRef = useRef(null);
+  const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  const posTimerRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const imgRef = useRef(null);
+
+  const animationRef = useRef(null);
+  const wanderTimerRef = useRef(null);
   const faceTimerRef = useRef(null);
   const blinkTimerRef = useRef(null);
   const tailTimerRef = useRef(null);
   const breathTimerRef = useRef(null);
   const yawnTimerRef = useRef(null);
   const scratchTimerRef = useRef(null);
-  const idleTimerRef = useRef(null);
+  const walkPhaseRef = useRef(0);
+
+  const posRef = useRef({ x: window.innerWidth - 140, y: window.innerHeight - 160 });
+  const velocityRef = useRef({ vx: 0, vy: 0 });
+  const targetRef = useRef({ x: window.innerWidth - 140, y: window.innerHeight - 160 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const isLoggedIn = !!authUser && !authLoading;
 
   useEffect(() => {
     if (authLoading) return;
-    
+
     const fetchPetInfo = async () => {
       if (authUser) {
         try {
@@ -102,6 +118,8 @@ function PetWidget() {
           const name = res.data.pet.name || '果果仁';
           setPetName(name);
           setCustomPetImage(res.data.pet.image || '');
+          setWalkGif(res.data.pet.walkGif || '');
+          setPetVideos(res.data.pet.videos || []);
           setMessages([{ role: 'pet', text: `喵~ 我是${name}！(=^ω^=) 有什么可以帮你的吗？` }]);
         } catch (err) {
           console.error('Failed to fetch pet info:', err);
@@ -109,6 +127,8 @@ function PetWidget() {
       } else {
         setPetName('果果仁');
         setCustomPetImage('');
+        setWalkGif('');
+        setPetVideos([]);
         setMessages([{ role: 'pet', text: '喵~ 我是果果仁！(=^ω^=) 有什么可以帮你的吗？' }]);
       }
       setPetInfoLoaded(true);
@@ -117,15 +137,98 @@ function PetWidget() {
   }, [authUser, authLoading]);
 
   useEffect(() => {
-    posTimerRef.current = setInterval(() => {
-      const now = Date.now();
-      if (now - lastInteractionTime > 15000 && petState === PET_STATES.IDLE) {
-        setIsMoving(true);
-        setTimeout(() => setIsMoving(false), 800);
-        setPosIndex(prev => (prev + 1) % PET_POSITIONS.length);
-      }
-    }, 5000);
+    const pickNewTarget = () => {
+      const margin = 60;
+      const maxX = window.innerWidth - 120;
+      const maxY = window.innerHeight - 140;
+      targetRef.current = {
+        x: margin + Math.random() * (maxX - margin * 2),
+        y: margin + Math.random() * (maxY - margin * 2),
+      };
+    };
 
+    const wanderLoop = () => {
+      if (!wanderingEnabled || isDraggingRef.current || isChatOpen || isSettingsOpen) {
+        animationRef.current = requestAnimationFrame(wanderLoop);
+        return;
+      }
+
+      const pos = posRef.current;
+      const target = targetRef.current;
+
+      const dx = target.x - pos.x;
+      const dy = target.y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 5) {
+        pickNewTarget();
+        velocityRef.current = { vx: 0, vy: 0 };
+      } else {
+        const maxSpeed = 0.8;
+        const ax = (dx / dist) * 0.04;
+        const ay = (dy / dist) * 0.04;
+
+        velocityRef.current = {
+          vx: Math.max(-maxSpeed, Math.min(maxSpeed, velocityRef.current.vx + ax)),
+          vy: Math.max(-maxSpeed, Math.min(maxSpeed, velocityRef.current.vy + ay)),
+        };
+
+        const friction = 0.96;
+        velocityRef.current = {
+          vx: velocityRef.current.vx * friction,
+          vy: velocityRef.current.vy * friction,
+        };
+
+        posRef.current = {
+          x: Math.max(10, Math.min(window.innerWidth - 120, pos.x + velocityRef.current.vx)),
+          y: Math.max(10, Math.min(window.innerHeight - 140, pos.y + velocityRef.current.vy)),
+        };
+      }
+
+      if (petRef.current) {
+        petRef.current.style.left = posRef.current.x + 'px';
+        petRef.current.style.top = posRef.current.y + 'px';
+      }
+
+      const speed = Math.abs(velocityRef.current.vx) + Math.abs(velocityRef.current.vy);
+      setIsWalking(speed > 0.1);
+
+      if (imgRef.current) {
+        if (speed > 0.1) {
+          walkPhaseRef.current += speed * 0.35;
+          const bounce = Math.abs(Math.sin(walkPhaseRef.current)) * 7;
+          imgRef.current.style.marginTop = `${-bounce}px`;
+        } else {
+          walkPhaseRef.current = 0;
+          imgRef.current.style.marginTop = '0px';
+        }
+      }
+
+      if (velocityRef.current.vx > 0.05) setFacingRight(true);
+      else if (velocityRef.current.vx < -0.05) setFacingRight(false);
+
+      animationRef.current = requestAnimationFrame(wanderLoop);
+    };
+
+    wanderTimerRef.current = setInterval(() => {
+      if (wanderingEnabled && !isDraggingRef.current && Math.random() > 0.4) {
+        const margin = 60;
+        targetRef.current = {
+          x: margin + Math.random() * (window.innerWidth - margin * 2 - 120),
+          y: margin + Math.random() * (window.innerHeight - margin * 2 - 140),
+        };
+      }
+    }, 4000 + Math.random() * 3000);
+
+    animationRef.current = requestAnimationFrame(wanderLoop);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (wanderTimerRef.current) clearInterval(wanderTimerRef.current);
+    };
+  }, [wanderingEnabled, isChatOpen, isSettingsOpen]);
+
+  useEffect(() => {
     faceTimerRef.current = setInterval(() => {
       if (petState === PET_STATES.IDLE) {
         setFaceIndex(prev => (prev + 1) % 3);
@@ -175,43 +278,90 @@ function PetWidget() {
       }
     }, 20000 + Math.random() * 10000);
 
-    idleTimerRef.current = setInterval(() => {
-      const now = Date.now();
-      if (now - lastInteractionTime > 30000 && petState === PET_STATES.IDLE) {
-        setIsMoving(true);
-        setTimeout(() => setIsMoving(false), 1000);
-        setPosIndex(prev => (prev + 1) % PET_POSITIONS.length);
-      }
-    }, 5000);
-
     return () => {
-      [posTimerRef, faceTimerRef, blinkTimerRef, tailTimerRef, breathTimerRef, yawnTimerRef, scratchTimerRef, idleTimerRef].forEach(ref => {
+      [faceTimerRef, blinkTimerRef, tailTimerRef, breathTimerRef, yawnTimerRef, scratchTimerRef].forEach(ref => {
         if (ref.current) clearInterval(ref.current);
       });
     };
-  }, [petState, lastInteractionTime]);
+  }, [petState]);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!petRef.current || isChatOpen || isSettingsOpen) return;
-      
+    const handleMouseDown = (e) => {
+      if (!petRef.current) return;
       const petRect = petRef.current.getBoundingClientRect();
-      const petCenterX = petRect.left + petRect.width / 2;
-      const petCenterY = petRect.top + petRect.height / 2;
-      
-      const dx = e.clientX - petCenterX;
-      const dy = e.clientY - petCenterY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance < 300) {
-        setIsFollowingMouse(true);
-        const maxOffset = 8;
-        const xOffset = Math.max(-maxOffset, Math.min(maxOffset, dx * 0.05));
-        const yOffset = Math.max(-maxOffset, Math.min(maxOffset, dy * 0.03));
-        setMouseOffset({ x: xOffset, y: yOffset });
-      } else {
-        setIsFollowingMouse(false);
-        setMouseOffset({ x: 0, y: 0 });
+      const mx = e.clientX;
+      const my = e.clientY;
+      if (
+        mx >= petRect.left &&
+        mx <= petRect.right &&
+        my >= petRect.top &&
+        my <= petRect.bottom
+      ) {
+        isDraggingRef.current = true;
+        dragStartRef.current = { x: mx, y: my };
+        dragOffsetRef.current = {
+          x: posRef.current.x - mx,
+          y: posRef.current.y - my,
+        };
+        setWanderingEnabled(false);
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      posRef.current = {
+        x: Math.max(10, Math.min(window.innerWidth - 120, e.clientX + dragOffsetRef.current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - 140, e.clientY + dragOffsetRef.current.y)),
+      };
+      if (petRef.current) {
+        petRef.current.style.left = posRef.current.x + 'px';
+        petRef.current.style.top = posRef.current.y + 'px';
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+      }
+    };
+
+    const handleTouchStart = (e) => {
+      if (!petRef.current || e.touches.length !== 1) return;
+      const petRect = petRef.current.getBoundingClientRect();
+      const tx = e.touches[0].clientX;
+      const ty = e.touches[0].clientY;
+      if (
+        tx >= petRect.left &&
+        tx <= petRect.right &&
+        ty >= petRect.top &&
+        ty <= petRect.bottom
+      ) {
+        isDraggingRef.current = true;
+        dragStartRef.current = { x: tx, y: ty };
+        dragOffsetRef.current = {
+          x: posRef.current.x - tx,
+          y: posRef.current.y - ty,
+        };
+        setWanderingEnabled(false);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isDraggingRef.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      posRef.current = {
+        x: Math.max(10, Math.min(window.innerWidth - 120, e.touches[0].clientX + dragOffsetRef.current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - 140, e.touches[0].clientY + dragOffsetRef.current.y)),
+      };
+      if (petRef.current) {
+        petRef.current.style.left = posRef.current.x + 'px';
+        petRef.current.style.top = posRef.current.y + 'px';
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
       }
     };
 
@@ -225,11 +375,21 @@ function PetWidget() {
       }
     };
 
+    window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isChatOpen, isSettingsOpen]);
@@ -240,10 +400,20 @@ function PetWidget() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (playingVideo && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [playingVideo]);
+
   const handlePetClick = useCallback((part) => {
-    setLastInteractionTime(Date.now());
-    setIsFollowingMouse(false);
-    setMouseOffset({ x: 0, y: 0 });
+    if (isDraggingRef.current) return;
+
+    if (petVideos.length > 0 && part !== 'chat' && part !== 'settings') {
+      const randomVideo = petVideos[Math.floor(Math.random() * petVideos.length)];
+      setPlayingVideo(randomVideo);
+      setTimeout(() => setPlayingVideo(null), 8000);
+    }
 
     if (part === 'chat') {
       setIsChatOpen(true);
@@ -257,10 +427,16 @@ function PetWidget() {
 
     const msgs = ACTION_MESSAGES[part] || ACTION_MESSAGES.body;
     const randomMessage = msgs[Math.floor(Math.random() * msgs.length)];
-    
+
     setShowHeadMessage(randomMessage);
     setPetState(PET_STATES.TALKING);
-    
+    setImageBounce(true);
+    setTimeout(() => setImageBounce(false), 400);
+
+    const heartId = Date.now();
+    setHearts(prev => [...prev, { id: heartId, x: 0, y: -20 }]);
+    setTimeout(() => setHearts(prev => prev.filter(h => h.id !== heartId)), 1200);
+
     setTimeout(() => {
       setShowHeadMessage('');
       setPetState(PET_STATES.HAPPY);
@@ -271,7 +447,7 @@ function PetWidget() {
       setTailWag(true);
       setTimeout(() => setTailWag(false), 800);
     }
-  }, []);
+  }, [petVideos]);
 
   const handleChat = async () => {
     const trimmed = input.trim();
@@ -290,7 +466,7 @@ function PetWidget() {
       setPetState(PET_STATES.TALKING);
       setShowHeadMessage(responseText.length > 30 ? responseText.substring(0, 30) + '...' : responseText);
       setMessages(prev => [...prev, { role: 'pet', text: responseText }]);
-      
+
       setTimeout(() => {
         setShowHeadMessage('');
         setPetState(PET_STATES.IDLE);
@@ -301,7 +477,7 @@ function PetWidget() {
       setPetState(PET_STATES.TALKING);
       setMessages(prev => [...prev, { role: 'pet', text: errorMsg }]);
       setShowHeadMessage(errorMsg);
-      
+
       setTimeout(() => {
         setShowHeadMessage('');
         setPetState(PET_STATES.IDLE);
@@ -315,50 +491,86 @@ function PetWidget() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('图片大小不能超过20MB', 'error');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      const res = await axios.post('/api/users/pet/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/users/pet/image', formData);
       setCustomPetImage(res.data.pet.image);
-      setUploadMessage('图片上传成功！');
-      setTimeout(() => setUploadMessage(''), 2000);
+      showToast('✅ 图片上传成功！', 'success');
     } catch (err) {
-      setUploadMessage('上传失败，请重试');
-      setTimeout(() => setUploadMessage(''), 2000);
+      const errorMsg = err.response?.data?.message || err.message || '上传失败，请重试';
+      showToast('❌ ' + errorMsg, 'error');
+    }
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      showToast('视频大小不能超过50MB', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('label', file.name.replace(/\.[^/.]+$/, ''));
+
+    try {
+      const res = await axios.post('/api/users/pet/video', formData);
+      setPetVideos(res.data.pet.videos || []);
+      showToast('✅ 视频上传成功！', 'success');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || '上传失败，请重试';
+      showToast('❌ ' + errorMsg, 'error');
+    }
+  };
+
+  const handleDeleteVideo = async (filename) => {
+    try {
+      const res = await axios.delete(`/api/users/pet/video/${filename}`);
+      setPetVideos(res.data.pet.videos || []);
+      if (playingVideo?.filename === filename) setPlayingVideo(null);
+    } catch (err) {
+      console.error('Failed to delete video:', err);
     }
   };
 
   const handleNameChange = async () => {
     if (!newPetName.trim()) return;
-    
+
     try {
       const res = await axios.put('/api/users/pet/name', { name: newPetName });
       setPetName(res.data.pet.name);
       setNewPetName('');
-      setUploadMessage('名字修改成功！');
-      setTimeout(() => setUploadMessage(''), 2000);
+      showToast('✅ 名字修改成功！', 'success');
     } catch (err) {
-      setUploadMessage('修改失败，请重试');
-      setTimeout(() => setUploadMessage(''), 2000);
+      showToast('❌ 修改失败，请重试', 'error');
     }
   };
 
   const handleResetPet = async () => {
     try {
       await axios.put('/api/users/pet/name', { name: '果果仁' });
-      try {
-        await axios.delete('/api/users/pet/image');
-      } catch (e) {}
+      try { await axios.delete('/api/users/pet/image'); } catch (e) {}
+      try { await axios.delete('/api/users/pet/walk-gif'); } catch (e) {}
+      for (const v of petVideos) {
+        try { await axios.delete(`/api/users/pet/video/${v.filename}`); } catch (e) {}
+      }
       setCustomPetImage('');
+      setWalkGif('');
       setPetName('果果仁');
-      setUploadMessage('已恢复默认宠物！');
-      setTimeout(() => setUploadMessage(''), 2000);
+      setPetVideos([]);
+      setPlayingVideo(null);
+      showToast('✅ 已恢复默认宠物！', 'success');
     } catch (err) {
-      setUploadMessage('重置失败');
-      setTimeout(() => setUploadMessage(''), 2000);
+      showToast('❌ 重置失败', 'error');
     }
   };
 
@@ -368,28 +580,52 @@ function PetWidget() {
     return path;
   };
 
-  const currentPos = PET_POSITIONS[posIndex];
-  const isLoggedIn = !!authUser && !authLoading;
+  const getVideoUrl = (filename) => {
+    if (!filename) return '';
+    return `/uploads/${filename}`;
+  };
 
-  if (authLoading) return null;
+  const handleGifTrim = async () => {
+    const start = parseFloat(gifTrimStart);
+    const end = parseFloat(gifTrimEnd);
+    if (isNaN(start) || isNaN(end) || start < 0 || end <= start) {
+      showToast('请输入有效的时间范围（结束时间需大于开始时间）', 'error');
+      return;
+    }
+    setTrimming(true);
+    try {
+      const res = await axios.post('/api/users/pet/walk-gif/trim', {
+        startTime: start,
+        endTime: end,
+      });
+      setWalkGif(res.data.pet.walkGif);
+      setGifTrimStart('');
+      setGifTrimEnd('');
+      showToast('✂️ ' + (res.data.message || 'GIF裁剪成功！'), 'success');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || '裁剪失败';
+      showToast('❌ ' + errorMsg, 'error');
+    } finally {
+      setTrimming(false);
+    }
+  };
+
+  if (authLoading || !petInfoLoaded) return null;
 
   return (
     <>
       <div
         ref={petRef}
-        className="fixed z-50 cursor-pointer select-none"
+        className="fixed z-50 select-none"
         style={{
-          ...currentPos,
-          transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          transform: isMoving 
-            ? 'translateY(-10px) rotate(-5deg) scale(1.05)' 
-            : isPlayingDead 
-              ? 'translateY(5px) rotate(180deg)' 
-              : 'translateY(0) rotate(0deg)',
+          left: posRef.current.x,
+          top: posRef.current.y,
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          transition: (isDraggingRef.current || !wanderingEnabled) ? 'none' : 'none',
         }}
-        title={`${petName} - 按 P 键聊天`}
+        title={`${petName} - 拖拽移动 | 点击互动 | 按 P 键聊天`}
       >
-        <div className="relative">
+        <div className="relative" onClick={() => handlePetClick('chat')}>
           {showThoughtBubble && (
             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-white rounded-xl px-3 py-2 shadow-lg border border-gray-200 animate-pulse">
               <span className="text-gray-600 text-sm">...</span>
@@ -408,43 +644,76 @@ function PetWidget() {
             </div>
           )}
 
+          {playingVideo && (
+            <div className="absolute -top-40 left-1/2 transform -translate-x-1/2 bg-black rounded-xl overflow-hidden shadow-2xl border-2 border-orange-400 z-20"
+              style={{ width: '160px', height: '120px' }}>
+              <video
+                ref={videoRef}
+                src={getVideoUrl(playingVideo.filename)}
+                className="w-full h-full object-cover"
+                muted
+                loop
+                playsInline
+                onEnded={() => setPlayingVideo(null)}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); setPlayingVideo(null); }}
+                className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs flex items-center justify-center hover:bg-black/80"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {customPetImage ? (
-            <img
-              src={getImageUrl(customPetImage)}
-              alt={petName}
-              width="100"
-              height="95"
-              className={`drop-shadow-lg transition-all duration-300 ${isFrightened ? 'scale-110' : 'scale-100'} object-contain`}
-              style={{ 
-                filter: isFrightened ? 'drop-shadow(0 8px 16px rgba(255,0,0,0.3))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
-                transform: `translate(${mouseOffset.x}px, ${mouseOffset.y}px)`,
-                borderRadius: '12px'
-              }}
-            />
+            <div className="relative inline-block" style={{
+              filter: isFrightened ? 'drop-shadow(0 8px 16px rgba(255,0,0,0.3))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
+            }}>
+              <img
+                ref={imgRef}
+                src={getImageUrl(walkGif || customPetImage)}
+                alt={petName}
+                width="150"
+                height="140"
+                className={`object-contain ${isFrightened ? 'scale-110' : 'scale-100'}`}
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '140px',
+                  transform: `scaleX(${facingRight ? 1 : -1})`,
+                  transition: 'transform 0.15s ease-out, margin-top 0.2s ease-out',
+                  animation: imageBounce ? 'petBounce 0.4s ease-out' : ((!isWalking || !walkGif) && breathing ? 'petBreathing 2s ease-in-out' : 'none'),
+                }}
+                draggable="false"
+              />
+              {hearts.map(h => (
+                <div key={h.id} className="absolute pointer-events-none"
+                  style={{
+                    left: '50%', top: '50%',
+                    transform: `translate(${h.x}px, ${h.y}px)`,
+                    animation: 'heartFloat 1.2s ease-out forwards',
+                    fontSize: '18px',
+                  }}>
+                  {['❤️', '💕', '💖'][h.id % 3]}
+                </div>
+              ))}
+            </div>
           ) : (
             <svg
               viewBox="0 0 220 190"
               width="110"
               height="95"
               className={`drop-shadow-lg transition-all duration-300 ${isFrightened ? 'scale-110' : 'scale-100'}`}
-              style={{ 
+              style={{
                 filter: isFrightened ? 'drop-shadow(0 8px 16px rgba(255,0,0,0.3))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
-                transform: `translate(${mouseOffset.x}px, ${mouseOffset.y}px)`
               }}
             >
-              <defs>
-                <filter id="fluffy" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
-                </filter>
-              </defs>
-
               {isFrightened && (
-                <g>
+                <>
                   <circle cx="5" cy="40" r="10" fill="#f59e0b" opacity="0.5" />
                   <circle cx="5" cy="60" r="7" fill="#f59e0b" opacity="0.4" />
                   <circle cx="215" cy="40" r="10" fill="#f59e0b" opacity="0.5" />
                   <circle cx="215" cy="60" r="7" fill="#f59e0b" opacity="0.4" />
-                </g>
+                </>
               )}
 
               <g style={{
@@ -452,17 +721,8 @@ function PetWidget() {
                 transition: 'transform 0.3s ease-in-out',
                 transform: tailWag ? 'rotate(-30deg)' : 'rotate(-5deg)'
               }}>
-                <path
-                  d="M190 110 Q215 85 230 55 Q235 42 225 38 Q210 34 212 55 Q208 78 195 105"
-                  fill="#fcd34d"
-                  stroke="#f59e0b"
-                  strokeWidth="1"
-                />
-                <path
-                  d="M225 42 Q222 36 228 38"
-                  fill="#fffbeb"
-                  stroke="none"
-                />
+                <path d="M190 110 Q215 85 230 55 Q235 42 225 38 Q210 34 212 55 Q208 78 195 105" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
+                <path d="M225 42 Q222 36 228 38" fill="#fffbeb" stroke="none" />
               </g>
 
               <ellipse cx="70" cy="170" rx="18" ry="12" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
@@ -470,13 +730,11 @@ function PetWidget() {
               <ellipse cx="70" cy="174" rx="12" ry="7" fill="#fffbeb" />
               <ellipse cx="115" cy="174" rx="12" ry="7" fill="#fffbeb" />
 
-              <ellipse 
-                cx="85" cy="125" rx="48" ry={breathing ? 38 : 34} 
-                fill="#fcd34d" stroke="#f59e0b" strokeWidth="1.5"
-                style={{ transition: 'ry 0.5s ease-in-out' }}
-              />
-              <ellipse cx="82" cy="130" rx="30" ry={breathing ? 24 : 21} fill="#fffbeb" style={{ transition: 'ry 0.5s ease-in-out' }} />
-              
+              <ellipse cx="85" cy="125" rx="48" ry={breathing ? 38 : 34} fill="#fcd34d" stroke="#f59e0b" strokeWidth="1.5"
+                style={{ transition: 'ry 0.5s ease-in-out' }} />
+              <ellipse cx="82" cy="130" rx="30" ry={breathing ? 24 : 21} fill="#fffbeb"
+                style={{ transition: 'ry 0.5s ease-in-out' }} />
+
               <path d="M105 95 Q108 100 105 105" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
               <path d="M112 105 Q115 110 112 115" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
               <path d="M108 117 Q111 122 108 127" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
@@ -500,44 +758,27 @@ function PetWidget() {
 
                 <ellipse cx="65" cy="92" rx="26" ry="20" fill="#fffbeb" />
 
-                <g style={{ transform: isFollowingMouse ? `translate(${mouseOffset.x * 0.4}px, ${mouseOffset.y * 0.2}px)` : 'translate(0, 0)' }}>
-                  <ellipse cx="48" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937" style={{ transition: 'all 0.1s' }} />
-                  <ellipse cx="82" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937" style={{ transition: 'all 0.1s' }} />
-                  {!blinking && !yawning && (
-                    <>
-                      <circle cx="51" cy="75" r="4" fill="white" />
-                      <circle cx="85" cy="75" r="4" fill="white" />
-                      <circle cx="53" cy="74" r="1.5" fill="#1f2937" />
-                      <circle cx="87" cy="74" r="1.5" fill="#1f2937" />
-                    </>
-                  )}
-                </g>
+                <ellipse cx="48" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937"
+                  style={{ transition: 'all 0.1s' }} />
+                <ellipse cx="82" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937"
+                  style={{ transition: 'all 0.1s' }} />
+                {!blinking && !yawning && (
+                  <>
+                    <circle cx="51" cy="75" r="4" fill="white" />
+                    <circle cx="85" cy="75" r="4" fill="white" />
+                    <circle cx="53" cy="74" r="1.5" fill="#1f2937" />
+                    <circle cx="87" cy="74" r="1.5" fill="#1f2937" />
+                  </>
+                )}
 
                 <ellipse cx="65" cy="94" rx="5" ry="3.5" fill="#f97316" />
 
                 {yawning ? (
-                  <path
-                    d="M65 98 Q58 115 48 108 Q65 125 82 108 Q72 115 65 98"
-                    fill="#78350f"
-                    stroke="#572d0a"
-                    strokeWidth="1.2"
-                  />
+                  <path d="M65 98 Q58 115 48 108 Q65 125 82 108 Q72 115 65 98" fill="#78350f" stroke="#572d0a" strokeWidth="1.2" />
                 ) : (
                   <>
-                    <path
-                      d={`M65 96 Q56 ${104 + (faceIndex % 2) * 3} 52 100`}
-                      fill="none"
-                      stroke="#9a3412"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d={`M65 96 Q74 ${104 + (faceIndex % 2) * 3} 78 100`}
-                      fill="none"
-                      stroke="#9a3412"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
+                    <path d={`M65 96 Q56 ${104 + (faceIndex % 2) * 3} 52 100`} fill="none" stroke="#9a3412" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d={`M65 96 Q74 ${104 + (faceIndex % 2) * 3} 78 100`} fill="none" stroke="#9a3412" strokeWidth="1.5" strokeLinecap="round" />
                   </>
                 )}
 
@@ -571,60 +812,35 @@ function PetWidget() {
                 </g>
               )}
 
-              <g className="absolute" style={{ top: '0', left: '0' }}>
-                <rect 
-                  x="25" y="45" width="30" height="40" 
-                  fill="transparent" 
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('ear'); }}
-                  className="cursor-pointer"
-                />
-                <rect 
-                  x="35" y="75" width="50" height="35" 
-                  fill="transparent" 
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('head'); }}
-                  className="cursor-pointer"
-                />
-                <rect 
-                  x="60" y="110" width="55" height="45" 
-                  fill="transparent" 
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('body'); }}
-                  className="cursor-pointer"
-                />
-                <rect 
-                  x="180" y="80" width="35" height="45" 
-                  fill="transparent" 
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('tail'); }}
-                  className="cursor-pointer"
-                />
+              <g style={{ pointerEvents: 'all' }}>
+                <rect x="25" y="45" width="30" height="40" fill="rgba(0,0,0,0.01)"
+                  onClick={(e) => { e.stopPropagation(); handlePetClick('ear'); }} className="cursor-pointer" />
+                <rect x="35" y="75" width="50" height="35" fill="rgba(0,0,0,0.01)"
+                  onClick={(e) => { e.stopPropagation(); handlePetClick('head'); }} className="cursor-pointer" />
+                <rect x="60" y="110" width="55" height="45" fill="rgba(0,0,0,0.01)"
+                  onClick={(e) => { e.stopPropagation(); handlePetClick('body'); }} className="cursor-pointer" />
+                <rect x="180" y="80" width="35" height="45" fill="rgba(0,0,0,0.01)"
+                  onClick={(e) => { e.stopPropagation(); handlePetClick('tail'); }} className="cursor-pointer" />
               </g>
             </svg>
           )}
 
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full border-2 border-white animate-pulse"></span>
-            <button
-              onClick={(e) => { e.stopPropagation(); handlePetClick('settings'); }}
-              className="absolute -top-3 -left-3 w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-sm hover:from-blue-500 hover:to-blue-700 hover:scale-110 transition-all z-10"
-              title="宠物设置"
-            >
-              ⚙
-            </button>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
+            {petVideos.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full border-2 border-white animate-pulse"
+                style={{ pointerEvents: 'auto' }} title={`${petVideos.length}个交互视频`}></span>
+            )}
           </div>
         </div>
       </div>
 
       {isChatOpen && (
-        <div className="fixed bottom-24 right-4 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden" style={{ maxHeight: '450px' }}>
+        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+          style={{ maxHeight: '450px' }}>
           <div className="bg-gradient-to-r from-amber-500 to-orange-400 text-white px-4 py-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {customPetImage ? (
-                <img
-                  src={getImageUrl(customPetImage)}
-                  alt={petName}
-                  width="32"
-                  height="32"
-                  className="rounded-full object-cover"
-                />
+                <img src={getImageUrl(customPetImage)} alt={petName} width="32" height="32" className="rounded-full object-cover" />
               ) : (
                 <svg viewBox="0 0 40 40" width="32" height="32">
                   <ellipse cx="20" cy="22" rx="15" ry="13" fill="#f59e0b" />
@@ -647,14 +863,23 @@ function PetWidget() {
                 <p className="text-xs text-orange-100">我有物 · 吉祥物 | 按 P 关闭</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="text-white hover:text-orange-200 transition"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => { setIsChatOpen(false); setIsSettingsOpen(true); }}
+                className="text-white hover:text-orange-200 transition p-1 rounded-full hover:bg-white/10"
+                title="宠物设置"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-orange-200 transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className="p-3 h-64 overflow-y-auto bg-orange-50/30">
@@ -663,13 +888,7 @@ function PetWidget() {
                 {msg.role === 'pet' && (
                   <div className="flex-shrink-0 mr-1 mt-0.5">
                     {customPetImage ? (
-                      <img
-                        src={getImageUrl(customPetImage)}
-                        alt={petName}
-                        width="22"
-                        height="22"
-                        className="rounded-full object-cover"
-                      />
+                      <img src={getImageUrl(customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                     ) : (
                       <svg viewBox="0 0 24 24" width="22" height="22">
                         <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
@@ -687,13 +906,11 @@ function PetWidget() {
                     )}
                   </div>
                 )}
-                <div
-                  className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-orange-400 text-white rounded-br-md'
-                      : 'bg-white text-gray-700 rounded-bl-md border border-orange-200'
-                  }`}
-                >
+                <div className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-orange-400 text-white rounded-br-md'
+                    : 'bg-white text-gray-700 rounded-bl-md border border-orange-200'
+                }`}>
                   {msg.text}
                 </div>
               </div>
@@ -702,13 +919,7 @@ function PetWidget() {
               <div className="flex mb-3">
                 <div className="flex-shrink-0 mr-1">
                   {customPetImage ? (
-                    <img
-                      src={getImageUrl(customPetImage)}
-                      alt={petName}
-                      width="22"
-                      height="22"
-                      className="rounded-full object-cover"
-                    />
+                    <img src={getImageUrl(customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                   ) : (
                     <svg viewBox="0 0 24 24" width="22" height="22">
                       <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
@@ -754,16 +965,13 @@ function PetWidget() {
       )}
 
       {isSettingsOpen && (
-        <div className="fixed bottom-24 right-4 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-400 text-white px-4 py-3 flex items-center justify-between">
+        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-400 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
             <div>
               <p className="font-semibold text-sm">宠物设置</p>
               <p className="text-xs text-blue-100">按 P 关闭</p>
             </div>
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="text-white hover:text-blue-200 transition"
-            >
+            <button onClick={() => setIsSettingsOpen(false)} className="text-white hover:text-blue-200 transition">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -779,7 +987,7 @@ function PetWidget() {
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-gray-700 mb-1">登录后可自定义宠物</p>
-                <p className="text-xs text-gray-500">登录后可以上传图片和修改名字</p>
+                <p className="text-xs text-gray-500">登录后可以上传图片、视频和修改名字</p>
                 <button
                   onClick={() => { setIsSettingsOpen(false); window.location.href = '/login'; }}
                   className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition text-sm"
@@ -789,37 +997,130 @@ function PetWidget() {
               </div>
             ) : (
               <>
-                {uploadMessage && (
-                  <div className={`text-center text-sm py-2 rounded-lg ${uploadMessage.includes('成功') ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                    {uploadMessage}
-                  </div>
-                )}
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">上传宠物图片</label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="pet-image-upload"
-                  />
-                  <label
-                    htmlFor="pet-image-upload"
-                    className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition"
-                  >
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="pet-image-upload" />
+                  <label htmlFor="pet-image-upload"
+                    className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <span className="text-sm text-gray-500 mt-1">点击上传图片</span>
                   </label>
                   {customPetImage && (
-                    <img
-                      src={getImageUrl(customPetImage)}
-                      alt="当前宠物"
-                      className="mt-2 w-full h-24 object-contain rounded-lg bg-gray-100"
-                    />
+                    <img src={getImageUrl(customPetImage)} alt="当前宠物" className="mt-2 w-full h-24 object-contain rounded-lg" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">上传走路GIF动画 🚶</label>
+                  <input type="file" accept="image/gif" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 100 * 1024 * 1024) {
+                      showToast('GIF大小不能超过100MB', 'error');
+                      return;
+                    }
+                    const formData = new FormData();
+                    formData.append('walkGif', file);
+                    try {
+                      const res = await axios.post('/api/users/pet/walk-gif', formData);
+                      setWalkGif(res.data.pet.walkGif);
+                      showToast('✅ 走路GIF上传成功！', 'success');
+                    } catch (err) {
+                      const errorMsg = err.response?.data?.message || err.message || '上传失败';
+                      showToast('❌ ' + errorMsg, 'error');
+                    }
+                  }} className="hidden" id="pet-walk-gif-upload" />
+                  <label htmlFor="pet-walk-gif-upload"
+                    className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:bg-orange-50 transition">
+                    <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-xs text-gray-500 mt-1">上传GIF（猫走路动画，≤10MB）</span>
+                  </label>
+                  {walkGif && (
+                    <div className="mt-2 flex items-center justify-between bg-orange-50 rounded-lg px-2 py-1.5">
+                      <div className="flex items-center space-x-2">
+                        <img src={getImageUrl(walkGif)} alt="走路GIF" className="w-8 h-8 object-contain rounded" />
+                        <span className="text-xs text-gray-600">走路动画已设置</span>
+                      </div>
+                      <button onClick={async () => {
+                        try {
+                          await axios.delete('/api/users/pet/walk-gif');
+                          setWalkGif('');
+                          showToast('✅ 走路动画已删除', 'success');
+                        } catch (err) {
+                          showToast('❌ 删除失败', 'error');
+                        }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                  {walkGif && (
+                    <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                      <p className="text-xs font-medium text-blue-700 mb-2">✂️ 裁剪GIF长度</p>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          value={gifTrimStart}
+                          onChange={e => setGifTrimStart(e.target.value)}
+                          placeholder="起始(秒)"
+                          step="0.1"
+                          min="0"
+                          className="w-1/2 px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
+                        />
+                        <span className="text-xs text-gray-400">~</span>
+                        <input
+                          type="number"
+                          value={gifTrimEnd}
+                          onChange={e => setGifTrimEnd(e.target.value)}
+                          placeholder="结束(秒)"
+                          step="0.1"
+                          min="0"
+                          className="w-1/2 px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
+                        />
+                        <button
+                          onClick={handleGifTrim}
+                          disabled={trimming || !gifTrimStart || !gifTrimEnd}
+                          className="px-2 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium whitespace-nowrap"
+                        >
+                          {trimming ? '裁剪中...' : '裁剪'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">上传交互视频</label>
+                  <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/ogg" onChange={handleVideoUpload} className="hidden" id="pet-video-upload" />
+                  <label htmlFor="pet-video-upload"
+                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm text-gray-500 mt-1">点击上传视频（MP4/WebM，≤50MB）</span>
+                  </label>
+                  {petVideos.length > 0 && (
+                    <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                      {petVideos.map((v, i) => (
+                        <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                          <div className="flex items-center space-x-2 min-w-0">
+                            <svg className="w-4 h-4 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
+                            <span className="text-xs text-gray-600 truncate">{v.originalName || v.filename}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteVideo(v.filename)}
+                            className="text-red-400 hover:text-red-600 text-xs flex-shrink-0 ml-1"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -834,10 +1135,8 @@ function PetWidget() {
                       className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 text-sm"
                       maxLength={20}
                     />
-                    <button
-                      onClick={handleNameChange}
-                      className="px-3 py-2 bg-blue-400 text-white rounded-xl hover:bg-blue-500 transition text-sm"
-                    >
+                    <button onClick={handleNameChange}
+                      className="px-3 py-2 bg-blue-400 text-white rounded-xl hover:bg-blue-500 transition text-sm">
                       保存
                     </button>
                   </div>
@@ -860,7 +1159,43 @@ function PetWidget() {
           0%, 100% { transform: rotate(-10deg); }
           50% { transform: rotate(10deg); }
         }
+        @keyframes petBounce {
+          0% { transform: translateY(0) scale(1); }
+          30% { transform: translateY(-14px) scale(1.08); }
+          60% { transform: translateY(-4px) scale(0.96); }
+          100% { transform: translateY(0) scale(1); }
+        }
+        @keyframes petBreathing {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+        @keyframes petWalk {
+          0%, 100% { transform: translateY(0) rotate(-1deg); }
+          15% { transform: translateY(-6px) rotate(-2deg); }
+          35% { transform: translateY(-2px) rotate(0deg); }
+          65% { transform: translateY(-5px) rotate(2deg); }
+          85% { transform: translateY(-1px) rotate(0deg); }
+        }
+        @keyframes heartFloat {
+          0% { opacity: 1; transform: translate(0, 0) scale(1); }
+          40% { opacity: 1; transform: translate(-15px, -50px) scale(1.3); }
+          100% { opacity: 0; transform: translate(-25px, -80px) scale(0.5); }
+        }
+        @keyframes toastIn {
+          0% { opacity: 0; transform: translate(-50%, -20px); }
+          100% { opacity: 1; transform: translate(-50%, 0); }
+        }
       `}</style>
+
+      {toast && (
+        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-lg text-sm font-medium animate-[toastIn_0.3s_ease-out] pointer-events-none ${
+          toast.type === 'success' ? 'bg-green-500 text-white' :
+          toast.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
     </>
   );
 }
