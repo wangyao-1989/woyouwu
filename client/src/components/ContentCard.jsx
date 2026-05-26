@@ -8,7 +8,27 @@ const tagStyles = {
   stuff:       { bg: '#E0F0E0', color: '#4a7a4a', label: '闲置交换' },
 };
 
-function ContentCard({ item, viewMode = 'grid' }) {
+function normalize(item) {
+  return {
+    id: item._id || item.id,
+    type: item.type,
+    title: item.name || item.title || '',
+    image: (item.images && item.images[0]) || item.image || null,
+    description: item.remark || item.description || '',
+    category: item.category || '',
+    location: item.location || '',
+    status: item.status || '',
+    author: item.owner
+      ? { nickname: item.owner.nickname || item.owner.username || '', avatar: item.owner.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner.nickname || item.owner.username || 'user'}` }
+      : item.author || { nickname: '', avatar: '' },
+    likes: typeof item.likes === 'number' ? item.likes : (Array.isArray(item.likes) ? item.likes.length : 0),
+    comments: typeof item.comments === 'number' ? item.comments : (Array.isArray(item.comments) ? item.comments.length : 0),
+    createdAt: item.createdAt,
+  };
+}
+
+function ContentCard({ item: rawItem, viewMode = 'grid' }) {
+  const item = normalize(rawItem);
   const tag = tagStyles[item.type] || { bg: '#E8E0D5', color: '#8B7355', label: '项目' };
 
   const getDefaultEmoji = () => {
@@ -26,10 +46,10 @@ function ContentCard({ item, viewMode = 'grid' }) {
     return (
       <Link
         to={`/items/${item.id}`}
-        className="card-sketch flex gap-5 p-5"
+        className="bg-white rounded-card border border-[#E8E0D5] shadow-card flex gap-5 p-5 hover:shadow-lg transition"
       >
         {item.image ? (
-          <div className="w-32 h-24 rounded-mini overflow-hidden flex-shrink-0">
+          <div className="w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
             <img
               src={item.image}
               alt={item.title}
@@ -38,7 +58,7 @@ function ContentCard({ item, viewMode = 'grid' }) {
             />
           </div>
         ) : (
-          <div className="w-32 h-24 rounded-mini bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD] flex items-center justify-center flex-shrink-0">
+          <div className="w-32 h-24 rounded-lg bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD] flex items-center justify-center flex-shrink-0">
             <span className="text-3xl">{getDefaultEmoji()}</span>
           </div>
         )}
@@ -87,26 +107,24 @@ function ContentCard({ item, viewMode = 'grid' }) {
   return (
     <Link
       to={`/items/${item.id}`}
-      className="card-sketch overflow-hidden flex flex-col"
+      className="bg-white rounded-card border border-[#E8E0D5] shadow-card overflow-hidden flex flex-col hover:shadow-lg transition group"
     >
-      <div className="h-1.5" style={{ backgroundColor: tag.bg }} />
-
       {item.image ? (
-        <div className="aspect-[4/3] overflow-hidden">
+        <div className="aspect-video overflow-hidden">
           <img
             src={item.image}
             alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
             loading="lazy"
           />
         </div>
       ) : (
-        <div className="aspect-[4/3] flex items-center justify-center bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD]">
+        <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD]">
           <span className="text-4xl opacity-80">{getDefaultEmoji()}</span>
         </div>
       )}
 
-      <div className="p-4 flex flex-col flex-1">
+      <div className="p-5 flex flex-col flex-1">
         <span
           className="tag-capsule mb-2.5 self-start"
           style={{ backgroundColor: tag.bg, color: tag.color }}
@@ -114,7 +132,7 @@ function ContentCard({ item, viewMode = 'grid' }) {
           {tag.label}
         </span>
 
-        <h3 className="text-[15px] font-medium text-[#4A3728] leading-snug mb-1.5 line-clamp-2">
+        <h3 className="text-[15px] font-medium text-[#4A3728] leading-snug mb-1.5 group-hover:text-[#8B7355] transition line-clamp-2">
           {item.title}
         </h3>
         <p className="text-[13px] text-[#8B7355] leading-relaxed mb-3 line-clamp-2">
