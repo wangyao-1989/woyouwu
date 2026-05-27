@@ -19,6 +19,7 @@ const inspirationRoutes = require('./routes/inspiration');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
 const newsRoutes = require('./routes/news');
+const settingsRoutes = require('./routes/settings');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/inspirations', inspirationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/settings', settingsRoutes);
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 

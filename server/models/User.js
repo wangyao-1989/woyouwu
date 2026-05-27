@@ -151,9 +151,22 @@ const userSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
+    avatar: {
+      type: String,
+      default: ''
+    },
     name: {
       type: String,
       default: '果果仁'
+    },
+    petCategory: {
+      type: String,
+      enum: ['cat', 'dog', 'rabbit', 'hamster', 'bird', 'fox', 'panda', 'custom'],
+      default: 'cat'
+    },
+    customCategory: {
+      type: String,
+      default: ''
     },
     videos: [{
       filename: { type: String },

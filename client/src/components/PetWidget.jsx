@@ -38,6 +38,53 @@ const ACTION_MESSAGES = {
   ],
 };
 
+const PET_CATEGORIES = [
+  { value: 'cat', label: '🐱 猫咪', species: '橘色小猫咪' },
+  { value: 'dog', label: '🐶 小狗', species: '金色小狗' },
+  { value: 'rabbit', label: '🐰 兔子', species: '雪白小兔子' },
+  { value: 'hamster', label: '🐹 仓鼠', species: '圆滚滚小仓鼠' },
+  { value: 'bird', label: '🐦 鹦鹉', species: '翠绿小鹦鹉' },
+  { value: 'fox', label: '🦊 狐狸', species: '赤毛小狐狸' },
+  { value: 'panda', label: '🐼 熊猫', species: '憨态可掬的小熊猫' },
+  { value: 'custom', label: '✨ 自定义', species: '神秘小动物' },
+];
+
+const PET_CATEGORY_MAP = Object.fromEntries(PET_CATEGORIES.map(c => [c.value, c]));
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return [h, s, l];
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
 function PetWidget() {
   const { user: authUser, loading: authLoading } = useAuth();
 
@@ -64,6 +111,54 @@ function PetWidget() {
   const [walkGif, setWalkGif] = useState('');
   const [newPetName, setNewPetName] = useState('');
   const [petInfoLoaded, setPetInfoLoaded] = useState(false);
+  const [petCategory, setPetCategory] = useState('cat');
+  const [customCategory, setCustomCategory] = useState('');
+  const [isAdminEditingGlobal, setIsAdminEditingGlobal] = useState(false);
+  const [petAvatar, setPetAvatar] = useState('');
+  const [dialogAccentColor, setDialogAccentColor] = useState('#6366f1');
+
+  // 从图片提取主色调
+  const extractColorFromImage = useCallback((imageUrl) => {
+    if (!imageUrl) {
+      setDialogAccentColor('#6366f1');
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const size = 40;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 16) {
+          const alpha = data[i + 3];
+          if (alpha < 30) continue;
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          count++;
+        }
+        if (count > 0) {
+          r = Math.round(r / count);
+          g = Math.round(g / count);
+          b = Math.round(b / count);
+          // 提升饱和度
+          const hsl = rgbToHsl(r, g, b);
+          hsl[1] = Math.min(1, hsl[1] * 1.5);
+          hsl[2] = Math.max(0.4, Math.min(0.6, hsl[2]));
+          const [pr, pg, pb] = hslToRgb(hsl[0], hsl[1], hsl[2]);
+          setDialogAccentColor(`rgb(${pr},${pg},${pb})`);
+        }
+      } catch (e) { /* ignore */ }
+    };
+    img.onerror = () => setDialogAccentColor('#6366f1');
+    img.src = getImageUrl(imageUrl);
+  }, []);
 
   const [wanderingEnabled, setWanderingEnabled] = useState(false);
   const [petVideos, setPetVideos] = useState([]);
@@ -73,10 +168,6 @@ function PetWidget() {
   const [isWalking, setIsWalking] = useState(false);
   const [facingRight, setFacingRight] = useState(true);
   const [toast, setToast] = useState(null);
-  const [gifTrimStart, setGifTrimStart] = useState('');
-  const [gifTrimEnd, setGifTrimEnd] = useState('');
-  const [trimming, setTrimming] = useState(false);
-
   const showToast = useCallback((message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
@@ -84,8 +175,6 @@ function PetWidget() {
 
   const petRef = useRef(null);
   const chatEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const videoInputRef = useRef(null);
   const videoRef = useRef(null);
   const imgRef = useRef(null);
 
@@ -107,34 +196,113 @@ function PetWidget() {
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   const isLoggedIn = !!authUser && !authLoading;
+  const isAdmin = authUser?.role === 'admin';
+
+  const reloadMyPetDisplay = async () => {
+    if (!isLoggedIn) return;
+    try {
+      const res = await axios.get('/api/settings/my-pet');
+      const myPet = res.data.pet;
+      const hasPersonalCustom = myPet && (myPet.image || myPet.walkGif || myPet.name !== '果果仁');
+      if (hasPersonalCustom) {
+        setPetName(myPet.name || '果果仁');
+        setCustomPetImage(myPet.image || '');
+        setWalkGif(myPet.walkGif || '');
+        setPetAvatar(myPet.avatar || '');
+        setPetVideos(myPet.videos || []);
+        setPetCategory(myPet.petCategory || 'cat');
+        setCustomCategory(myPet.customCategory || '');
+      }
+    } catch (err) {
+      console.error('Failed to reload my pet:', err);
+    }
+  };
+
+  const enterGlobalEdit = async () => {
+    try {
+      const res = await axios.get('/api/settings/global-pet');
+      const gp = res.data.pet;
+      setIsAdminEditingGlobal(true);
+      setPetName(gp.name || '果果仁');
+      setCustomPetImage(gp.image || '');
+      setWalkGif(gp.walkGif || '');
+      setPetAvatar(gp.avatar || '');
+      setPetVideos(gp.videos || []);
+      setNewPetName(gp.name || '果果仁');
+    } catch (err) {
+      setIsAdminEditingGlobal(true);
+    }
+  };  
 
   useEffect(() => {
-    if (authLoading) return;
+    const avatarSrc = petAvatar || customPetImage;
+    extractColorFromImage(avatarSrc);
+  }, [petAvatar, customPetImage, extractColorFromImage]);
 
-    const fetchPetInfo = async () => {
-      if (authUser) {
-        try {
-          const res = await axios.get('/api/users/pet/info');
-          const name = res.data.pet.name || '果果仁';
-          setPetName(name);
-          setCustomPetImage(res.data.pet.image || '');
-          setWalkGif(res.data.pet.walkGif || '');
-          setPetVideos(res.data.pet.videos || []);
-          setMessages([{ role: 'pet', text: `喵~ 我是${name}！(=^ω^=) 有什么可以帮你的吗？` }]);
-        } catch (err) {
-          console.error('Failed to fetch pet info:', err);
-        }
+  useEffect(() => {
+    let globalPetData = null;
+
+    const fetchGlobalPet = async () => {
+      try {
+        const res = await axios.get('/api/settings/global-pet');
+        globalPetData = res.data.pet;
+      } catch (err) {
+        console.error('Failed to fetch global pet info:', err);
+      }
+    };
+
+    const fetchMyPet = async () => {
+      if (!isLoggedIn) return null;
+      try {
+        const res = await axios.get('/api/settings/my-pet');
+        return res.data.pet;
+      } catch (err) {
+        console.error('Failed to fetch my pet info:', err);
+        return null;
+      }
+    };
+
+    const loadPets = async () => {
+      await fetchGlobalPet();
+      const myPet = await fetchMyPet();
+
+      const hasPersonalCustom = myPet && (myPet.image || myPet.walkGif || myPet.name !== '果果仁');
+
+      if (hasPersonalCustom) {
+        setPetName(myPet.name || '果果仁');
+        setCustomPetImage(myPet.image || '');
+        setWalkGif(myPet.walkGif || '');
+        setPetAvatar(myPet.avatar || '');
+        setPetVideos(myPet.videos || []);
+        setPetCategory(myPet.petCategory || 'cat');
+        setCustomCategory(myPet.customCategory || '');
+        setMessages([{ role: 'pet', text: `嗨~ 我是${myPet.name || '果果仁'}！(◕‿◕✿) 有什么可以帮你的吗？` }]);
+      } else if (globalPetData) {
+        setPetName(globalPetData.name || '果果仁');
+        setCustomPetImage(globalPetData.image || '');
+        setWalkGif(globalPetData.walkGif || '');
+        setPetAvatar(globalPetData.avatar || '');
+        setPetVideos(globalPetData.videos || []);
       } else {
         setPetName('果果仁');
         setCustomPetImage('');
         setWalkGif('');
+        setPetAvatar('');
         setPetVideos([]);
-        setMessages([{ role: 'pet', text: '喵~ 我是果果仁！(=^ω^=) 有什么可以帮你的吗？' }]);
+        setPetCategory('cat');
+        setCustomCategory('');
       }
+
       setPetInfoLoaded(true);
     };
-    fetchPetInfo();
-  }, [authUser, authLoading]);
+    loadPets();
+  }, [isLoggedIn, authUser?.pet?.image]);
+
+  useEffect(() => {
+    if (isSettingsOpen) {
+      setNewPetName(petName);
+    }
+  }, [isSettingsOpen, petName]);
 
   useEffect(() => {
     const pickNewTarget = () => {
@@ -460,7 +628,12 @@ function PetWidget() {
     setPetState(PET_STATES.THINKING);
 
     try {
-      const res = await axios.post('/api/ai/chat', { message: trimmed });
+      const res = await axios.post('/api/ai/chat', {
+        message: trimmed,
+        petName,
+        petCategory,
+        customCategory,
+      });
       const responseText = res.data.response || '喵~ 我没听懂呢~';
       setShowThoughtBubble(false);
       setPetState(PET_STATES.TALKING);
@@ -487,92 +660,7 @@ function PetWidget() {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      showToast('图片大小不能超过20MB', 'error');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const res = await axios.post('/api/users/pet/image', formData);
-      setCustomPetImage(res.data.pet.image);
-      showToast('✅ 图片上传成功！', 'success');
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || '上传失败，请重试';
-      showToast('❌ ' + errorMsg, 'error');
-    }
-  };
-
-  const handleVideoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 50 * 1024 * 1024) {
-      showToast('视频大小不能超过50MB', 'error');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('video', file);
-    formData.append('label', file.name.replace(/\.[^/.]+$/, ''));
-
-    try {
-      const res = await axios.post('/api/users/pet/video', formData);
-      setPetVideos(res.data.pet.videos || []);
-      showToast('✅ 视频上传成功！', 'success');
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || '上传失败，请重试';
-      showToast('❌ ' + errorMsg, 'error');
-    }
-  };
-
-  const handleDeleteVideo = async (filename) => {
-    try {
-      const res = await axios.delete(`/api/users/pet/video/${filename}`);
-      setPetVideos(res.data.pet.videos || []);
-      if (playingVideo?.filename === filename) setPlayingVideo(null);
-    } catch (err) {
-      console.error('Failed to delete video:', err);
-    }
-  };
-
-  const handleNameChange = async () => {
-    if (!newPetName.trim()) return;
-
-    try {
-      const res = await axios.put('/api/users/pet/name', { name: newPetName });
-      setPetName(res.data.pet.name);
-      setNewPetName('');
-      showToast('✅ 名字修改成功！', 'success');
-    } catch (err) {
-      showToast('❌ 修改失败，请重试', 'error');
-    }
-  };
-
-  const handleResetPet = async () => {
-    try {
-      await axios.put('/api/users/pet/name', { name: '果果仁' });
-      try { await axios.delete('/api/users/pet/image'); } catch (e) {}
-      try { await axios.delete('/api/users/pet/walk-gif'); } catch (e) {}
-      for (const v of petVideos) {
-        try { await axios.delete(`/api/users/pet/video/${v.filename}`); } catch (e) {}
-      }
-      setCustomPetImage('');
-      setWalkGif('');
-      setPetName('果果仁');
-      setPetVideos([]);
-      setPlayingVideo(null);
-      showToast('✅ 已恢复默认宠物！', 'success');
-    } catch (err) {
-      showToast('❌ 重置失败', 'error');
-    }
-  };
 
   const getImageUrl = (path) => {
     if (!path) return '';
@@ -585,32 +673,7 @@ function PetWidget() {
     return `/uploads/${filename}`;
   };
 
-  const handleGifTrim = async () => {
-    const start = parseFloat(gifTrimStart);
-    const end = parseFloat(gifTrimEnd);
-    if (isNaN(start) || isNaN(end) || start < 0 || end <= start) {
-      showToast('请输入有效的时间范围（结束时间需大于开始时间）', 'error');
-      return;
-    }
-    setTrimming(true);
-    try {
-      const res = await axios.post('/api/users/pet/walk-gif/trim', {
-        startTime: start,
-        endTime: end,
-      });
-      setWalkGif(res.data.pet.walkGif);
-      setGifTrimStart('');
-      setGifTrimEnd('');
-      showToast('✂️ ' + (res.data.message || 'GIF裁剪成功！'), 'success');
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || '裁剪失败';
-      showToast('❌ ' + errorMsg, 'error');
-    } finally {
-      setTrimming(false);
-    }
-  };
-
-  if (authLoading || !petInfoLoaded) return null;
+  if (!petInfoLoaded) return null;
 
   return (
     <>
@@ -682,6 +745,37 @@ function PetWidget() {
                   transform: `scaleX(${facingRight ? 1 : -1})`,
                   transition: 'transform 0.15s ease-out, margin-top 0.2s ease-out',
                   animation: imageBounce ? 'petBounce 0.4s ease-out' : ((!isWalking || !walkGif) && breathing ? 'petBreathing 2s ease-in-out' : 'none'),
+                }}
+                draggable="false"
+              />
+              {hearts.map(h => (
+                <div key={h.id} className="absolute pointer-events-none"
+                  style={{
+                    left: '50%', top: '50%',
+                    transform: `translate(${h.x}px, ${h.y}px)`,
+                    animation: 'heartFloat 1.2s ease-out forwards',
+                    fontSize: '18px',
+                  }}>
+                  {['❤️', '💕', '💖'][h.id % 3]}
+                </div>
+              ))}
+            </div>
+          ) : walkGif ? (
+            <div className="relative inline-block" style={{
+              filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
+            }}>
+              <img
+                ref={imgRef}
+                src={getImageUrl(walkGif)}
+                alt={petName}
+                width="150"
+                height="140"
+                className="object-contain"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '140px',
+                  transform: `scaleX(${facingRight ? 1 : -1})`,
+                  transition: 'transform 0.15s ease-out, margin-top 0.2s ease-out',
                 }}
                 draggable="false"
               />
@@ -837,10 +931,12 @@ function PetWidget() {
       {isChatOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
           style={{ maxHeight: '450px' }}>
-          <div className="bg-gradient-to-r from-amber-500 to-orange-400 text-white px-4 py-3 flex items-center justify-between">
+          <div className="text-white px-4 py-3 flex items-center justify-between" style={{
+            background: `linear-gradient(135deg, ${dialogAccentColor}, ${dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.7)')})`
+          }}>
             <div className="flex items-center space-x-2">
-              {customPetImage ? (
-                <img src={getImageUrl(customPetImage)} alt={petName} width="32" height="32" className="rounded-full object-cover" />
+              {(petAvatar || customPetImage) ? (
+                <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="32" height="32" className="rounded-full object-cover" />
               ) : (
                 <svg viewBox="0 0 40 40" width="32" height="32">
                   <ellipse cx="20" cy="22" rx="15" ry="13" fill="#f59e0b" />
@@ -860,13 +956,13 @@ function PetWidget() {
               )}
               <div>
                 <p className="font-semibold text-sm">{petName}</p>
-                <p className="text-xs text-orange-100">我有物 · 吉祥物 | 按 P 关闭</p>
+                <p className="text-xs opacity-80">我有物 · 吉祥物 | 按 P 关闭</p>
               </div>
             </div>
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => { setIsChatOpen(false); setIsSettingsOpen(true); }}
-                className="text-white hover:text-orange-200 transition p-1 rounded-full hover:bg-white/10"
+                className="text-white hover:opacity-80 transition p-1 rounded-full hover:bg-white/10"
                 title="宠物设置"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -874,7 +970,7 @@ function PetWidget() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
-              <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-orange-200 transition">
+              <button onClick={() => setIsChatOpen(false)} className="text-white hover:opacity-80 transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -882,13 +978,13 @@ function PetWidget() {
             </div>
           </div>
 
-          <div className="p-3 h-64 overflow-y-auto bg-orange-50/30">
+          <div className="p-3 h-64 overflow-y-auto" style={{ backgroundColor: dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.05)') }}>
             {messages.map((msg, i) => (
               <div key={i} className={`flex mb-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'pet' && (
                   <div className="flex-shrink-0 mr-1 mt-0.5">
-                    {customPetImage ? (
-                      <img src={getImageUrl(customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
+                    {(petAvatar || customPetImage) ? (
+                      <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                     ) : (
                       <svg viewBox="0 0 24 24" width="22" height="22">
                         <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
@@ -918,8 +1014,8 @@ function PetWidget() {
             {isTyping && (
               <div className="flex mb-3">
                 <div className="flex-shrink-0 mr-1">
-                  {customPetImage ? (
-                    <img src={getImageUrl(customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
+                  {(petAvatar || customPetImage) ? (
+                    <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                   ) : (
                     <svg viewBox="0 0 24 24" width="22" height="22">
                       <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
@@ -968,10 +1064,12 @@ function PetWidget() {
         <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
           <div className="bg-gradient-to-r from-blue-500 to-indigo-400 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
             <div>
-              <p className="font-semibold text-sm">宠物设置</p>
-              <p className="text-xs text-blue-100">按 P 关闭</p>
+              <p className="font-semibold text-sm">
+                {!isLoggedIn ? '宠物设置' : isAdminEditingGlobal ? '⚠️ 全局宠物管理' : '🐾 我的小伙伴'}
+              </p>
+              <p className="text-xs opacity-80">{isAdminEditingGlobal ? '设置将影响所有访客看到的首页宠物' : '按 P 关闭'}</p>
             </div>
-            <button onClick={() => setIsSettingsOpen(false)} className="text-white hover:text-blue-200 transition">
+            <button onClick={() => { setIsSettingsOpen(false); setIsAdminEditingGlobal(false); }} className="text-white hover:text-blue-200 transition">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -987,19 +1085,263 @@ function PetWidget() {
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-gray-700 mb-1">登录后可自定义宠物</p>
-                <p className="text-xs text-gray-500">登录后可以上传图片、视频和修改名字</p>
+                <p className="text-xs text-gray-500">登录后可以选择宠物品类、上传形象、修改名字</p>
                 <button
                   onClick={() => { setIsSettingsOpen(false); window.location.href = '/login'; }}
                   className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition text-sm"
                 >
                   去登录
                 </button>
+                {customPetImage && (
+                  <img src={getImageUrl(customPetImage)} alt={petName} className="mt-3 mx-auto w-20 h-20 object-contain rounded-lg" />
+                )}
+                <p className="mt-1 text-sm text-gray-600 font-medium">{petName}</p>
               </div>
-            ) : (
+            ) : isAdminEditingGlobal ? (
               <>
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-xl p-3 mb-3">
+                  <p className="text-sm font-bold text-red-700 mb-1">⚠️ 你正在修改首页宠物</p>
+                  <p className="text-xs text-red-600">此处修改将影响所有未登录访客看到的宠物形象、名字和头像。你自己的宠物不受影响。</p>
+                </div>
+
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="bg-green-100 border border-green-300 rounded-lg px-3 py-2 flex-1">
+                    <p className="text-xs text-green-700 font-medium">🔧 当前编辑：全局宠物</p>
+                  </div>
+                  <button
+                    onClick={() => { setIsAdminEditingGlobal(false); reloadMyPetDisplay(); }}
+                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition whitespace-nowrap font-medium"
+                  >
+                    ← 回到我的
+                  </button>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">上传宠物图片</label>
-                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="pet-image-upload" />
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 20 * 1024 * 1024) { showToast('图片大小不能超过20MB', 'error'); return; }
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    try {
+                      const res = await axios.post('/api/settings/global-pet/image', formData);
+                      setCustomPetImage(res.data.pet.image);
+                      showToast('✅ 图片上传成功！', 'success');
+                    } catch (err) {
+                      showToast('❌ ' + (err.response?.data?.message || err.message || '上传失败'), 'error');
+                    }
+                  }} className="hidden" id="pet-image-upload-global" />
+                  <label htmlFor="pet-image-upload-global"
+                    className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm text-gray-500 mt-1">点击上传图片</span>
+                  </label>
+                  {customPetImage && (
+                    <div className="mt-2 flex items-center justify-between bg-green-50 rounded-lg px-2 py-1.5">
+                      <img src={getImageUrl(customPetImage)} alt="宠物" className="h-12 object-contain rounded" />
+                      <button onClick={async () => {
+                        try { await axios.delete('/api/settings/global-pet/image'); setCustomPetImage(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">走路 GIF 动画</label>
+                  <input type="file" accept="image/gif" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 20 * 1024 * 1024) { showToast('GIF不能超过20MB', 'error'); return; }
+                    const formData = new FormData();
+                    formData.append('gif', file);
+                    try {
+                      const res = await axios.post('/api/settings/global-pet/walk-gif', formData);
+                      setWalkGif(res.data.pet.walkGif);
+                      showToast('✅ GIF上传成功！', 'success');
+                    } catch (err) { showToast('❌ 上传失败', 'error'); }
+                  }} className="hidden" id="pet-walk-gif-upload-global" />
+                  <label htmlFor="pet-walk-gif-upload-global"
+                    className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:bg-orange-50 transition">
+                    <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-xs text-gray-500 mt-1">上传GIF（≤20MB）</span>
+                  </label>
+                  {walkGif && (
+                    <div className="mt-2 flex items-center justify-between bg-orange-50 rounded-lg px-2 py-1.5">
+                      <img src={getImageUrl(walkGif)} alt="GIF" className="w-8 h-8 object-contain rounded" />
+                      <button onClick={async () => {
+                        try { await axios.delete('/api/settings/global-pet/walk-gif'); setWalkGif(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">全局宠物名字</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={newPetName}
+                      onChange={e => setNewPetName(e.target.value)}
+                      placeholder={petName}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 text-sm"
+                      maxLength={20}
+                    />
+                    <button onClick={async () => {
+                      const nameToSave = newPetName.trim() || petName;
+                      try {
+                        const res = await axios.put('/api/settings/global-pet/name', { name: nameToSave });
+                        setPetName(res.data.pet.name);
+                        setNewPetName('');
+                        showToast('✅ 名字修改成功！', 'success');
+                      } catch (err) { showToast('❌ 修改失败', 'error'); }
+                    }} className="px-3 py-2 bg-blue-400 text-white rounded-xl hover:bg-blue-500 transition text-sm">
+                      保存
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">💬 对话框头像</label>
+                  <p className="text-xs text-gray-500 mb-2">单独设置聊天框里的头像，推荐正方形图片</p>
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) { showToast('头像不能超过10MB', 'error'); return; }
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+                    try {
+                      const res = await axios.post('/api/settings/global-pet/avatar', formData);
+                      setPetAvatar(res.data.pet.avatar);
+                      showToast('✅ 头像上传成功！', 'success');
+                    } catch (err) { showToast('❌ 上传失败', 'error'); }
+                  }} className="hidden" id="pet-avatar-upload-global" />
+                  <label htmlFor="pet-avatar-upload-global"
+                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition">
+                    <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs text-gray-500 mt-1">上传头像（≤10MB）</span>
+                  </label>
+                  {petAvatar && (
+                    <div className="mt-2 flex items-center justify-between bg-pink-50 rounded-lg px-2 py-1.5">
+                      <img src={getImageUrl(petAvatar)} alt="头像" className="h-10 w-10 object-cover rounded-full" />
+                      <button onClick={async () => {
+                        try { await axios.delete('/api/settings/global-pet/avatar'); setPetAvatar(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await axios.put('/api/settings/global-pet/name', { name: '果果仁' });
+                      try { await axios.delete('/api/settings/global-pet/image'); } catch (e) {}
+                      try { await axios.delete('/api/settings/global-pet/walk-gif'); } catch (e) {}
+                      for (const v of petVideos) {
+                        try { await axios.delete(`/api/settings/global-pet/video/${v.filename}`); } catch (e) {}
+                      }
+                      setCustomPetImage('');
+                      setWalkGif('');
+                      setPetName('果果仁');
+                      setPetVideos([]);
+                      setPlayingVideo(null);
+                      showToast('✅ 已恢复默认！', 'success');
+                    } catch (err) { showToast('❌ 重置失败', 'error'); }
+                  }}
+                  className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
+                >
+                  恢复默认全局宠物
+                </button>
+              </>
+            ) : (
+              <>
+                {isAdmin && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-3">
+                    <p className="text-xs text-green-700 mb-2 text-center font-medium">🔧 修改所有访客看到的首页宠物</p>
+                    <button
+                      onClick={enterGlobalEdit}
+                      className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition text-sm font-bold flex items-center justify-center space-x-2 shadow-md"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>管理全局宠物</span>
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">宠物品类 🎭</label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    选择宠物类型后，AI 会根据品类自动生成符合其性格的交流话语
+                  </p>
+                  <select
+                    value={petCategory}
+                    onChange={async (e) => {
+                      const newCat = e.target.value;
+                      setPetCategory(newCat);
+                      try {
+                        await axios.put('/api/settings/my-pet/category', {
+                          petCategory: newCat,
+                          customCategory: newCat === 'custom' ? customCategory : '',
+                        });
+                        showToast('✅ 品类已更新！', 'success');
+                      } catch (err) { showToast('❌ 更新失败', 'error'); }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 text-sm bg-white"
+                  >
+                    {PET_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                  {petCategory === 'custom' && (
+                    <div className="mt-2 flex space-x-2">
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={e => setCustomCategory(e.target.value)}
+                        placeholder="输入你的宠物类型（如：小龙、独角兽...）"
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 text-sm"
+                        maxLength={20}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!customCategory.trim()) return;
+                          try {
+                            await axios.put('/api/settings/my-pet/category', { petCategory: 'custom', customCategory: customCategory.trim() });
+                            showToast('✅ 自定义品类已保存！', 'success');
+                          } catch (err) { showToast('❌ 保存失败', 'error'); }
+                        }}
+                        className="px-3 py-2 bg-purple-400 text-white rounded-xl hover:bg-purple-500 transition text-sm"
+                      >
+                        确定
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">上传宠物图片</label>
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 20 * 1024 * 1024) { showToast('图片不能超过20MB', 'error'); return; }
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    try {
+                      const res = await axios.post('/api/settings/my-pet/image', formData);
+                      setCustomPetImage(res.data.pet.image);
+                      showToast('✅ 图片上传成功！', 'success');
+                    } catch (err) { showToast('❌ ' + (err.response?.data?.message || err.message || '上传失败'), 'error'); }
+                  }} className="hidden" id="pet-image-upload" />
                   <label htmlFor="pet-image-upload"
                     className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1008,29 +1350,28 @@ function PetWidget() {
                     <span className="text-sm text-gray-500 mt-1">点击上传图片</span>
                   </label>
                   {customPetImage && (
-                    <img src={getImageUrl(customPetImage)} alt="当前宠物" className="mt-2 w-full h-24 object-contain rounded-lg" />
+                    <div className="mt-2 flex items-center justify-between bg-purple-50 rounded-lg px-2 py-1.5">
+                      <img src={getImageUrl(customPetImage)} alt={petName} className="h-12 object-contain rounded" />
+                      <button onClick={async () => {
+                        try { await axios.delete('/api/settings/my-pet/image'); setCustomPetImage(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">上传走路GIF动画 🚶</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">走路 GIF 动画</label>
                   <input type="file" accept="image/gif" onChange={async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    if (file.size > 100 * 1024 * 1024) {
-                      showToast('GIF大小不能超过100MB', 'error');
-                      return;
-                    }
+                    if (file.size > 20 * 1024 * 1024) { showToast('GIF不能超过20MB', 'error'); return; }
                     const formData = new FormData();
-                    formData.append('walkGif', file);
+                    formData.append('gif', file);
                     try {
-                      const res = await axios.post('/api/users/pet/walk-gif', formData);
+                      const res = await axios.post('/api/settings/my-pet/walk-gif', formData);
                       setWalkGif(res.data.pet.walkGif);
-                      showToast('✅ 走路GIF上传成功！', 'success');
-                    } catch (err) {
-                      const errorMsg = err.response?.data?.message || err.message || '上传失败';
-                      showToast('❌ ' + errorMsg, 'error');
-                    }
+                      showToast('✅ GIF上传成功！', 'success');
+                    } catch (err) { showToast('❌ 上传失败', 'error'); }
                   }} className="hidden" id="pet-walk-gif-upload" />
                   <label htmlFor="pet-walk-gif-upload"
                     className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:bg-orange-50 transition">
@@ -1038,88 +1379,14 @@ function PetWidget() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-xs text-gray-500 mt-1">上传GIF（猫走路动画，≤10MB）</span>
+                    <span className="text-xs text-gray-500 mt-1">上传GIF（≤20MB）</span>
                   </label>
                   {walkGif && (
                     <div className="mt-2 flex items-center justify-between bg-orange-50 rounded-lg px-2 py-1.5">
-                      <div className="flex items-center space-x-2">
-                        <img src={getImageUrl(walkGif)} alt="走路GIF" className="w-8 h-8 object-contain rounded" />
-                        <span className="text-xs text-gray-600">走路动画已设置</span>
-                      </div>
+                      <img src={getImageUrl(walkGif)} alt="GIF" className="w-8 h-8 object-contain rounded" />
                       <button onClick={async () => {
-                        try {
-                          await axios.delete('/api/users/pet/walk-gif');
-                          setWalkGif('');
-                          showToast('✅ 走路动画已删除', 'success');
-                        } catch (err) {
-                          showToast('❌ 删除失败', 'error');
-                        }
+                        try { await axios.delete('/api/settings/my-pet/walk-gif'); setWalkGif(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
                       }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
-                    </div>
-                  )}
-                  {walkGif && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                      <p className="text-xs font-medium text-blue-700 mb-2">✂️ 裁剪GIF长度</p>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          value={gifTrimStart}
-                          onChange={e => setGifTrimStart(e.target.value)}
-                          placeholder="起始(秒)"
-                          step="0.1"
-                          min="0"
-                          className="w-1/2 px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
-                        />
-                        <span className="text-xs text-gray-400">~</span>
-                        <input
-                          type="number"
-                          value={gifTrimEnd}
-                          onChange={e => setGifTrimEnd(e.target.value)}
-                          placeholder="结束(秒)"
-                          step="0.1"
-                          min="0"
-                          className="w-1/2 px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
-                        />
-                        <button
-                          onClick={handleGifTrim}
-                          disabled={trimming || !gifTrimStart || !gifTrimEnd}
-                          className="px-2 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium whitespace-nowrap"
-                        >
-                          {trimming ? '裁剪中...' : '裁剪'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">上传交互视频</label>
-                  <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/ogg" onChange={handleVideoUpload} className="hidden" id="pet-video-upload" />
-                  <label htmlFor="pet-video-upload"
-                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:bg-purple-50 transition">
-                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-sm text-gray-500 mt-1">点击上传视频（MP4/WebM，≤50MB）</span>
-                  </label>
-                  {petVideos.length > 0 && (
-                    <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                      {petVideos.map((v, i) => (
-                        <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
-                          <div className="flex items-center space-x-2 min-w-0">
-                            <svg className="w-4 h-4 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                            </svg>
-                            <span className="text-xs text-gray-600 truncate">{v.originalName || v.filename}</span>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteVideo(v.filename)}
-                            className="text-red-400 hover:text-red-600 text-xs flex-shrink-0 ml-1"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      ))}
                     </div>
                   )}
                 </div>
@@ -1129,21 +1396,72 @@ function PetWidget() {
                   <div className="flex space-x-2">
                     <input
                       type="text"
-                      value={newPetName || petName}
+                      value={newPetName}
                       onChange={e => setNewPetName(e.target.value)}
-                      placeholder="输入宠物名字"
+                      placeholder={petName}
                       className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 text-sm"
                       maxLength={20}
                     />
-                    <button onClick={handleNameChange}
-                      className="px-3 py-2 bg-blue-400 text-white rounded-xl hover:bg-blue-500 transition text-sm">
+                    <button onClick={async () => {
+                      const nameToSave = newPetName.trim() || petName;
+                      try {
+                        const res = await axios.put('/api/settings/my-pet/name', { name: nameToSave });
+                        setPetName(res.data.pet.name);
+                        setNewPetName('');
+                        showToast('✅ 名字修改成功！', 'success');
+                      } catch (err) { showToast('❌ 修改失败', 'error'); }
+                    }} className="px-3 py-2 bg-blue-400 text-white rounded-xl hover:bg-blue-500 transition text-sm">
                       保存
                     </button>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleResetPet}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">💬 对话框头像</label>
+                  <p className="text-xs text-gray-500 mb-2">单独设置聊天框里的头像，推荐正方形图片</p>
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) { showToast('头像不能超过10MB', 'error'); return; }
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+                    try {
+                      const res = await axios.post('/api/settings/my-pet/avatar', formData);
+                      setPetAvatar(res.data.pet.avatar);
+                      showToast('✅ 头像上传成功！', 'success');
+                    } catch (err) { showToast('❌ 上传失败', 'error'); }
+                  }} className="hidden" id="pet-avatar-upload" />
+                  <label htmlFor="pet-avatar-upload"
+                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition">
+                    <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs text-gray-500 mt-1">上传头像（≤10MB）</span>
+                  </label>
+                  {petAvatar && (
+                    <div className="mt-2 flex items-center justify-between bg-pink-50 rounded-lg px-2 py-1.5">
+                      <img src={getImageUrl(petAvatar)} alt="头像" className="h-10 w-10 object-cover rounded-full" />
+                      <button onClick={async () => {
+                        try { await axios.delete('/api/settings/my-pet/avatar'); setPetAvatar(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                      }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={async () => {
+                    try {
+                      await axios.put('/api/settings/my-pet/name', { name: '果果仁' });
+                      try { await axios.delete('/api/settings/my-pet/image'); } catch (e) {}
+                      try { await axios.delete('/api/settings/my-pet/walk-gif'); } catch (e) {}
+                      setCustomPetImage('');
+                      setWalkGif('');
+                      setPetName('果果仁');
+                      setPetCategory('cat');
+                      setCustomCategory('');
+                      setPlayingVideo(null);
+                      showToast('✅ 已恢复默认！', 'success');
+                    } catch (err) { showToast('❌ 重置失败', 'error'); }
+                  }}
                   className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
                 >
                   恢复默认宠物

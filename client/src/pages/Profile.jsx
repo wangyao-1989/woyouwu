@@ -45,6 +45,14 @@ function Profile() {
   const [likedPosts, setLikedPosts] = useState([]);
   const [cropImage, setCropImage] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const isOwnProfile = !id || id === currentUser?.id;
   const profileId = id || currentUser?.id;
@@ -210,6 +218,46 @@ function Profile() {
       setIsEditing(false);
     } catch (error) {
       alert('保存失败');
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('请填写所有字段');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('新密码至少需要6位');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('两次输入的新密码不一致');
+      return;
+    }
+
+    try {
+      await axios.put('/api/users/me/password', {
+        currentPassword,
+        newPassword
+      });
+      setPasswordSuccess('密码修改成功');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordSuccess('');
+      }, 1500);
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || '修改失败');
     }
   };
 
@@ -429,6 +477,12 @@ function Profile() {
                       className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 transition shadow-sketch"
                     >
                       编辑资料
+                    </button>
+                    <button
+                      onClick={() => setShowPasswordModal(true)}
+                      className="rounded-btn px-6 py-2 bg-[#F5F0E8] text-[#4A3728] border border-[#C8BAAA] hover:bg-[#E8DCD0] transition"
+                    >
+                      修改密码
                     </button>
                     <Link
                       to="/profile/edit"
@@ -1042,6 +1096,83 @@ function Profile() {
                 className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 shadow-sketch"
               >
                 保存更改
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">修改密码</h3>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordError(''); setPasswordSuccess(''); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="text-[#B8A899] hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {passwordSuccess && (
+              <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                {passwordSuccess}
+              </div>
+            )}
+            {passwordError && (
+              <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {passwordError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">当前密码</label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordForm.currentPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
+                  placeholder="输入当前密码"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">新密码</label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordForm.newPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
+                  placeholder="输入新密码（至少6位）"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">确认新密码</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordForm.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 sketch-border-sm focus:outline-none focus:ring-2 focus:ring-warm-900"
+                  placeholder="再次输入新密码"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+              <button
+                onClick={() => { setShowPasswordModal(false); setPasswordError(''); setPasswordSuccess(''); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}
+                className="rounded-btn px-6 py-2 bg-[#F0E8DD] text-gray-700 hover:bg-gray-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleChangePassword}
+                className="rounded-btn px-6 py-2 bg-warm-900 text-white hover:bg-warm-700 shadow-sketch"
+              >
+                确认修改
               </button>
             </div>
           </div>

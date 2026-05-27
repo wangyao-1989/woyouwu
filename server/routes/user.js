@@ -7,6 +7,7 @@ const Article = require('../models/Article');
 const Inspiration = require('../models/Inspiration');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
@@ -192,6 +193,42 @@ router.post('/background', auth, upload.single('background'), async (req, res) =
 
     res.json({ message: '背景图更新成功', user });
   } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 修改密码
+router.put('/me/password', auth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: '请提供当前密码和新密码' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: '新密码至少6位' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: '当前密码不正确' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.updateOne(
+      { _id: req.user._id },
+      { $set: { password: hashedPassword } }
+    );
+
+    res.json({ message: '密码修改成功' });
+  } catch (error) {
+    console.error('Password change error:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
