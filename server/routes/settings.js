@@ -428,4 +428,26 @@ router.put('/my-pet/mbti', auth, async (req, res) => {
   }
 });
 
+const VALID_ZODIAC_SIGNS = [
+  'aries', 'taurus', 'gemini', 'cancer',
+  'leo', 'virgo', 'libra', 'scorpio',
+  'sagittarius', 'capricorn', 'aquarius', 'pisces',
+];
+
+router.put('/my-pet/zodiac', auth, async (req, res) => {
+  try {
+    const { zodiac } = req.body;
+    if (!zodiac || !VALID_ZODIAC_SIGNS.includes(zodiac)) {
+      return res.status(400).json({ message: '无效的星座' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    user.pet.zodiac = zodiac;
+    await user.save();
+    res.json({ message: '星座已保存', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;

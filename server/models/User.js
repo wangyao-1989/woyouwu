@@ -178,6 +178,10 @@ const userSchema = new mongoose.Schema({
     mbti: {
       type: String,
       default: ''
+    },
+    zodiac: {
+      type: String,
+      default: ''
     }
   },
   favorites: [{

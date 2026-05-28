@@ -68,6 +68,21 @@ const MBTI_PROFILES = {
   ESFP: { title: '表演者', emoji: '🎭', color: '#f43f5e' },
 };
 
+const ZODIAC_PROFILES = {
+  aries: { name: '白羊座', emoji: '♈', element: '火象' },
+  taurus: { name: '金牛座', emoji: '♉', element: '土象' },
+  gemini: { name: '双子座', emoji: '♊', element: '风象' },
+  cancer: { name: '巨蟹座', emoji: '♋', element: '水象' },
+  leo: { name: '狮子座', emoji: '♌', element: '火象' },
+  virgo: { name: '处女座', emoji: '♍', element: '土象' },
+  libra: { name: '天秤座', emoji: '♎', element: '风象' },
+  scorpio: { name: '天蝎座', emoji: '♏', element: '水象' },
+  sagittarius: { name: '射手座', emoji: '♐', element: '火象' },
+  capricorn: { name: '摩羯座', emoji: '♑', element: '土象' },
+  aquarius: { name: '水瓶座', emoji: '♒', element: '风象' },
+  pisces: { name: '双鱼座', emoji: '♓', element: '水象' },
+};
+
 const PET_TOOLS = [
   {
     id: 'mbti',
@@ -170,6 +185,7 @@ function PetWidget() {
   const [isAdminEditingGlobal, setIsAdminEditingGlobal] = useState(false);
   const [petAvatar, setPetAvatar] = useState('');
   const [petMbti, setPetMbti] = useState('');
+  const [petZodiac, setPetZodiac] = useState('');
   const [dialogAccentColor, setDialogAccentColor] = useState('#6366f1');
 
   // 从图片提取主色调
@@ -305,6 +321,7 @@ function PetWidget() {
         setCustomCategory(myPet.customCategory || '');
       }
       setPetMbti(myPet.mbti || '');
+      setPetZodiac(myPet.zodiac || '');
     } catch (err) {
       console.error('Failed to reload my pet:', err);
     }
@@ -371,6 +388,7 @@ function PetWidget() {
         setPetCategory(myPet.petCategory || 'cat');
         setCustomCategory(myPet.customCategory || '');
         setPetMbti(myPet.mbti || '');
+        setPetZodiac(myPet.zodiac || '');
         setMessages(buildInitialMessages(myPet.name));
       } else if (globalPetData) {
         setPetName(globalPetData.name || '果果仁');
@@ -379,6 +397,7 @@ function PetWidget() {
         setPetAvatar(globalPetData.avatar || '');
         setPetVideos(globalPetData.videos || []);
         setPetMbti('');
+        setPetZodiac('');
       } else {
         setPetName('果果仁');
         setCustomPetImage('');
@@ -388,6 +407,7 @@ function PetWidget() {
         setPetCategory('cat');
         setCustomCategory('');
         setPetMbti('');
+        setPetZodiac('');
       }
 
       setPetInfoLoaded(true);
@@ -1110,17 +1130,30 @@ function PetWidget() {
               <div>
                 <p className="font-semibold text-sm">{petName}</p>
                 <p className="text-xs opacity-80">我有物 · 吉祥物 | 按 P 关闭</p>
-                {petMbti && MBTI_PROFILES[petMbti] && (
-                  <span
-                    className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs font-bold"
-                    style={{
-                      backgroundColor: 'rgba(255,255,255,0.25)',
-                      color: '#fff',
-                    }}
-                  >
-                    {MBTI_PROFILES[petMbti].emoji} {petMbti}
-                  </span>
-                )}
+                <span className="flex flex-wrap gap-1 mt-0.5">
+                  {petMbti && MBTI_PROFILES[petMbti] && (
+                    <span
+                      className="inline-block px-1.5 py-0.5 rounded text-xs font-bold"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        color: '#fff',
+                      }}
+                    >
+                      {MBTI_PROFILES[petMbti].emoji} {petMbti}
+                    </span>
+                  )}
+                  {petZodiac && ZODIAC_PROFILES[petZodiac] && (
+                    <span
+                      className="inline-block px-1.5 py-0.5 rounded text-xs font-bold"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        color: '#fff',
+                      }}
+                    >
+                      {ZODIAC_PROFILES[petZodiac].emoji} {ZODIAC_PROFILES[petZodiac].name}
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
             <div className="flex items-center space-x-1">
