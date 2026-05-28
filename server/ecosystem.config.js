@@ -22,7 +22,7 @@ module.exports = {
     autorestart: true,
     restart_delay: 1000,
     exp_backoff_restart_delay: 100,
-    kill_timeout: 5000,
+    kill_timeout: 10000,
     wait_ready: true,
     listen_timeout: 10000
   }]

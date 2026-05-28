@@ -46,7 +46,7 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F5F0E8] py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F0E8] pb-12 px-4">
       <div className="max-w-md w-full bg-white rounded-card border border-[#E8E0D5] shadow-card p-8 fade-in">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">

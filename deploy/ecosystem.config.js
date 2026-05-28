@@ -19,7 +19,11 @@
       "error_file": "/var/log/woyouwu/server-error.log",
       "out_file": "/var/log/woyouwu/server-out.log",
       "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
-      "merge_logs": true
+      "merge_logs": true,
+      "kill_timeout": 10000,
+      "wait_ready": true,
+      "listen_timeout": 10000,
+      "restart_delay": 1000
     }
   ]
 }

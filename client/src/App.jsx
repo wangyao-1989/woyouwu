@@ -28,6 +28,7 @@ import CreateInspiration from './pages/CreateInspiration';
 import ResumeEdit from './pages/ResumeEdit';
 import ResumePreview from './pages/ResumePreview';
 import UserResume from './pages/UserResume';
+import MBTITest from './pages/MBTITest';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -74,9 +75,9 @@ function AdminRoute({ children }) {
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#F5F0E8]">
         <Navbar />
-        <main className="pt-16">
+        <main>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -111,6 +112,7 @@ function App() {
               <ProtectedRoute><Messages /></ProtectedRoute>
             } />
             <Route path="/user/:userId/resume" element={<UserResume />} />
+            <Route path="/mbti-test" element={<MBTITest />} />
             <Route path="/admin/settings" element={
               <AdminRoute><AdminSettings /></AdminRoute>
             } />

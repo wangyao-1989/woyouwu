@@ -49,6 +49,62 @@ const PET_CATEGORIES = [
   { value: 'custom', label: '✨ 自定义', species: '神秘小动物' },
 ];
 
+const MBTI_PROFILES = {
+  INTJ: { title: '建筑师', emoji: '🏛️', color: '#6366f1' },
+  INTP: { title: '逻辑学家', emoji: '🔬', color: '#8b5cf6' },
+  ENTJ: { title: '指挥官', emoji: '👑', color: '#f59e0b' },
+  ENTP: { title: '辩论家', emoji: '💡', color: '#f97316' },
+  INFJ: { title: '提倡者', emoji: '🌿', color: '#10b981' },
+  INFP: { title: '调停者', emoji: '🕊️', color: '#ec4899' },
+  ENFJ: { title: '主人公', emoji: '🌟', color: '#ef4444' },
+  ENFP: { title: '竞选者', emoji: '🎨', color: '#f97316' },
+  ISTJ: { title: '物流师', emoji: '⚙️', color: '#64748b' },
+  ISFJ: { title: '守卫者', emoji: '🛡️', color: '#84cc16' },
+  ESTJ: { title: '总经理', emoji: '📋', color: '#0ea5e9' },
+  ESFJ: { title: '执政官', emoji: '🤝', color: '#14b8a6' },
+  ISTP: { title: '鉴赏家', emoji: '🔧', color: '#a855f7' },
+  ISFP: { title: '探险家', emoji: '🌸', color: '#d946ef' },
+  ESTP: { title: '企业家', emoji: '🚀', color: '#eab308' },
+  ESFP: { title: '表演者', emoji: '🎭', color: '#f43f5e' },
+};
+
+const PET_TOOLS = [
+  {
+    id: 'mbti',
+    icon: '🧠',
+    label: 'MBTI 性格测试',
+    desc: '发现你的性格类型',
+    color: '#6366f1',
+    bgColor: '#eef2ff',
+    route: '/mbti-test',
+  },
+  {
+    id: 'doc-converter',
+    icon: '📄',
+    label: '文档转换工具',
+    desc: '格式转换，即将上线',
+    color: '#f59e0b',
+    bgColor: '#fffbeb',
+    route: null,
+    disabled: true,
+  },
+  {
+    id: 'more',
+    icon: '🔮',
+    label: '更多小工具',
+    desc: '敬请期待...',
+    color: '#64748b',
+    bgColor: '#f1f5f9',
+    route: null,
+    disabled: true,
+  },
+];
+
+const buildInitialMessages = (name) => [
+  { role: 'pet', text: `喵~ 我是${name || '果果仁'}！(=^ω^=) 有什么可以帮你的吗？` },
+  { role: 'pet', type: 'toolkit' },
+];
+
 const PET_CATEGORY_MAP = Object.fromEntries(PET_CATEGORIES.map(c => [c.value, c]));
 
 function rgbToHsl(r, g, b) {
@@ -91,9 +147,7 @@ function PetWidget() {
   const [petState, setPetState] = useState(PET_STATES.IDLE);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'pet', text: '喵~ 我是果果仁！(=^ω^=) 有什么可以帮你的吗？' }
-  ]);
+  const [messages, setMessages] = useState(buildInitialMessages('果果仁'));
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [faceIndex, setFaceIndex] = useState(0);
@@ -115,6 +169,7 @@ function PetWidget() {
   const [customCategory, setCustomCategory] = useState('');
   const [isAdminEditingGlobal, setIsAdminEditingGlobal] = useState(false);
   const [petAvatar, setPetAvatar] = useState('');
+  const [petMbti, setPetMbti] = useState('');
   const [dialogAccentColor, setDialogAccentColor] = useState('#6366f1');
 
   // 从图片提取主色调
@@ -160,9 +215,44 @@ function PetWidget() {
     img.src = getImageUrl(imageUrl);
   }, []);
 
+  const avoidDialogOverlap = useCallback(() => {
+    const dialogW = 384;
+    const dialogH = 420;
+    const margin = 16;
+    const gap = 4;
+    const petW = 130;
+    const petH = 150;
+
+    const petX = posRef.current.x;
+    const petY = posRef.current.y;
+
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
+
+    const dialogLeft = screenW - dialogW - margin;
+    const dialogTop = screenH - dialogH - margin;
+
+    const petRight = petX + petW;
+    const petBottom = petY + petH;
+
+    if (petRight < dialogLeft || petBottom < dialogTop) return;
+
+    const newX = Math.max(10, dialogLeft - petW - gap);
+    const newY = Math.max(10, dialogTop - petH - gap);
+
+    posRef.current = { x: newX, y: newY };
+    targetRef.current = { x: newX, y: newY };
+    if (petRef.current) {
+      petRef.current.style.left = newX + 'px';
+      petRef.current.style.top = newY + 'px';
+    }
+  }, []);
+
   const [wanderingEnabled, setWanderingEnabled] = useState(false);
   const [petVideos, setPetVideos] = useState([]);
   const [playingVideo, setPlayingVideo] = useState(null);
+  const [showHoverMenu, setShowHoverMenu] = useState(false);
+  const hoverTimerRef = useRef(null);
   const [hearts, setHearts] = useState([]);
   const [imageBounce, setImageBounce] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
@@ -192,6 +282,7 @@ function PetWidget() {
   const velocityRef = useRef({ vx: 0, vy: 0 });
   const targetRef = useRef({ x: window.innerWidth - 140, y: window.innerHeight - 160 });
   const isDraggingRef = useRef(false);
+  const dragMovedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
@@ -213,6 +304,7 @@ function PetWidget() {
         setPetCategory(myPet.petCategory || 'cat');
         setCustomCategory(myPet.customCategory || '');
       }
+      setPetMbti(myPet.mbti || '');
     } catch (err) {
       console.error('Failed to reload my pet:', err);
     }
@@ -240,6 +332,8 @@ function PetWidget() {
   }, [petAvatar, customPetImage, extractColorFromImage]);
 
   useEffect(() => {
+    if (authLoading) return;
+
     let globalPetData = null;
 
     const fetchGlobalPet = async () => {
@@ -276,13 +370,15 @@ function PetWidget() {
         setPetVideos(myPet.videos || []);
         setPetCategory(myPet.petCategory || 'cat');
         setCustomCategory(myPet.customCategory || '');
-        setMessages([{ role: 'pet', text: `嗨~ 我是${myPet.name || '果果仁'}！(◕‿◕✿) 有什么可以帮你的吗？` }]);
+        setPetMbti(myPet.mbti || '');
+        setMessages(buildInitialMessages(myPet.name));
       } else if (globalPetData) {
         setPetName(globalPetData.name || '果果仁');
         setCustomPetImage(globalPetData.image || '');
         setWalkGif(globalPetData.walkGif || '');
         setPetAvatar(globalPetData.avatar || '');
         setPetVideos(globalPetData.videos || []);
+        setPetMbti('');
       } else {
         setPetName('果果仁');
         setCustomPetImage('');
@@ -291,18 +387,25 @@ function PetWidget() {
         setPetVideos([]);
         setPetCategory('cat');
         setCustomCategory('');
+        setPetMbti('');
       }
 
       setPetInfoLoaded(true);
     };
     loadPets();
-  }, [isLoggedIn, authUser?.pet?.image]);
+  }, [isLoggedIn, authUser?.pet?.image, authLoading]);
 
   useEffect(() => {
     if (isSettingsOpen) {
       setNewPetName(petName);
     }
   }, [isSettingsOpen, petName]);
+
+  useEffect(() => {
+    const handler = () => reloadMyPetDisplay();
+    window.addEventListener('pet-refresh', handler);
+    return () => window.removeEventListener('pet-refresh', handler);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const pickNewTarget = () => {
@@ -466,6 +569,7 @@ function PetWidget() {
         my <= petRect.bottom
       ) {
         isDraggingRef.current = true;
+        dragMovedRef.current = false;
         dragStartRef.current = { x: mx, y: my };
         dragOffsetRef.current = {
           x: posRef.current.x - mx,
@@ -477,6 +581,7 @@ function PetWidget() {
 
     const handleMouseMove = (e) => {
       if (!isDraggingRef.current) return;
+      dragMovedRef.current = true;
       posRef.current = {
         x: Math.max(10, Math.min(window.innerWidth - 120, e.clientX + dragOffsetRef.current.x)),
         y: Math.max(10, Math.min(window.innerHeight - 140, e.clientY + dragOffsetRef.current.y)),
@@ -505,6 +610,7 @@ function PetWidget() {
         ty <= petRect.bottom
       ) {
         isDraggingRef.current = true;
+        dragMovedRef.current = false;
         dragStartRef.current = { x: tx, y: ty };
         dragOffsetRef.current = {
           x: posRef.current.x - tx,
@@ -517,6 +623,7 @@ function PetWidget() {
     const handleTouchMove = (e) => {
       if (!isDraggingRef.current || e.touches.length !== 1) return;
       e.preventDefault();
+      dragMovedRef.current = true;
       posRef.current = {
         x: Math.max(10, Math.min(window.innerWidth - 120, e.touches[0].clientX + dragOffsetRef.current.x)),
         y: Math.max(10, Math.min(window.innerHeight - 140, e.touches[0].clientY + dragOffsetRef.current.y)),
@@ -563,6 +670,12 @@ function PetWidget() {
   }, [isChatOpen, isSettingsOpen]);
 
   useEffect(() => {
+    if (isChatOpen || isSettingsOpen) {
+      avoidDialogOverlap();
+    }
+  }, [isChatOpen, isSettingsOpen, avoidDialogOverlap]);
+
+  useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -575,7 +688,10 @@ function PetWidget() {
   }, [playingVideo]);
 
   const handlePetClick = useCallback((part) => {
-    if (isDraggingRef.current) return;
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
 
     if (petVideos.length > 0 && part !== 'chat' && part !== 'settings') {
       const randomVideo = petVideos[Math.floor(Math.random() * petVideos.length)];
@@ -673,7 +789,7 @@ function PetWidget() {
     return `/uploads/${filename}`;
   };
 
-  if (!petInfoLoaded) return null;
+  if (!petInfoLoaded || authLoading) return null;
 
   return (
     <>
@@ -687,6 +803,13 @@ function PetWidget() {
           transition: (isDraggingRef.current || !wanderingEnabled) ? 'none' : 'none',
         }}
         title={`${petName} - 拖拽移动 | 点击互动 | 按 P 键聊天`}
+        onMouseEnter={() => {
+          if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+          if (!isDraggingRef.current && petVideos.length > 0) setShowHoverMenu(true);
+        }}
+        onMouseLeave={() => {
+          hoverTimerRef.current = setTimeout(() => setShowHoverMenu(false), 200);
+        }}
       >
         <div className="relative" onClick={() => handlePetClick('chat')}>
           {showThoughtBubble && (
@@ -708,8 +831,9 @@ function PetWidget() {
           )}
 
           {playingVideo && (
-            <div className="absolute -top-40 left-1/2 transform -translate-x-1/2 bg-black rounded-xl overflow-hidden shadow-2xl border-2 border-orange-400 z-20"
-              style={{ width: '160px', height: '120px' }}>
+            <div className="absolute -top-44 left-1/2 transform -translate-x-1/2 z-20">
+              <p className="text-center text-xs text-gray-600 bg-white/90 rounded-full px-3 py-0.5 mb-1 shadow-sm">{playingVideo.title || playingVideo.originalName || '播放中'}</p>
+              <div className="bg-black rounded-xl overflow-hidden shadow-2xl border-2 border-orange-400" style={{ width: '160px', height: '120px' }}>
               <video
                 ref={videoRef}
                 src={getVideoUrl(playingVideo.filename)}
@@ -725,6 +849,7 @@ function PetWidget() {
               >
                 ✕
               </button>
+            </div>
             </div>
           )}
 
@@ -925,12 +1050,40 @@ function PetWidget() {
                 style={{ pointerEvents: 'auto' }} title={`${petVideos.length}个交互视频`}></span>
             )}
           </div>
+
+          {showHoverMenu && petVideos.length > 0 && (
+            <div className="absolute -top-2 -translate-y-full left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-30 min-w-[130px] max-h-[200px] overflow-y-auto"
+              onMouseEnter={() => {
+                if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+                setShowHoverMenu(true);
+              }}
+              onMouseLeave={() => {
+                hoverTimerRef.current = setTimeout(() => setShowHoverMenu(false), 200);
+              }}>
+              <p className="text-xs text-gray-400 px-3 py-1 font-medium">选择动作</p>
+              {petVideos.map((v, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPlayingVideo(v);
+                    setShowHoverMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center space-x-2"
+                >
+                  <span>▶</span>
+                  <span className="truncate">{v.title || v.originalName || `动作 ${i + 1}`}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
 
       {isChatOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
-          style={{ maxHeight: '450px' }}>
+        <div className="fixed bottom-4 right-4 z-50 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+          style={{ maxHeight: '600px' }}>
           <div className="text-white px-4 py-3 flex items-center justify-between" style={{
             background: `linear-gradient(135deg, ${dialogAccentColor}, ${dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.7)')})`
           }}>
@@ -957,6 +1110,17 @@ function PetWidget() {
               <div>
                 <p className="font-semibold text-sm">{petName}</p>
                 <p className="text-xs opacity-80">我有物 · 吉祥物 | 按 P 关闭</p>
+                {petMbti && MBTI_PROFILES[petMbti] && (
+                  <span
+                    className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs font-bold"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      color: '#fff',
+                    }}
+                  >
+                    {MBTI_PROFILES[petMbti].emoji} {petMbti}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-1">
@@ -978,8 +1142,67 @@ function PetWidget() {
             </div>
           </div>
 
-          <div className="p-3 h-64 overflow-y-auto" style={{ backgroundColor: dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.05)') }}>
-            {messages.map((msg, i) => (
+          <div className="p-3 h-80 overflow-y-auto" style={{ backgroundColor: dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.05)') }}>
+            {messages.map((msg, i) => {
+              if (msg.type === 'toolkit') {
+                return (
+                  <div key={i} className="flex mb-3 justify-start">
+                    <div className="flex-shrink-0 mr-1 mt-0.5">
+                      {(petAvatar || customPetImage) ? (
+                        <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
+                      ) : (
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                          <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
+                          <polygon points="6,8 4,3 10,7" fill="#f59e0b" />
+                          <polygon points="18,8 20,3 14,7" fill="#f59e0b" />
+                          <polygon points="7,7 5,5 9,7" fill="#fca5a5" />
+                          <polygon points="17,7 19,5 15,7" fill="#fca5a5" />
+                          <ellipse cx="12" cy="16" rx="7" ry="5" fill="#fef3c7" />
+                          <ellipse cx="9" cy="13" rx="2" ry="2.5" fill="#1c1917" />
+                          <ellipse cx="15" cy="13" rx="2" ry="2.5" fill="#1c1917" />
+                          <circle cx="10" cy="12" r="0.8" fill="white" />
+                          <circle cx="16" cy="12" r="0.8" fill="white" />
+                          <ellipse cx="12" cy="17" rx="1.5" ry="1" fill="#f97316" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="max-w-[95%] bg-white rounded-2xl rounded-bl-md border border-orange-200 p-3">
+                      <p className="text-xs text-gray-500 mb-2 font-medium">🔧 我的小工具包</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {PET_TOOLS.map(tool => (
+                          tool.disabled ? (
+                            <div
+                              key={tool.id}
+                              className="rounded-xl p-2.5 text-center opacity-50 cursor-not-allowed"
+                              style={{ backgroundColor: tool.bgColor }}
+                            >
+                              <span className="text-xl block mb-0.5">{tool.icon}</span>
+                              <span className="text-xs font-medium text-gray-500">{tool.label}</span>
+                              <span className="text-[10px] text-gray-400 block">{tool.desc}</span>
+                            </div>
+                          ) : (
+                            <button
+                              key={tool.id}
+                              onClick={() => {
+                                setIsChatOpen(false);
+                                window.location.href = tool.route;
+                              }}
+                              className="rounded-xl p-2.5 text-center hover:scale-105 transition-transform hover:shadow-md"
+                              style={{ backgroundColor: tool.bgColor }}
+                            >
+                              <span className="text-xl block mb-0.5">{tool.icon}</span>
+                              <span className="text-xs font-medium" style={{ color: tool.color }}>{tool.label}</span>
+                              <span className="text-[10px] text-gray-400 block">{tool.desc}</span>
+                            </button>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
               <div key={i} className={`flex mb-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'pet' && (
                   <div className="flex-shrink-0 mr-1 mt-0.5">
@@ -1010,7 +1233,8 @@ function PetWidget() {
                   {msg.text}
                 </div>
               </div>
-            ))}
+            );
+            })}
             {isTyping && (
               <div className="flex mb-3">
                 <div className="flex-shrink-0 mr-1">
@@ -1061,7 +1285,8 @@ function PetWidget() {
       )}
 
       {isSettingsOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
+        <div className="fixed bottom-4 right-4 z-50 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden overflow-y-auto"
+          style={{ maxHeight: '85vh' }}>
           <div className="bg-gradient-to-r from-blue-500 to-indigo-400 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
             <div>
               <p className="font-semibold text-sm">
@@ -1150,7 +1375,7 @@ function PetWidget() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">走路 GIF 动画</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">待机动画</label>
                   <input type="file" accept="image/gif" onChange={async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -1234,6 +1459,44 @@ function PetWidget() {
                       <button onClick={async () => {
                         try { await axios.delete('/api/settings/global-pet/avatar'); setPetAvatar(''); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
                       }} className="text-red-400 hover:text-red-600 text-xs">删除</button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">🎬 互动GIF/视频</label>
+                  <p className="text-xs text-gray-500 mb-2">上传不同状态的GIF或视频，鼠标悬停宠物即可选择播放</p>
+                  <div className="flex space-x-2 mb-2">
+                    <input type="text" id="video-title-global" placeholder="动作名称，如：开心" className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" maxLength={20} />
+                    <label className="px-3 py-2 bg-blue-400 text-white rounded-xl cursor-pointer hover:bg-blue-500 transition text-sm whitespace-nowrap inline-flex items-center">
+                      📁 上传
+                      <input type="file" accept="image/gif,video/*" onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const titleEl = document.getElementById('video-title-global');
+                        const title = (titleEl?.value || '').trim() || file.name;
+                        const formData = new FormData();
+                        formData.append('video', file);
+                        formData.append('title', title);
+                        try {
+                          const res = await axios.post('/api/settings/global-pet/video', formData);
+                          setPetVideos(res.data.pet.videos);
+                          if (titleEl) titleEl.value = '';
+                          showToast('✅ 上传成功！', 'success');
+                        } catch (err) { showToast('❌ ' + (err.response?.data?.message || '上传失败'), 'error'); }
+                      }} className="hidden" />
+                    </label>
+                  </div>
+                  {petVideos.length > 0 && (
+                    <div className="space-y-1 max-h-36 overflow-y-auto">
+                      {petVideos.map((v, i) => (
+                        <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                          <span className="text-xs text-gray-700 truncate flex-1 mr-2">{v.title || v.originalName || '未命名'}</span>
+                          <button onClick={async () => {
+                            try { await axios.delete(`/api/settings/global-pet/video/${v.filename}`); setPetVideos(prev => prev.filter(x => x.filename !== v.filename)); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                          }} className="text-red-400 hover:text-red-600 text-xs flex-shrink-0">✕</button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1360,7 +1623,7 @@ function PetWidget() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">走路 GIF 动画</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">待机动画</label>
                   <input type="file" accept="image/gif" onChange={async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -1448,16 +1711,58 @@ function PetWidget() {
                   )}
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">🎬 互动GIF/视频</label>
+                  <p className="text-xs text-gray-500 mb-2">上传不同状态的GIF或视频，鼠标悬停宠物即可选择播放</p>
+                  <div className="flex space-x-2 mb-2">
+                    <input type="text" id="video-title-user" placeholder="动作名称，如：开心" className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-400" maxLength={20} />
+                    <label className="px-3 py-2 bg-purple-400 text-white rounded-xl cursor-pointer hover:bg-purple-500 transition text-sm whitespace-nowrap inline-flex items-center">
+                      📁 上传
+                      <input type="file" accept="image/gif,video/*" onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const titleEl = document.getElementById('video-title-user');
+                        const title = (titleEl?.value || '').trim() || file.name;
+                        const formData = new FormData();
+                        formData.append('video', file);
+                        formData.append('title', title);
+                        try {
+                          const res = await axios.post('/api/settings/my-pet/video', formData);
+                          setPetVideos(res.data.pet.videos);
+                          if (titleEl) titleEl.value = '';
+                          showToast('✅ 上传成功！', 'success');
+                        } catch (err) { showToast('❌ ' + (err.response?.data?.message || '上传失败'), 'error'); }
+                      }} className="hidden" />
+                    </label>
+                  </div>
+                  {petVideos.length > 0 && (
+                    <div className="space-y-1 max-h-36 overflow-y-auto">
+                      {petVideos.map((v, i) => (
+                        <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                          <span className="text-xs text-gray-700 truncate flex-1 mr-2">{v.title || v.originalName || '未命名'}</span>
+                          <button onClick={async () => {
+                            try { await axios.delete(`/api/settings/my-pet/video/${v.filename}`); setPetVideos(prev => prev.filter(x => x.filename !== v.filename)); showToast('✅ 已删除', 'success'); } catch (err) { showToast('❌ 删除失败', 'error'); }
+                          }} className="text-red-400 hover:text-red-600 text-xs flex-shrink-0">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={async () => {
                     try {
                       await axios.put('/api/settings/my-pet/name', { name: '果果仁' });
                       try { await axios.delete('/api/settings/my-pet/image'); } catch (e) {}
                       try { await axios.delete('/api/settings/my-pet/walk-gif'); } catch (e) {}
+                      for (const v of petVideos) {
+                        try { await axios.delete(`/api/settings/my-pet/video/${v.filename}`); } catch (e) {}
+                      }
                       setCustomPetImage('');
                       setWalkGif('');
                       setPetName('果果仁');
                       setPetCategory('cat');
                       setCustomCategory('');
+                      setPetVideos([]);
                       setPlayingVideo(null);
                       showToast('✅ 已恢复默认！', 'success');
                     } catch (err) { showToast('❌ 重置失败', 'error'); }

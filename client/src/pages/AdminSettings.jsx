@@ -72,7 +72,7 @@ function AdminSettings() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] ">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 pb-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 heading-md ">系统设置</h1>
           <p className="text-gray-600 mt-2">管理网站的基本设置</p>

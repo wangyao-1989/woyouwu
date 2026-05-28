@@ -55,7 +55,7 @@ function AdminUsers() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] ">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="bg-white rounded-card border-2 border-gray-200 shadow-card overflow-hidden">
           <div className="bg-gradient-to-r from-warm-900 to-[#8B7355] px-6 py-6">
             <div className="flex items-center justify-between">

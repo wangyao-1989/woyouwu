@@ -8,6 +8,11 @@
   box-sizing: border-box;
 }
 
+html {
+  background-color: #F5F0E8;
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -15,6 +20,7 @@ body {
   background-color: #F5F0E8;
   color: #4A3728;
   line-height: 1.6;
+  overscroll-behavior-y: none;
 }
 
 ::selection {

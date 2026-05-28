@@ -7,6 +7,7 @@ function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [videos, setVideos] = useState([]);
+  const [videosLoaded, setVideosLoaded] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
@@ -19,8 +20,11 @@ function Home() {
         if (res.data.projects && res.data.projects.length > 0) {
           setVideos(res.data.projects.filter(p => p.video && p.video.trim()));
         }
+        setVideosLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        setVideosLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -85,7 +89,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-cream-50 fade-in">
       {/* 主视觉区域 */}
-      <section className="relative py-16 px-4 gradient-hero">
+      <section className="relative pb-16 pt-2 px-4 gradient-hero">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
@@ -112,7 +116,11 @@ function Home() {
               </div>
             </div>
             <div className="flex-1 flex justify-center lg:justify-end">
-              {videos.length > 0 ? (
+              {!videosLoaded ? (
+                <div className="w-full max-w-xs">
+                  <div className="aspect-square bg-[#E8E0D5] rounded-2xl animate-pulse" />
+                </div>
+              ) : videos.length > 0 ? (
                 <div className="w-full max-w-xs">
                   <div className="bg-white rounded-2xl card-ring overflow-hidden">
                     <div className="aspect-square bg-black relative">

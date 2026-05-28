@@ -111,7 +111,7 @@ function Inspirations() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] fade-in">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="heading-xl">灵感碎片</h1>

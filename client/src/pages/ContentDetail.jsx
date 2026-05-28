@@ -132,7 +132,7 @@ function ContentDetail() {
   const isOwner = user && content.owner && user.id === content.owner._id;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#F5F0E8] pb-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {content.images && content.images.length > 0 && (

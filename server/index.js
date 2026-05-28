@@ -20,6 +20,7 @@ const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
 const newsRoutes = require('./routes/news');
 const settingsRoutes = require('./routes/settings');
+const mbtiRoutes = require('./routes/mbti');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -28,13 +29,24 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/woyouwu', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('MongoDB connected successfully');
-}).catch(err => {
-  console.error('MongoDB connection error:', err);
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/woyouwu')
+  .then(() => {
+    console.log('MongoDB connected successfully');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+  });
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB reconnected');
 });
 
 app.use('/api/auth', authRoutes);
@@ -51,6 +63,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/mbti', mbtiRoutes);
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
@@ -77,7 +90,7 @@ process.on('SIGINT', () => {
   setTimeout(() => {
     console.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
-  }, 5000);
+  }, 10000);
 });
 
 process.on('SIGTERM', () => {
@@ -89,7 +102,17 @@ process.on('SIGTERM', () => {
   setTimeout(() => {
     console.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
-  }, 5000);
+  }, 10000);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise);
+  console.error('Reason:', reason instanceof Error ? reason.message : reason);
 });
 
 module.exports = app;

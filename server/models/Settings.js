@@ -15,6 +15,7 @@ const SettingsSchema = new mongoose.Schema({
     videos: [{
       filename: String,
       originalName: String,
+      title: { type: String, default: '' },
       path: String,
       createdAt: Date,
     }],

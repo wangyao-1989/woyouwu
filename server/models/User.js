@@ -171,9 +171,14 @@ const userSchema = new mongoose.Schema({
     videos: [{
       filename: { type: String },
       originalName: { type: String },
+      title: { type: String, default: '' },
       label: { type: String, default: '' },
       createdAt: { type: Date, default: Date.now }
-    }]
+    }],
+    mbti: {
+      type: String,
+      default: ''
+    }
   },
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,

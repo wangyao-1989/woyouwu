@@ -154,16 +154,34 @@ router.post('/global-pet/video', auth, admin, upload.single('video'), async (req
     if (!req.file) {
       return res.status(400).json({ message: '请上传视频' });
     }
+    const title = req.body.title || req.file.originalname;
     const settings = await getSettings();
     const videoEntry = {
       filename: req.file.filename,
       originalName: req.file.originalname,
+      title,
       path: `/uploads/${req.file.filename}`,
       createdAt: new Date(),
     };
     settings.globalPet.videos.push(videoEntry);
     await settings.save();
     res.json({ message: '视频上传成功', pet: settings.globalPet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 更新全局宠物视频标题（管理员）
+router.put('/global-pet/video/:filename', auth, admin, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ message: '标题不能为空' });
+    const settings = await getSettings();
+    const videoEntry = settings.globalPet.videos.find(v => v.filename === req.params.filename);
+    if (!videoEntry) return res.status(404).json({ message: '视频不存在' });
+    videoEntry.title = title;
+    await settings.save();
+    res.json({ message: '标题更新成功', pet: settings.globalPet });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }
@@ -329,6 +347,82 @@ router.delete('/my-pet/avatar', auth, async (req, res) => {
     user.pet.avatar = '';
     await user.save();
     res.json({ message: '头像已删除', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/my-pet/video', auth, upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: '请上传视频' });
+    const title = req.body.title || req.file.originalname;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    const videoEntry = {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      title,
+      createdAt: new Date(),
+    };
+    user.pet.videos.push(videoEntry);
+    await user.save();
+    res.json({ message: '视频上传成功', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.put('/my-pet/video/:filename', auth, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ message: '标题不能为空' });
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    const videoEntry = user.pet.videos.find(v => v.filename === req.params.filename);
+    if (!videoEntry) return res.status(404).json({ message: '视频不存在' });
+    videoEntry.title = title;
+    await user.save();
+    res.json({ message: '标题更新成功', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.delete('/my-pet/video/:filename', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    const videoEntry = user.pet.videos.find(v => v.filename === req.params.filename);
+    if (videoEntry) {
+      const filePath = path.join(__dirname, '..', 'uploads', videoEntry.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    user.pet.videos = user.pet.videos.filter(v => v.filename !== req.params.filename);
+    await user.save();
+    res.json({ message: '视频已删除', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+const VALID_MBTI_TYPES = [
+  'INTJ', 'INTP', 'ENTJ', 'ENTP',
+  'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+  'ISTP', 'ISFP', 'ESTP', 'ESFP',
+];
+
+router.put('/my-pet/mbti', auth, async (req, res) => {
+  try {
+    const { mbti } = req.body;
+    if (!mbti || !VALID_MBTI_TYPES.includes(mbti)) {
+      return res.status(400).json({ message: '无效的MBTI类型' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    user.pet.mbti = mbti;
+    await user.save();
+    res.json({ message: 'MBTI性格标签已保存', pet: user.pet });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }

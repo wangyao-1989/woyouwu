@@ -305,7 +305,7 @@ function CreateArticle() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] fade-in">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <h1 className="heading-xl mb-6">
           {isEdit ? '编辑文章' : (currentCategory ? `发布${currentCategory.label}` : '发布文章')}
         </h1>
