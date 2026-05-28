@@ -115,10 +115,24 @@ const PET_TOOLS = [
   },
 ];
 
-const buildInitialMessages = (name) => [
-  { role: 'pet', text: `喵~ 我是${name || '果果仁'}！(=^ω^=) 有什么可以帮你的吗？` },
-  { role: 'pet', type: 'toolkit' },
-];
+const CATEGORY_GREETINGS = {
+  cat: (name) => `喵~ 我是${name}！(=^ω^=) 有什么可以帮你的吗？`,
+  dog: (name) => `汪~ 我是${name}！(´▽\`ʃ♡ƪ) 有什么可以帮你的吗？`,
+  rabbit: (name) => `蹦~ 我是${name}！(｡･ω･｡) 有什么可以帮你的吗？`,
+  hamster: (name) => `吱吱~ 我是${name}！(*/ω＼*) 有什么可以帮你的吗？`,
+  bird: (name) => `啾~ 我是${name}！(๑•̀ㅂ•́)و✧ 有什么可以帮你的吗？`,
+  fox: (name) => `嗷~ 我是${name}！(￣▽￣*) 有什么可以帮你的吗？`,
+  panda: (name) => `嗯~ 我是${name}！(￣ω￣) 有什么可以帮你的吗？`,
+  custom: (name) => `嗨~ 我是${name}！有什么可以帮你的吗？`,
+};
+
+const buildInitialMessages = (name, category = 'cat') => {
+  const greet = CATEGORY_GREETINGS[category] || CATEGORY_GREETINGS.custom;
+  return [
+    { role: 'pet', text: greet(name || '果果仁') },
+    { role: 'pet', type: 'toolkit' },
+  ];
+};
 
 const PET_CATEGORY_MAP = Object.fromEntries(PET_CATEGORIES.map(c => [c.value, c]));
 
@@ -162,7 +176,7 @@ function PetWidget() {
   const [petState, setPetState] = useState(PET_STATES.IDLE);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [messages, setMessages] = useState(buildInitialMessages('果果仁'));
+  const [messages, setMessages] = useState(buildInitialMessages('果果仁', 'cat'));
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [faceIndex, setFaceIndex] = useState(0);
@@ -389,7 +403,7 @@ function PetWidget() {
         setCustomCategory(myPet.customCategory || '');
         setPetMbti(myPet.mbti || '');
         setPetZodiac(myPet.zodiac || '');
-        setMessages(buildInitialMessages(myPet.name));
+        setMessages(buildInitialMessages(myPet.name, myPet.petCategory || 'cat'));
       } else if (globalPetData) {
         setPetName(globalPetData.name || '果果仁');
         setCustomPetImage(globalPetData.image || '');
@@ -398,6 +412,9 @@ function PetWidget() {
         setPetVideos(globalPetData.videos || []);
         setPetMbti('');
         setPetZodiac('');
+        setPetCategory('custom');
+        setCustomCategory('');
+        setMessages(buildInitialMessages(globalPetData.name || '果果仁', 'custom'));
       } else {
         setPetName('果果仁');
         setCustomPetImage('');

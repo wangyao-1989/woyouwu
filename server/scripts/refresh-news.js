@@ -3,6 +3,30 @@ const mongoose = require('mongoose');
 const NewsItem = require('../models/NewsItem');
 const { fetchAllHeadlines } = require('../newsFetcher');
 
+const fs = require('fs');
+
+function logMemory(label) {
+  const mem = process.memoryUsage();
+  const heapMB = (mem.heapUsed / 1024 / 1024).toFixed(1);
+  const heapTotalMB = (mem.heapTotal / 1024 / 1024).toFixed(1);
+  const rssMB = (mem.rss / 1024 / 1024).toFixed(1);
+
+  let sysMem = '';
+  try {
+    const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+    const total = meminfo.match(/MemTotal:\s+(\d+)/)?.[1];
+    const avail = meminfo.match(/MemAvailable:\s+(\d+)/)?.[1];
+    if (total && avail) {
+      const totalMB = (total / 1024).toFixed(0);
+      const availMB = (avail / 1024).toFixed(0);
+      const usedPercent = ((1 - avail / total) * 100).toFixed(1);
+      sysMem = ` | 系统总:${totalMB}MB 可用:${availMB}MB 占用:${usedPercent}%`;
+    }
+  } catch (e) {}
+
+  console.log(`[MEM] ${label}: 堆${heapMB}MB/${heapTotalMB}MB RSS:${rssMB}MB${sysMem}`);
+}
+
 async function callDeepSeek(messages, maxTokens = 4000) {
   const apiKey = process.env.DEEPSEEK_API_KEY || '';
   const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -142,18 +166,21 @@ ${headlinesText}
 }
 
 async function refreshNews() {
+  logMemory('启动');
   console.log('[NewsRefresh] 开始聚合今日真实资讯...');
   console.log('[NewsRefresh] Step 1: 抓取 RSS 头条...');
 
   let realHeadlines = [];
   try {
     realHeadlines = await fetchAllHeadlines();
+    logMemory('RSS抓取完成');
     console.log(`[NewsRefresh] 获取到 ${realHeadlines.length} 条真实头条`);
   } catch (e) {
     console.log('[NewsRefresh] RSS 获取失败');
   }
 
   await NewsItem.deleteMany({ generatedFor: null });
+  logMemory('清理旧数据完成');
 
   if (realHeadlines.length < 10) {
     console.log(`[NewsRefresh] 真实头条不足 (${realHeadlines.length}条)，不生成，清空旧数据后退出`);
@@ -165,6 +192,7 @@ async function refreshNews() {
   const apiKey = process.env.DEEPSEEK_API_KEY || '';
   if (apiKey) {
     console.log('[NewsRefresh] Step 2: AI 整理摘要...');
+    logMemory('AI调用前');
     const aiItems = await generateAiNews('REFRESH', 10);
 
     if (aiItems.length > 0) {
@@ -175,6 +203,7 @@ async function refreshNews() {
           sourceType: 'ai',
         }))
       );
+      logMemory('AI写入完成');
       console.log(`[NewsRefresh] AI 整理完成，共 ${aiItems.length} 条资讯`);
     }
   } else {
@@ -183,14 +212,13 @@ async function refreshNews() {
 
   const finalCount = await NewsItem.countDocuments({ generatedFor: null });
   console.log(`[NewsRefresh] 刷新完成，共 ${finalCount} 条资讯`);
+  logMemory('结束');
   return finalCount;
 }
 
 if (require.main === module) {
-  mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/woyouwu', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }).then(async () => {
+  mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/woyouwu')
+    .then(async () => {
     console.log('MongoDB connected');
     await refreshNews();
     process.exit(0);

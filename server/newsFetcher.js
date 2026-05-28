@@ -7,18 +7,16 @@ const parser = new Parser({
 });
 
 const RSS_SOURCES = [
-  { url: 'https://36kr.com/feed', label: '36氪', category: 'tech', maxItems: 15 },
-  { url: 'https://www.ifanr.com/feed', label: '爱范儿', category: 'tech', maxItems: 10 },
-  { url: 'https://feedx.net/rss/weibo.xml', label: '微博热搜', maxItems: 15 },
-  { url: 'https://www.thepaper.cn/rss_newslist.xml', label: '澎湃新闻', category: 'life', maxItems: 15 },
-  { url: 'https://rsshub.app/36kr/search/kr?keyword=AI', label: 'AI动态', category: 'tech', maxItems: 10 },
-  { url: 'https://rsshub.app/ithome/ranking/daily', label: 'IT之家', category: 'tech', maxItems: 10 },
-  { url: 'https://rsshub.app/juejin/trending/frontend/monthly', label: '掘金', category: 'tech', maxItems: 10 },
-  { url: 'https://rsshub.app/sspai/matrix', label: '少数派', category: 'creative', maxItems: 10 },
-  { url: 'https://rsshub.app/cls/telegraph', label: '财联社', category: 'career', maxItems: 15 },
-  { url: 'https://rsshub.app/zhihu/hot', label: '知乎热榜', maxItems: 15 },
-  { url: 'https://rsshub.app/douban/movie/playing', label: '豆瓣电影', category: 'art', maxItems: 8 },
-  { url: 'https://rsshub.app/guokr/scientific', label: '果壳科学', category: 'science', maxItems: 8 },
+  { url: 'https://36kr.com/feed', label: '36氪', category: 'tech', maxItems: 10 },
+  { url: 'https://www.ifanr.com/feed', label: '爱范儿', category: 'tech', maxItems: 8 },
+  { url: 'https://feedx.net/rss/weibo.xml', label: '微博热搜', maxItems: 10 },
+  { url: 'https://www.thepaper.cn/rss_newslist.xml', label: '澎湃新闻', category: 'life', maxItems: 10 },
+  { url: 'https://rsshub.app/ithome/ranking/daily', label: 'IT之家', category: 'tech', maxItems: 8 },
+  { url: 'https://rsshub.app/sspai/matrix', label: '少数派', category: 'creative', maxItems: 8 },
+  { url: 'https://rsshub.app/zhihu/hot', label: '知乎热榜', maxItems: 10 },
+  { url: 'https://rsshub.app/cls/telegraph', label: '财联社', category: 'career', maxItems: 10 },
+  { url: 'https://rsshub.app/douban/movie/playing', label: '豆瓣电影', category: 'art', maxItems: 5 },
+  { url: 'https://rsshub.app/guokr/scientific', label: '果壳科学', category: 'science', maxItems: 5 },
 ];
 
 async function fetchRssSource(source) {
@@ -43,16 +41,15 @@ async function fetchRssSource(source) {
   }
 }
 
-async function fetchAllHeadlines() {
-  const results = await Promise.allSettled(
-    RSS_SOURCES.map(s => fetchRssSource(s))
-  );
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+async function fetchAllHeadlines() {
   const allItems = [];
-  for (const r of results) {
-    if (r.status === 'fulfilled') {
-      allItems.push(...r.value);
-    }
+
+  for (const source of RSS_SOURCES) {
+    const items = await fetchRssSource(source);
+    allItems.push(...items);
+    await delay(2000);
   }
 
   const seen = new Set();
