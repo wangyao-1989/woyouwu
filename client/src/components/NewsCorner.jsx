@@ -37,6 +37,7 @@ function NewsCorner() {
   const [customKeywords, setCustomKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedDetail, setExpandedDetail] = useState(null);
   const [hasPreference, setHasPreference] = useState(false);
 
@@ -96,6 +97,22 @@ function NewsCorner() {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (user) {
+        await axios.post('/api/news/refresh-my');
+      } else {
+        await axios.post('/api/news/refresh');
+      }
+      await fetchNews();
+    } catch (err) {
+      console.error('刷新资讯失败:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const toggleCategory = (value) => {
     setMyCategories(prev =>
       prev.includes(value)
@@ -136,7 +153,12 @@ function NewsCorner() {
       setCustomKeywords(res.data.customKeywords || []);
       setHasPreference((res.data.categories || []).length > 0 || (res.data.customKeywords || []).length > 0);
       setShowPrefModal(false);
+      setRefreshing(true);
+      try {
+        await axios.post('/api/news/refresh-my');
+      } catch {}
       await fetchNews();
+      setRefreshing(false);
     } catch {
     } finally {
       setSaving(false);
@@ -198,23 +220,49 @@ function NewsCorner() {
         </span>
       </div>
       {user ? (
-        <button
-          onClick={openPreferenceModal}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 bg-primary-50 rounded-xl hover:bg-primary-100 transition-all"
-        >
-          <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          定制我的资讯
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
+            title="刷新资讯"
+          >
+            <svg aria-hidden="true" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {refreshing ? '刷新中...' : '刷新'}
+          </button>
+          <button
+            onClick={openPreferenceModal}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 bg-primary-50 rounded-xl hover:bg-primary-100 transition-all"
+          >
+            <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            定制我的资讯
+          </button>
+        </div>
       ) : (
-        <Link
-          to="/login"
-          className="text-sm text-gray-400 hover:text-primary-500 transition"
-        >
-          登录后定制专属资讯 →
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
+            title="刷新资讯"
+          >
+            <svg aria-hidden="true" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {refreshing ? '刷新中...' : '刷新'}
+          </button>
+          <Link
+            to="/login"
+            className="text-sm text-gray-400 hover:text-primary-500 transition"
+          >
+            登录后定制专属资讯 →
+          </Link>
+        </div>
       )}
     </div>
   );

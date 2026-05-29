@@ -21,6 +21,7 @@ const aiRoutes = require('./routes/ai');
 const newsRoutes = require('./routes/news');
 const settingsRoutes = require('./routes/settings');
 const mbtiRoutes = require('./routes/mbti');
+const tempUploadRoutes = require('./routes/temp-upload');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/mbti', mbtiRoutes);
+app.use('/api/temp-upload', tempUploadRoutes);
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 

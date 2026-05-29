@@ -10,6 +10,13 @@ function AdminSettings() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const fileInputRef = useRef(null);
+  
+  const [selectedMBTIFile, setSelectedMBTIFile] = useState(null);
+  const [mbtiPreview, setMBTIPreview] = useState(null);
+  const [currentMBTIAvatar, setCurrentMBTIAvatar] = useState(null);
+  const [uploadingMBTI, setUploadingMBTI] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const mbtiFileInputRef = useRef(null);
 
   useEffect(() => {
     const checkLogo = async () => {
@@ -22,7 +29,20 @@ function AdminSettings() {
         setCurrentLogo(null);
       }
     };
+    
+    const checkMBTIAvatar = async () => {
+      try {
+        const response = await axios.head('/api/admin/mbti-avatar');
+        if (response.status === 200) {
+          setCurrentMBTIAvatar(`/uploads/mbti-avatars.jpg?t=${Date.now()}`);
+        }
+      } catch (error) {
+        setCurrentMBTIAvatar(null);
+      }
+    };
+    
     checkLogo();
+    checkMBTIAvatar();
   }, []);
 
   const handleFileChange = (e) => {
@@ -67,6 +87,52 @@ function AdminSettings() {
       setMessageType('error');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleMBTIFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedMBTIFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setMBTIPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMBTIUpload = async () => {
+    if (!selectedMBTIFile) {
+      setMessage('请选择要上传的MBTI头像图片');
+      setMessageType('error');
+      return;
+    }
+
+    setUploadingMBTI(true);
+    setMessage('');
+    setMessageType('');
+
+    const formData = new FormData();
+    formData.append('avatar', selectedMBTIFile);
+
+    try {
+      const res = await axios.post('/api/admin/upload-mbti-avatar', formData);
+
+      setMessage(res.data.message || 'MBTI头像上传成功！');
+      setMessageType('success');
+      setUploadSuccess(true);
+      setCurrentMBTIAvatar(`/uploads/mbti-avatars.jpg?t=${Date.now()}`);
+      setSelectedMBTIFile(null);
+      setMBTIPreview(null);
+      if (mbtiFileInputRef.current) {
+        mbtiFileInputRef.current.value = '';
+      }
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'MBTI头像上传失败');
+      setMessageType('error');
+    } finally {
+      setUploadingMBTI(false);
     }
   };
 
@@ -141,6 +207,84 @@ function AdminSettings() {
           >
             {uploading ? '上传中...' : '上传Logo'}
           </button>
+        </div>
+
+        <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">MBTI测试头像</h2>
+          <p className="text-gray-600 mb-4">上传4×4网格的MBTI头像图片（16种类型）</p>
+          
+          <div className="mb-6">
+            <p className="text-sm font-medium text-gray-700 mb-2">当前头像：</p>
+            <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
+              {currentMBTIAvatar ? (
+                <img src={currentMBTIAvatar} alt="当前MBTI头像" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-[#B8A899] text-sm">暂无头像</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-sm font-medium text-gray-700 mb-2">选择新头像：</p>
+            <div className="flex items-center gap-4">
+              <input
+                type="file"
+                ref={mbtiFileInputRef}
+                accept="image/*"
+                onChange={handleMBTIFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={() => mbtiFileInputRef.current?.click()}
+                className="rounded-btn px-4 py-2 bg-[#F0E8DD] text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                选择图片
+              </button>
+              {selectedMBTIFile && (
+                <span className="text-sm text-gray-600">{selectedMBTIFile.name}</span>
+              )}
+            </div>
+          </div>
+
+          {mbtiPreview && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">预览：</p>
+              <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
+                <img src={mbtiPreview} alt="预览" className="w-full h-full object-contain" />
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleMBTIUpload}
+            disabled={!selectedMBTIFile || uploadingMBTI}
+            className="rounded-btn px-6 py-3 bg-warm-900 text-white font-medium hover:bg-warm-700 transition-colors shadow-sketch disabled:opacity-50 disabled:cursor-not-allowed wobble"
+          >
+            {uploadingMBTI ? '上传中...' : '上传MBTI头像'}
+          </button>
+
+          {uploadSuccess && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">裁剪后的16个头像预览：</h3>
+              <div className="grid grid-cols-4 gap-4">
+                {['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'].map((type) => (
+                  <div key={type} className="flex flex-col items-center">
+                    <div className="w-24 h-24 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={`/api/admin/mbti-avatar/${type}?t=${Date.now()}`} 
+                        alt={type} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <span className="mt-2 text-sm font-medium text-gray-700">{type}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6">

@@ -450,4 +450,20 @@ router.put('/my-pet/zodiac', auth, async (req, res) => {
   }
 });
 
+router.put('/my-pet/avatar-url', auth, async (req, res) => {
+  try {
+    const { avatarUrl } = req.body;
+    if (!avatarUrl || typeof avatarUrl !== 'string') {
+      return res.status(400).json({ message: '请提供有效的头像地址' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    user.pet.avatar = avatarUrl;
+    await user.save();
+    res.json({ message: '头像已保存', pet: user.pet });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -267,6 +267,31 @@ const ZODIAC_PROFILES = {
   },
 };
 
+const AVATAR_MOTIFS = {
+  INTJ: { shapes: ['hexagon', 'lines'], secondary: '#312e81' },
+  INTP: { shapes: ['circles', 'dots'], secondary: '#4c1d95' },
+  ENTJ: { shapes: ['diamond', 'rays'], secondary: '#92400e' },
+  ENTP: { shapes: ['star', 'spiral'], secondary: '#9a3412' },
+  INFJ: { shapes: ['leaf', 'glow'], secondary: '#064e3b' },
+  INFP: { shapes: ['flower', 'wave'], secondary: '#831843' },
+  ENFJ: { shapes: ['sun', 'heart'], secondary: '#7f1d1d' },
+  ENFP: { shapes: ['sparkle', 'rainbow'], secondary: '#9a3412' },
+  ISTJ: { shapes: ['grid', 'square'], secondary: '#334155' },
+  ISFJ: { shapes: ['shield', 'circle'], secondary: '#365314' },
+  ESTJ: { shapes: ['compass', 'block'], secondary: '#0c4a6e' },
+  ESFJ: { shapes: ['people', 'ring'], secondary: '#115e59' },
+  ISTP: { shapes: ['gear', 'cross'], secondary: '#581c87' },
+  ISFP: { shapes: ['petal', 'moon'], secondary: '#701a75' },
+  ESTP: { shapes: ['bolt', 'arrow'], secondary: '#854d0e' },
+  ESFP: { shapes: ['burst', 'confetti'], secondary: '#881337' },
+};
+
+const generateAvatarSVG = (mbti) => {
+  const profile = MBTI_PROFILES[mbti];
+  if (!profile) return '';
+  
+  return `/uploads/mbti-avatars/${mbti.toLowerCase()}.png?t=${Date.now()}`;
+};
 
 const getCombinedAnalysis = (mbti, zodiac) => {
   if (!mbti || !zodiac) return null;
@@ -279,10 +304,10 @@ const getCombinedAnalysis = (mbti, zodiac) => {
   const element = zodProfile.element;
 
   const elementMatches = {
-    '\u706b\u8c61': { desc: '\u4f60\u7684' + zodName + '\u5c5e\u4e8e\u706b\u8c61\u661f\u5ea7\uff0c\u706b\u8c61\u7279\u8d28\u8d4b\u4e88\u4f60\u70ed\u60c5\u548c\u884c\u52a8\u529b\uff0c\u8fd9\u4e0e' + mbtiTitle + '\u7684\u679c\u65ad\u548c\u76ee\u6807\u5bfc\u5411\u76f8\u8f85\u76f8\u6210\u3002\u4f60\u662f\u4e00\u4e2a\u65e2\u6709\u5927\u5c40\u89c2\u53c8\u80fd\u5feb\u901f\u884c\u52a8\u7684\u4eba\uff0c\u5728\u56e2\u961f\u4e2d\u5f80\u5f80\u662f\u5f00\u62d3\u8005\u548c\u63a8\u52a8\u8005\u3002\u4f46\u706b\u8c61\u7684\u51b2\u52a8\u4e5f\u53ef\u80fd\u8ba9\u4f60\u5728\u4e00\u4e9b\u65f6\u5019\u8ddf' + mbtiTitle + '\u7684\u8c28\u614e\u601d\u7ef4\u53d1\u751f\u51b2\u7a81\uff0c\u8fd9\u662f\u4f60\u9700\u8981\u5e73\u8861\u7684\u5730\u65b9\u3002' },
-    '\u571f\u8c61': { desc: '\u4f60\u7684' + zodName + '\u5c5e\u4e8e\u571f\u8c61\u661f\u5ea7\uff0c\u571f\u8c61\u7279\u8d28\u8d4b\u4e88\u4f60\u7a33\u91cd\u548c\u8010\u529b\uff0c\u8fd9\u4e0e' + mbtiTitle + '\u7684\u5206\u6790\u80fd\u529b\u7ed3\u5408\uff0c\u8ba9\u4f60\u6210\u4e3a\u4e00\u4e2a\u65e2\u4e25\u8c39\u53c8\u6709\u9274\u8d4f\u529b\u7684\u4eba\u3002\u4f60\u505a\u4e8b\u8e0f\u5b9e\uff0c\u4e0d\u8f7b\u6613\u5192\u9669\uff0c\u4f46\u4e00\u65e6\u51b3\u5b9a\u5c31\u4f1a\u575a\u6301\u5230\u5e95\u3002\u571f\u8c61\u7684\u56fa\u6267\u548c' + mbtiTitle + '\u7684\u539f\u5219\u6027\u53e0\u52a0\u65f6\uff0c\u8bb0\u5f97\u7ed9\u81ea\u5df1\u7559\u4e00\u70b9\u5f39\u6027\u7a7a\u95f4\u3002' },
-    '\u98ce\u8c61': { desc: '\u4f60\u7684' + zodName + '\u5c5e\u4e8e\u98ce\u8c61\u661f\u5ea7\uff0c\u98ce\u8c61\u7279\u8d28\u8d4b\u4e88\u4f60\u7075\u6d3b\u548c\u6c9f\u901a\u80fd\u529b\uff0c\u8fd9\u4e0e' + mbtiTitle + '\u7684\u667a\u529b\u7279\u8d28\u76f8\u7ed3\u5408\uff0c\u8ba9\u4f60\u6210\u4e3a\u4e00\u4e2a\u601d\u7ef4\u654f\u6377\u3001\u5584\u4e8e\u8868\u8fbe\u7684\u4eba\u3002\u4f60\u80fd\u5728\u4e0d\u540c\u89c2\u70b9\u4e4b\u95f4\u81ea\u5982\u5207\u6362\uff0c\u662f\u5929\u751f\u7684\u6c9f\u901a\u8005\u548c\u521b\u610f\u4eba\u3002\u4e0d\u8fc7\u98ce\u8c61\u7684\u5584\u53d8\u548c' + mbtiTitle + '\u7684\u6df1\u5ea6\u601d\u8003\u53ef\u80fd\u4f1a\u6709\u62c9\u952f\uff0c\u9002\u65f6\u505c\u4e0b\u6765\u6df1\u5165\u4e00\u4e2a\u65b9\u5411\u4f1a\u66f4\u597d\u3002' },
-    '\u6c34\u8c61': { desc: '\u4f60\u7684' + zodName + '\u5c5e\u4e8e\u6c34\u8c61\u661f\u5ea7\uff0c\u6c34\u8c61\u7279\u8d28\u8d4b\u4e88\u4f60\u6df1\u9082\u7684\u611f\u60c5\u548c\u76f4\u89c9\u529b\uff0c\u8fd9\u4e0e' + mbtiTitle + '\u7684\u6d1e\u5bdf\u529b\u76f8\u7ed3\u5408\uff0c\u8ba9\u4f60\u6210\u4e3a\u4e00\u4e2a\u65e2\u6709\u611f\u6027\u6df1\u5ea6\u53c8\u80fd\u7406\u6027\u5206\u6790\u7684\u4eba\u3002\u4f60\u80fd\u611f\u77e5\u4ed6\u4eba\u7684\u60c5\u7eea\uff0c\u540c\u65f6\u4e5f\u80fd\u4fdd\u6301\u81ea\u5df1\u7684\u5224\u65ad\u3002\u4f46\u6c34\u8c61\u7684\u654f\u611f\u548c' + mbtiTitle + '\u7684\u6df1\u601d\u53e0\u52a0\u65f6\uff0c\u53ef\u80fd\u4f1a\u8d70\u5411\u8fc7\u5ea6\u5185\u8017\uff0c\u8bb0\u5f97\u5173\u7167\u81ea\u5df1\u7684\u60c5\u7eea\u5065\u5eb7\u3002' },
+    '火象': { desc: `你的${zodName}属于火象星座，火象特质赋予你热情和行动力，这与${mbtiTitle}的果断和目标导向相辅相成。你是一个既有大局观又能快速行动的人，在团队中往往是开拓者和推动者。但火象的冲动也可能让你在一些时候跟${mbtiTitle}的谨慎思维发生冲突，这是你需要平衡的地方。` },
+    '土象': { desc: `你的${zodName}属于土象星座，土象特质赋予你稳重和耐力，这与${mbtiTitle}的分析能力结合，让你成为一个既严肃又有鉴赏力的人。你做事踏实，不轻易冒险，但一旦决定就会坚持到底。土象的固执和${mbtiTitle}的原则性叠加时，记得给自己留一点弹性空间。` },
+    '风象': { desc: `你的${zodName}属于风象星座，风象特质赋予你灵活和沟通能力，这与${mbtiTitle}的智力特质相结合，让你成为一个思维敏捷、善于表达的人。你能在不同观点之间自如切换，是天生的沟通者和创意人。不过风象的善变和${mbtiTitle}的深度思考可能会有拉锯，适时停下来深入一个方向会更好。` },
+    '水象': { desc: `你的${zodName}属于水象星座，水象特质赋予你深刻的感情和直觉力，这与${mbtiTitle}的洞察力相结合，让你成为一个既有感性深度又能理性分析的人。你能感知他人的情绪，同时也能保持自己的判断。但水象的敏感和${mbtiTitle}的深思叠加时，可能会走向过度内耗，记得关照自己的情绪健康。` },
   };
 
   return {
@@ -310,6 +335,9 @@ function MBTITest() {
   const [fetchError, setFetchError] = useState('');
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [generatedAvatarUrl, setGeneratedAvatarUrl] = useState('');
+  const [avatarSaving, setAvatarSaving] = useState(false);
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -415,6 +443,41 @@ function MBTITest() {
     } catch (err) {
       showToast('\u4fdd\u5b58\u5931\u8d25', 'error');
     } finally { setSaving(false); }
+  };
+
+  const generateAvatar = () => {
+    if (!result) return;
+    setGeneratingAvatar(true);
+    setTimeout(() => {
+      try {
+        const avatarUrl = generateAvatarSVG(result.type);
+        if (avatarUrl) {
+          setGeneratedAvatarUrl(avatarUrl);
+          showToast('专属头像已生成！', 'success');
+        } else {
+          showToast('暂未找到该类型的头像，请在后台上传', 'error');
+        }
+      } catch (error) {
+        showToast('头像生成失败，请稍后再试', 'error');
+      } finally { setGeneratingAvatar(false); }
+    }, 300);
+  };
+
+  const saveAvatarAsPet = async () => {
+    if (!user || !generatedAvatarUrl) return;
+    setAvatarSaving(true);
+    try {
+      const blob = await (await fetch(generatedAvatarUrl)).blob();
+      const formData = new FormData();
+      formData.append('avatar', blob, 'mbti-avatar.png');
+      await axios.post('/api/settings/my-pet/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      window.dispatchEvent(new CustomEvent('pet-refresh'));
+      showToast('头像已设为宠物头像！', 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message || '设置头像失败', 'error');
+    } finally { setAvatarSaving(false); }
   };
 
   if (loading) {
@@ -592,6 +655,57 @@ function MBTITest() {
                 <h1 className="heading-xl mb-2" style={{ color: MBTI_PROFILES[result.type].color }}>{result.type}</h1>
                 <p className="text-xl font-semibold text-gray-700">{MBTI_PROFILES[result.type].title}</p>
                 <span className="text-xs text-gray-400">{testMode === 'express' ? '极速版' : '专业版'} · {questions.length} 题</span>
+              </div>
+
+              <div className="mb-6">
+                {generatedAvatarUrl ? (
+                  <div className="flex flex-col items-center">
+                    <div 
+                      className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl shadow-lg bg-[#F0E8DD] bg-center bg-cover"
+                      style={{ backgroundImage: `url(${generatedAvatarUrl})` }}
+                    />
+                    <div className="mt-3 flex gap-2 justify-center flex-wrap">
+                      <button
+                        onClick={generateAvatar}
+                        disabled={generatingAvatar}
+                        className="px-4 py-1.5 rounded-xl text-xs font-medium border-2 transition-all disabled:opacity-50"
+                        style={{ borderColor: MBTI_PROFILES[result.type].color, color: MBTI_PROFILES[result.type].color }}
+                      >
+                        {generatingAvatar ? '重新生成中...' : '重新生成'}
+                      </button>
+                      <button
+                        onClick={saveAvatarAsPet}
+                        disabled={avatarSaving}
+                        className="px-4 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 shadow"
+                        style={{ backgroundColor: MBTI_PROFILES[result.type].color }}
+                      >
+                        {avatarSaving ? '设置中...' : '设为宠物头像'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 mb-3">根据你的性格类型，AI 为你生成专属头像</p>
+                    <button
+                      onClick={generateAvatar}
+                      disabled={generatingAvatar}
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:shadow-lg disabled:opacity-60 inline-flex items-center gap-2"
+                      style={{ background: `linear-gradient(135deg, ${MBTI_PROFILES[result.type].color}, ${MBTI_PROFILES[result.type].color}dd)` }}
+                    >
+                      {generatingAvatar ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          AI 正在绘制中...
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-lg">🎨</span>
+                          生成专属头像
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 overflow-x-auto">

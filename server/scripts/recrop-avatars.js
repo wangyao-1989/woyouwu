@@ -1,12 +1,6 @@
-const express = require('express');
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
-const { auth } = require('../middleware/auth');
-const { admin } = require('../middleware/admin');
-const upload = require('../middleware/upload');
-
-const router = express.Router();
 
 const MBTI_TYPES = [
   ['INTJ', 'INTP', 'ENTJ', 'ENTP'],
@@ -15,75 +9,31 @@ const MBTI_TYPES = [
   ['ISTP', 'ISFP', 'ESTP', 'ESFP']
 ];
 
-router.get('/mbti-avatar-debug', auth, admin, async (req, res) => {
+async function recropAvatars() {
   try {
-    const avatarPath = path.join(__dirname, '../uploads/mbti-avatars.jpg');
+    const avatarPath = path.resolve(__dirname, '../uploads/mbti-avatars.jpg');
+    console.log('Looking for avatar at:', avatarPath);
+    
     if (!fs.existsSync(avatarPath)) {
-      return res.status(404).json({ error: 'No avatar uploaded yet' });
-    }
-    
-    const image = await sharp(avatarPath);
-    const metadata = await image.metadata();
-    const raw = await image.raw().toBuffer();
-    const channels = metadata.channels || 3;
-    const width = metadata.width;
-    const height = metadata.height;
-    
-    const sampleLines = [];
-    for (let i = Math.floor(height * 0.05); i < Math.floor(height * 0.95); i += Math.floor(height / 30)) {
-      let whiteCount = 0;
-      for (let j = 0; j < width; j++) {
-        const idx = i * width * channels + j * channels;
-        const r = raw[idx];
-        const g = raw[idx + 1];
-        const b = raw[idx + 2];
-        if (r > 245 && g > 245 && b > 245) whiteCount++;
-      }
-      sampleLines.push({ y: i, whitePercent: (whiteCount / width * 100).toFixed(1) });
-    }
-    
-    const sampleCols = [];
-    for (let j = Math.floor(width * 0.05); j < Math.floor(width * 0.95); j += Math.floor(width / 30)) {
-      let whiteCount = 0;
-      for (let i = 0; i < height; i++) {
-        const idx = i * width * channels + j * channels;
-        const r = raw[idx];
-        const g = raw[idx + 1];
-        const b = raw[idx + 2];
-        if (r > 245 && g > 245 && b > 245) whiteCount++;
-      }
-      sampleCols.push({ x: j, whitePercent: (whiteCount / height * 100).toFixed(1) });
-    }
-    
-    res.json({
-      width,
-      height,
-      sampleLines,
-      sampleCols
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/upload-mbti-avatar', auth, admin, upload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: '请选择要上传的图片' });
+      console.error('No avatar uploaded yet');
+      return;
     }
 
-    const uploadsDir = path.join(__dirname, '../uploads');
-    const mbtiAvatarsDir = path.join(uploadsDir, 'mbti-avatars');
+    const uploadsDir = path.resolve(__dirname, '../uploads');
+    const mbtiAvatarsDir = path.resolve(uploadsDir, 'mbti-avatars');
+    
+    console.log('Output directory:', mbtiAvatarsDir);
     
     if (!fs.existsSync(mbtiAvatarsDir)) {
       fs.mkdirSync(mbtiAvatarsDir, { recursive: true });
     }
 
-    const image = await sharp(req.file.path);
+    const image = await sharp(avatarPath);
     const metadata = await image.metadata();
     const width = metadata.width;
     const height = metadata.height;
+    
+    console.log(`Processing image: ${width}x${height}`);
     
     const raw = await image.raw().toBuffer();
     const channels = metadata.channels || 3;
@@ -118,6 +68,9 @@ router.post('/upload-mbti-avatar', auth, admin, upload.single('avatar'), async (
     
     const hLines = findSeparatorLines(height, true);
     const vLines = findSeparatorLines(width, false);
+    
+    console.log('Detected horizontal lines:', hLines);
+    console.log('Detected vertical lines:', vLines);
     
     const getTileBounds = (row, col) => {
       const hBoundaries = [0, ...hLines, height];
@@ -222,13 +175,15 @@ router.post('/upload-mbti-avatar', auth, admin, upload.single('avatar'), async (
     for (let row = 0; row < 4; row++) {
       for (let col = 0; col < 4; col++) {
         const mbtiType = MBTI_TYPES[row][col];
-        const tilePath = path.join(mbtiAvatarsDir, `${mbtiType.toLowerCase()}.png`);
+        const tilePath = path.resolve(mbtiAvatarsDir, `${mbtiType.toLowerCase()}.png`);
         
         if (fs.existsSync(tilePath)) {
           fs.unlinkSync(tilePath);
         }
         
         const bounds = getTileBounds(row, col);
+        
+        console.log(`Processing ${mbtiType}:`, bounds);
         
         // 直接裁剪后调整大小，不做额外内容检测
         await image.clone()
@@ -242,28 +197,10 @@ router.post('/upload-mbti-avatar', auth, admin, upload.single('avatar'), async (
       }
     }
     
-    fs.unlinkSync(req.file.path);
-
-    res.json({ 
-      message: 'MBTI头像上传成功',
-      detectedHLines: hLines,
-      detectedVLines: vLines
-    });
+    console.log('Successfully recropped all avatars!');
   } catch (error) {
-    console.error('MBTI avatar upload error:', error);
-    res.status(500).json({ message: 'MBTI头像上传失败: ' + error.message });
+    console.error('Error recropping avatars:', error);
   }
-});
+}
 
-router.get('/mbti-avatar/:type', (req, res) => {
-  const type = req.params.type.toLowerCase();
-  const avatarPath = path.join(__dirname, '../uploads/mbti-avatars', `${type}.png`);
-  if (fs.existsSync(avatarPath)) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(avatarPath);
-  } else {
-    res.status(404).json({ message: 'MBTI avatar not found' });
-  }
-});
-
-module.exports = router;
+recropAvatars();
