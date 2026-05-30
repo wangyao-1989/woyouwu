@@ -53,6 +53,10 @@ function Profile() {
   });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [inviteCodes, setInviteCodes] = useState([]);
+  const [invitedUsers, setInvitedUsers] = useState([]);
+  const [inviteSubTab, setInviteSubTab] = useState('codes');
+  const [generatingCode, setGeneratingCode] = useState(false);
 
   const isOwnProfile = !id || id === currentUser?.id;
   const profileId = id || currentUser?.id;
@@ -113,6 +117,10 @@ function Profile() {
       if (currentUser && !isOwnProfile) {
         const currentUserData = await axios.get(`/api/users/${currentUser.id}`);
         setIsFollowing(currentUserData.data.following?.includes(profileId));
+      }
+
+      if (isOwnProfile) {
+        fetchInviteData();
       }
     } catch (error) {
       console.error('Failed to fetch profile');
@@ -355,6 +363,43 @@ function Profile() {
       setStats(prev => ({ ...prev, inspirations: prev.inspirations - 1 }));
     } catch (error) {
       alert('删除失败');
+    }
+  };
+
+  const fetchInviteData = async () => {
+    try {
+      const [codesRes, invitesRes] = await Promise.all([
+        axios.get('/api/invite/my-codes'),
+        axios.get('/api/invite/my-invites')
+      ]);
+      setInviteCodes(codesRes.data);
+      setInvitedUsers(invitesRes.data);
+    } catch (error) {
+      console.error('Failed to fetch invite data');
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    setGeneratingCode(true);
+    try {
+      const res = await axios.post('/api/invite/generate');
+      setInviteCodes([res.data.code, ...inviteCodes]);
+    } catch (error) {
+      alert(error.response?.data?.message || '生成失败');
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const handleRevokeCode = async (codeId) => {
+    if (!confirm('确定要作废这个邀请码吗？')) return;
+    try {
+      await axios.post(`/api/invite/${codeId}/revoke`);
+      setInviteCodes(prev => prev.map(c =>
+        c.id === codeId ? { ...c, status: 'revoked' } : c
+      ));
+    } catch (error) {
+      alert(error.response?.data?.message || '操作失败');
     }
   };
 
@@ -687,6 +732,18 @@ function Profile() {
               >
                 资源 ({stats.resources})
               </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setActiveTab('invite')}
+                  className={`flex-1 px-6 py-4 font-medium transition ${
+                    activeTab === 'invite'
+                      ? 'text-warm-900 border-b-2 border-warm-900 bg-[#F5F0E8]/50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-[#F5F0E8]'
+                  }`}
+                >
+                  邀请 ({inviteCodes.length})
+                </button>
+              )}
             </div>
           </div>
 
@@ -896,6 +953,153 @@ function Profile() {
                   <p className="text-gray-500">暂无发布的物品</p>
                 </div>
               )
+            ) : activeTab === 'invite' ? (
+              <div>
+                <div className="flex gap-4 mb-6">
+                  <button
+                    onClick={() => setInviteSubTab('codes')}
+                    className={`px-4 py-2 rounded-btn font-medium transition ${
+                      inviteSubTab === 'codes'
+                        ? 'bg-warm-900 text-white'
+                        : 'bg-[#F5F0E8] text-[#4A3728] hover:bg-[#E8DCD0]'
+                    }`}
+                  >
+                    我的邀请码
+                  </button>
+                  <button
+                    onClick={() => setInviteSubTab('invites')}
+                    className={`px-4 py-2 rounded-btn font-medium transition ${
+                      inviteSubTab === 'invites'
+                        ? 'bg-warm-900 text-white'
+                        : 'bg-[#F5F0E8] text-[#4A3728] hover:bg-[#E8DCD0]'
+                    }`}
+                  >
+                    邀请关系
+                  </button>
+                </div>
+
+                {inviteSubTab === 'codes' ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm text-[#8B7355]">
+                        已生成 {inviteCodes.length} 个邀请码，可用 {inviteCodes.filter(c => c.status === 'active').length} 个，
+                        已使用 {inviteCodes.filter(c => c.status === 'used').length} 个
+                        {(() => {
+                          const used = inviteCodes.filter(c => c.status === 'used').length;
+                          const total = inviteCodes.length;
+                          const max = 5 + used;
+                          return total >= max
+                            ? '（已达上限，需邀请码被使用后可继续生成）'
+                            : `（还可生成 ${max - total} 个）`;
+                        })()}
+                      </p>
+                      <button
+                        onClick={handleGenerateCode}
+                        disabled={(() => {
+                          if (generatingCode) return true;
+                          const used = inviteCodes.filter(c => c.status === 'used').length;
+                          return inviteCodes.length >= 5 + used;
+                        })()}
+                        className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {generatingCode ? '生成中...' : '生成邀请码'}
+                      </button>
+                    </div>
+
+                    {inviteCodes.length > 0 ? (
+                      <div className="space-y-3">
+                        {inviteCodes.map((code) => (
+                          <div
+                            key={code.id}
+                            className="bg-[#F5F0E8] rounded-xl p-4 flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-4">
+                              <span className="font-mono text-lg font-bold text-[#4A3728] tracking-widest">
+                                {code.code}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 text-xs rounded-full ${
+                                  code.status === 'active'
+                                    ? 'bg-green-100 text-green-700'
+                                    : code.status === 'used'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}
+                              >
+                                {code.status === 'active' ? '可用' : code.status === 'used' ? '已使用' : '已作废'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs text-[#B8A899]">
+                                {new Date(code.createdAt).toLocaleDateString()}
+                              </span>
+                              {code.status === 'used' && code.usedBy && (
+                                <span className="text-xs text-[#8B7355]">
+                                  使用者: {code.usedBy.nickname}
+                                </span>
+                              )}
+                              {code.status === 'active' && (
+                                <button
+                                  onClick={() => handleRevokeCode(code.id)}
+                                  className="text-sm text-red-500 hover:text-red-700 transition"
+                                >
+                                  作废
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <p className="text-gray-500">暂无邀请码</p>
+                        <p className="text-[#B8A899] text-sm mt-1">点击上方按钮生成邀请码</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    {invitedUsers.length > 0 ? (
+                      <div className="space-y-3">
+                        {invitedUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="bg-[#F5F0E8] rounded-xl p-4 flex items-center gap-4"
+                          >
+                            <img
+                              src={user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.nickname}`}
+                              alt={user.nickname}
+                              className="w-10 h-10 rounded-full bg-gray-200"
+                            />
+                            <div className="flex-1">
+                              <Link
+                                to={`/profile/${user.id}`}
+                                className="font-medium text-gray-800 hover:text-[#4A3728] transition"
+                              >
+                                {user.nickname}
+                              </Link>
+                              <p className="text-xs text-[#B8A899]">
+                                @{user.username} · 注册于 {new Date(user.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p className="text-gray-500">暂无通过你邀请注册的用户</p>
+                        <p className="text-[#B8A899] text-sm mt-1">分享邀请码给朋友即可看到邀请关系</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : userResources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {userResources.map((resource) => (

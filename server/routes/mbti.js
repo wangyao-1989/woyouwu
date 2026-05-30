@@ -6,6 +6,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const MBTIQuestion = require('../models/MBTIQuestion');
 const { auth } = require('../middleware/auth');
+const Settings = require('../models/Settings');
 
 const AVATAR_PROMPTS = {
   INTJ: 'Anime portrait of a mastermind strategist, sharp intelligent eyes, dark academia library background with chess pieces and blueprints, wearing dark tailored outfit, cool indigo and deep navy color scheme, clean minimalist illustration style, confident composed expression, square portrait',
@@ -89,6 +90,11 @@ router.get('/questions/count', async (req, res) => {
 router.post('/generate-avatar', async (req, res) => {
   try {
     const { mbti, zodiac } = req.body;
+
+    const isEnabled = await Settings.isApiEnabled('mbtiAvatar');
+    if (!isEnabled) {
+      return res.status(503).json({ message: '头像生成功能已暂停使用，请联系管理员' });
+    }
 
     if (!mbti || !AVATAR_PROMPTS[mbti]) {
       return res.status(400).json({ message: '无效的 MBTI 类型' });

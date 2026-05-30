@@ -92,7 +92,7 @@ function Navbar() {
                   onError={() => setLogoFailed(true)}
                 />
               )}
-              <span className="text-xl font-kai text-[#4A3728]">我有物</span>
+              <span className="text-xl font-kai text-[#4A3728] text-center leading-tight">我有物<br/>我有悟</span>
             </Link>
             <div className="hidden md:flex ml-10 space-x-1">
               <Link 

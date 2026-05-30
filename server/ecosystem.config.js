@@ -12,13 +12,13 @@ module.exports = {
       NODE_ENV: 'development',
       PORT: 5004,
       JWT_SECRET: 'woyouwu_jwt_secret_key_2026',
-      DEEPSEEK_API_KEY: 'sk-9569cdbb7fd2426e9ff3a9e320663fdd'
+      DEEPSEEK_API_KEY: 'ark-bb76e101-355a-428f-9ebe-e481a942040d-a2343'
     },
     env_production: {
       NODE_ENV: 'production',
       PORT: 5004,
       JWT_SECRET: 'woyouwu_jwt_secret_key_2026',
-      DEEPSEEK_API_KEY: 'sk-9569cdbb7fd2426e9ff3a9e320663fdd'
+      DEEPSEEK_API_KEY: 'ark-bb76e101-355a-428f-9ebe-e481a942040d-a2343'
     },
     autorestart: true,
     restart_delay: 1000,

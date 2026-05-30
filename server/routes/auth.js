@@ -1,16 +1,30 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const InviteCode = require('../models/InviteCode');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, phone, password, nickname } = req.body;
+    const { username, email, phone, password, nickname, inviteCode } = req.body;
 
     if (!username || !password || !nickname) {
       return res.status(400).json({ message: '用户名、密码和昵称不能为空' });
+    }
+
+    if (!inviteCode) {
+      return res.status(400).json({ message: '邀请码不能为空' });
+    }
+
+    const code = await InviteCode.findOne({ code: inviteCode.toUpperCase() });
+    if (!code) {
+      return res.status(400).json({ message: '邀请码无效' });
+    }
+
+    if (code.status !== 'active') {
+      return res.status(400).json({ message: '该邀请码已被使用或已作废' });
     }
 
     const existingUser = await User.findOne({ username });
@@ -38,11 +52,17 @@ router.post('/register', async (req, res) => {
       phone,
       password,
       nickname,
+      invitedBy: code.creator,
       contactEmail: email || '',
       contactPhone: phone || ''
     });
 
     await user.save();
+
+    code.status = 'used';
+    code.usedBy = user._id;
+    code.usedAt = new Date();
+    await code.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 

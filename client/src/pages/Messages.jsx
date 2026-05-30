@@ -61,10 +61,13 @@ function Messages() {
       await handleMarkAsRead(message._id);
     }
 
-    if (message.type.startsWith('borrow_') && message.relatedItem) {
-      navigate(`/items/${message.relatedItem}`);
-    } else if (message.type === 'resource_comment' && message.relatedResource) {
-      navigate(`/resources/${message.relatedResource}`);
+    const itemId = message.relatedItem?._id || message.relatedItem;
+    const resourceId = message.relatedResource?._id || message.relatedResource;
+
+    if (message.type.startsWith('borrow_') && itemId) {
+      navigate(`/items/${itemId}`);
+    } else if (message.type === 'resource_comment' && resourceId) {
+      navigate(`/resources/${resourceId}`);
     }
   };
 
@@ -76,6 +79,10 @@ function Messages() {
         return '✅';
       case 'borrow_rejected':
         return '❌';
+      case 'borrow_shipped':
+        return '📮';
+      case 'borrow_picked_up':
+        return '👋';
       case 'borrow_returned':
         return '🔄';
       case 'resource_comment':
@@ -95,6 +102,10 @@ function Messages() {
         return 'bg-green-50 border-green-200';
       case 'borrow_rejected':
         return 'bg-red-50 border-red-200';
+      case 'borrow_shipped':
+        return 'bg-orange-50 border-orange-200';
+      case 'borrow_picked_up':
+        return 'bg-yellow-50 border-yellow-200';
       case 'borrow_returned':
         return 'bg-purple-50 border-purple-200';
       case 'resource_comment':

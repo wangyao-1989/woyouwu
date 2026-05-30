@@ -9,14 +9,11 @@ const parser = new Parser({
 const RSS_SOURCES = [
   { url: 'https://36kr.com/feed', label: '36氪', category: 'tech', maxItems: 10 },
   { url: 'https://www.ifanr.com/feed', label: '爱范儿', category: 'tech', maxItems: 8 },
-  { url: 'https://feedx.net/rss/weibo.xml', label: '微博热搜', maxItems: 10 },
-  { url: 'https://www.thepaper.cn/rss_newslist.xml', label: '澎湃新闻', category: 'life', maxItems: 10 },
-  { url: 'https://rsshub.app/ithome/ranking/daily', label: 'IT之家', category: 'tech', maxItems: 8 },
-  { url: 'https://rsshub.app/sspai/matrix', label: '少数派', category: 'creative', maxItems: 8 },
-  { url: 'https://rsshub.app/zhihu/hot', label: '知乎热榜', maxItems: 10 },
-  { url: 'https://rsshub.app/cls/telegraph', label: '财联社', category: 'career', maxItems: 10 },
-  { url: 'https://rsshub.app/douban/movie/playing', label: '豆瓣电影', category: 'art', maxItems: 5 },
-  { url: 'https://rsshub.app/guokr/scientific', label: '果壳科学', category: 'science', maxItems: 5 },
+  { url: 'https://www.ithome.com/rss/', label: 'IT之家', category: 'tech', maxItems: 8 },
+  { url: 'https://sspai.com/feed', label: '少数派', category: 'creative', maxItems: 8 },
+  { url: 'https://www.oschina.net/news/rss', label: '开源中国', category: 'tech', maxItems: 8 },
+  { url: 'https://www.cyzone.cn/rss/', label: '创业邦', category: 'career', maxItems: 8 },
+  { url: 'https://www.solidot.org/index.rss', label: 'Solidot', category: 'science', maxItems: 8 },
 ];
 
 async function fetchRssSource(source) {

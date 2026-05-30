@@ -22,10 +22,36 @@ const borrowRecordSchema = new mongoose.Schema({
   actualReturnDate: {
     type: Date
   },
+  pickupMethod: {
+    type: String,
+    enum: ['self_pickup', 'delivery', '自取', '邮寄'],
+    default: 'self_pickup'
+  },
+  message: {
+    type: String,
+    trim: true,
+    maxlength: 500,
+    default: ''
+  },
+  contactInfo: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'returned', 'rejected'],
+    enum: ['pending', 'approved', 'shipped', 'picked_up', 'returned', 'rejected'],
     default: 'pending'
+  },
+  messageId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Message'
+  },
+  shippedAt: {
+    type: Date
+  },
+  pickedUpAt: {
+    type: Date
   },
   createdAt: {
     type: Date,

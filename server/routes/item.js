@@ -45,7 +45,7 @@ router.get('/:id', async (req, res) => {
     const item = await Item.findById(req.params.id)
       .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
       .populate('borrower', 'username nickname')
-      .populate('borrowHistory.borrower', 'username nickname');
+      .populate('borrowHistory.borrower', 'username nickname avatar');
 
     if (!item) {
       return res.status(404).json({ message: '物品不存在' });
@@ -159,14 +159,14 @@ router.delete('/:id', auth, async (req, res) => {
 
 router.post('/:id/borrow', auth, async (req, res) => {
   try {
-    const { expectedReturnDate } = req.body;
+    const { expectedReturnDate, pickupMethod, message, contactInfo } = req.body;
     const item = await Item.findById(req.params.id);
 
     if (!item) {
       return res.status(404).json({ message: '物品不存在' });
     }
 
-    if (item.status !== '可借用') {
+    if (item.status !== '可借用' && item.status !== 'available') {
       return res.status(400).json({ message: '该物品当前不可借用' });
     }
 
@@ -174,21 +174,46 @@ router.post('/:id/borrow', auth, async (req, res) => {
       return res.status(400).json({ message: '不能借用自己的物品' });
     }
 
-    const message = new Message({
+    const pickupMethodText = pickupMethod === 'delivery' || pickupMethod === '邮寄' ? '邮寄' : '自取';
+    const messageContent = message ? `\n留言：${message}` : '';
+    const contactText = contactInfo ? `\n联系方式：${contactInfo}` : '';
+
+    const message2 = new Message({
       recipient: item.owner,
       sender: req.user._id,
       senderName: req.user.nickname,
       senderAvatar: req.user.avatar,
       type: 'borrow_request',
       title: '借用申请',
-      content: `${req.user.nickname} 想借用你的物品"${item.name}"，预计 ${new Date(expectedReturnDate).toLocaleDateString()} 归还`,
+      content: `${req.user.nickname} 想借用你的物品"${item.name}"，取用方式：${pickupMethodText}，预计 ${new Date(expectedReturnDate).toLocaleDateString()} 归还${messageContent}${contactText}`,
       relatedItem: item._id
     });
 
-    await message.save();
+    await message2.save();
 
-    res.json({ message: '借用申请已发送', borrowRequest: message });
+    const newBorrowRecord = {
+      item: item._id,
+      borrower: req.user._id,
+      borrowerName: req.user.nickname,
+      expectedReturnDate,
+      pickupMethod: pickupMethod || 'self_pickup',
+      message: message || '',
+      contactInfo: contactInfo || '',
+      status: 'pending',
+      messageId: message2._id
+    };
+
+    item.borrowHistory.push(newBorrowRecord);
+    await item.save();
+
+    const updatedItem = await Item.findById(req.params.id)
+      .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
+      .populate('borrower', 'username nickname')
+      .populate('borrowHistory.borrower', 'username nickname avatar');
+
+    res.json({ message: '借用申请已发送', item: updatedItem });
   } catch (error) {
+    console.error('Borrow error:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
@@ -209,18 +234,30 @@ router.post('/:id/approve/:messageId', auth, async (req, res) => {
 
     const borrower = await User.findById(borrowerId);
 
+    const pendingRecord = item.borrowHistory.find(
+      h => h.status === 'pending' && h.borrower.toString() === borrowerId.toString()
+    );
+
+    if (pendingRecord) {
+      pendingRecord.status = 'approved';
+      pendingRecord.expectedReturnDate = expectedReturnDate;
+    } else {
+      item.borrowHistory.push({
+        item: item._id,
+        borrower: borrowerId,
+        borrowerName: borrower.nickname,
+        expectedReturnDate,
+        pickupMethod: 'self_pickup',
+        message: '',
+        contactInfo: '',
+        status: 'approved'
+      });
+    }
+
     item.status = '已借出';
     item.borrower = borrowerId;
     item.borrowerName = borrower.nickname;
     item.expectedReturnDate = expectedReturnDate;
-
-    item.borrowHistory.push({
-      item: item._id,
-      borrower: borrowerId,
-      borrowerName: borrower.nickname,
-      expectedReturnDate,
-      status: 'approved'
-    });
 
     await item.save();
 
@@ -240,8 +277,14 @@ router.post('/:id/approve/:messageId', auth, async (req, res) => {
 
     await notifyMessage.save();
 
-    res.json({ message: '已同意借用', item });
+    const updatedItem = await Item.findById(req.params.id)
+      .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
+      .populate('borrower', 'username nickname')
+      .populate('borrowHistory.borrower', 'username nickname avatar');
+
+    res.json({ message: '已同意借用', item: updatedItem });
   } catch (error) {
+    console.error('Approve error:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
@@ -259,8 +302,17 @@ router.post('/:id/reject/:messageId', auth, async (req, res) => {
       return res.status(403).json({ message: '无权限操作' });
     }
 
+    const pendingRecord = item.borrowHistory.find(
+      h => h.status === 'pending' && h.messageId?.toString() === req.params.messageId
+    );
+
+    if (pendingRecord) {
+      pendingRecord.status = 'rejected';
+    }
+
     message.status = 'rejected';
     await message.save();
+    await item.save();
 
     const notifyMessage = new Message({
       recipient: message.sender,
@@ -277,11 +329,12 @@ router.post('/:id/reject/:messageId', auth, async (req, res) => {
 
     res.json({ message: '已拒绝借用申请' });
   } catch (error) {
+    console.error('Reject error:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
 
-router.post('/:id/return', auth, async (req, res) => {
+router.post('/:id/return/:borrowId', auth, async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);
 
@@ -296,7 +349,7 @@ router.post('/:id/return', auth, async (req, res) => {
     const borrowerId = item.borrower;
 
     const borrowRecord = item.borrowHistory.find(
-      h => h.borrower.toString() === item.borrower?.toString() && h.status === 'approved' && !h.actualReturnDate
+      h => h._id.toString() === req.params.borrowId
     );
 
     if (borrowRecord) {
@@ -325,8 +378,114 @@ router.post('/:id/return', auth, async (req, res) => {
       await notifyMessage.save();
     }
 
-    res.json({ message: '物品已归还', item });
+    const updatedItem = await Item.findById(req.params.id)
+      .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
+      .populate('borrower', 'username nickname')
+      .populate('borrowHistory.borrower', 'username nickname avatar');
+
+    res.json({ message: '物品已归还', item: updatedItem });
   } catch (error) {
+    console.error('Return error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/:id/ship/:borrowId', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ message: '物品不存在' });
+    }
+
+    if (item.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: '无权限操作' });
+    }
+
+    const borrowRecord = item.borrowHistory.find(
+      h => h._id.toString() === req.params.borrowId && h.status === 'approved'
+    );
+
+    if (!borrowRecord) {
+      return res.status(404).json({ message: '借用记录不存在或状态不正确' });
+    }
+
+    borrowRecord.status = 'shipped';
+    borrowRecord.shippedAt = new Date();
+    item.status = '已借出';
+
+    await item.save();
+
+    const notifyMessage = new Message({
+      recipient: borrowRecord.borrower,
+      sender: req.user._id,
+      senderName: req.user.nickname,
+      senderAvatar: req.user.avatar,
+      type: 'borrow_shipped',
+      title: '物品已发货',
+      content: `你借用的物品"${item.name}"已发货，请留意查收！`,
+      relatedItem: item._id
+    });
+    await notifyMessage.save();
+
+    const updatedItem = await Item.findById(req.params.id)
+      .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
+      .populate('borrower', 'username nickname')
+      .populate('borrowHistory.borrower', 'username nickname avatar');
+
+    res.json({ message: '已确认发货', item: updatedItem });
+  } catch (error) {
+    console.error('Ship error:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+router.post('/:id/pickup/:borrowId', auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ message: '物品不存在' });
+    }
+
+    if (item.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: '无权限操作' });
+    }
+
+    const borrowRecord = item.borrowHistory.find(
+      h => h._id.toString() === req.params.borrowId && h.status === 'approved'
+    );
+
+    if (!borrowRecord) {
+      return res.status(404).json({ message: '借用记录不存在或状态不正确' });
+    }
+
+    borrowRecord.status = 'picked_up';
+    borrowRecord.pickedUpAt = new Date();
+    item.status = '已借出';
+
+    await item.save();
+
+    const notifyMessage = new Message({
+      recipient: borrowRecord.borrower,
+      sender: req.user._id,
+      senderName: req.user.nickname,
+      senderAvatar: req.user.avatar,
+      type: 'borrow_picked_up',
+      title: '物品已取货',
+      content: `你借用的物品"${item.name}"已取货，感谢使用！`,
+      relatedItem: item._id
+    });
+    await notifyMessage.save();
+
+    const updatedItem = await Item.findById(req.params.id)
+      .populate('owner', 'username nickname avatar contactWechat contactPhone contactEmail')
+      .populate('borrower', 'username nickname')
+      .populate('borrowHistory.borrower', 'username nickname avatar');
+
+    res.json({ message: '已确认取货', item: updatedItem });
+  } catch (error) {
+    console.error('Pickup error:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });

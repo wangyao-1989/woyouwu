@@ -5,6 +5,8 @@ const sharp = require('sharp');
 const { auth } = require('../middleware/auth');
 const { admin } = require('../middleware/admin');
 const upload = require('../middleware/upload');
+const Settings = require('../models/Settings');
+const ApiUsage = require('../models/ApiUsage');
 
 const router = express.Router();
 
@@ -263,6 +265,92 @@ router.get('/mbti-avatar/:type', (req, res) => {
     res.sendFile(avatarPath);
   } else {
     res.status(404).json({ message: 'MBTI avatar not found' });
+  }
+});
+
+// 获取全局设置
+router.get('/settings', auth, admin, async (req, res) => {
+  try {
+    const settingsDoc = await Settings.getGlobalSettings();
+    const settings = settingsDoc.toObject();
+    const envKey = process.env.DEEPSEEK_API_KEY || '';
+    if (settings.externalApiConfig && envKey) {
+      for (const key of ['aiChat', 'newsGeneration', 'resumeParse']) {
+        if (settings.externalApiConfig[key] && !settings.externalApiConfig[key].apiKey) {
+          settings.externalApiConfig[key].apiKey = envKey;
+        }
+      }
+    }
+    res.json({ settings });
+  } catch (error) {
+    console.error('获取设置失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 更新全局设置
+router.put('/settings', auth, admin, async (req, res) => {
+  try {
+    const { externalApis, externalApiConfig } = req.body;
+    
+    const settings = await Settings.getGlobalSettings();
+    
+    if (externalApis) {
+      settings.externalApis = {
+        ...settings.externalApis,
+        ...externalApis,
+      };
+    }
+    
+    if (externalApiConfig) {
+      settings.externalApiConfig = {
+        ...settings.externalApiConfig,
+        ...externalApiConfig,
+      };
+    }
+    
+    await settings.save();
+    res.json({ message: '设置已更新', settings });
+  } catch (error) {
+    console.error('更新设置失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取公共API开关状态（无需管理员权限）
+router.get('/settings/public', async (req, res) => {
+  try {
+    const settings = await Settings.getGlobalSettings();
+    res.json({ 
+      externalApis: settings.externalApis || {
+        aiChat: true,
+        newsGeneration: true,
+        resumeParse: true,
+        mbtiAvatar: true,
+      }
+    });
+  } catch (error) {
+    console.error('获取公共设置失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取API使用统计
+router.get('/api-usage/stats', auth, admin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const { stats, modelStats } = await ApiUsage.getStats({ startDate, endDate });
+    const dailyStats = await ApiUsage.getDailyStats({ startDate, endDate });
+    
+    res.json({ 
+      stats, 
+      modelStats,
+      dailyStats 
+    });
+  } catch (error) {
+    console.error('获取API使用统计失败:', error);
+    res.status(500).json({ message: '服务器错误' });
   }
 });
 

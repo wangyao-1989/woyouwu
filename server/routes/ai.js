@@ -4,11 +4,19 @@ const path = require('path');
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const { auth } = require('../middleware/auth');
+const Settings = require('../models/Settings');
+const ApiUsage = require('../models/ApiUsage');
+const { getApiConfig } = require('../utils/apiConfig');
 
 const router = express.Router();
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+// 估算token数量 (中文通常是1字符≈1token，英文是4字符≈1token)
+const estimateTokens = (text) => {
+  if (!text) return 0;
+  let chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  let otherChars = text.length - chineseChars;
+  return chineseChars + Math.ceil(otherChars / 4);
+};
 
 const PET_CATEGORIES = {
   cat: {
@@ -75,7 +83,7 @@ function buildPetSystemPrompt(petName, petCategory, customCategory) {
     ? `一只${customCategory}`
     : cat.species;
 
-  return `你叫"${petName}"，是${species}，也是"我有物"网站的吉祥物和向导。"我有物"是一个创意生活社区，中文口号是"打开一盒灵感惊喜"。
+  return `你叫"${petName}"，是${species}，也是"我有物"网站的吉祥物和向导。"我有物"是一个创意生活社区，中文口号是"藏在心里是光，走出来就是星芒"。
 
 ## 你的性格
 - ${cat.traits}
@@ -179,17 +187,20 @@ const RESUME_PARSE_PROMPT = `你是一个专业的简历解析助手。请根据
 
 请确保返回的是合法的 JSON，不要有任何说明文字。`;
 
-async function callDeepSeekParse(content) {
+async function callDeepSeekParse(content, userId) {
   const prompt = RESUME_PARSE_PROMPT.replace('{{content}}', content);
 
-  const response = await fetch(DEEPSEEK_API_URL, {
+  const { endpoint, model, apiKey } = await getApiConfig('resumeParse');
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      'Authorization': `Bearer ${finalKey}`
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model,
       messages: [
         { role: 'system', content: '你是一个专业的简历数据提取助手。你只返回严格的 JSON，不包含任何 markdown 标记或说明文字。' },
         { role: 'user', content: prompt }
@@ -218,6 +229,18 @@ async function callDeepSeekParse(content) {
   if (resumeData.education && !Array.isArray(resumeData.education)) resumeData.education = [];
   if (resumeData.skills && !Array.isArray(resumeData.skills)) resumeData.skills = [];
   if (resumeData.interests && !Array.isArray(resumeData.interests)) resumeData.interests = [];
+  
+  // 记录API使用
+  const usage = data.usage || {};
+  await ApiUsage.recordUsage({
+    apiType: 'resumeParse',
+    userId,
+    promptTokens: usage.prompt_tokens || estimateTokens(prompt),
+    completionTokens: usage.completion_tokens || estimateTokens(rawContent),
+    totalTokens: usage.total_tokens,
+    status: 'success',
+    model,
+  });
 
   return resumeData;
 }
@@ -239,8 +262,9 @@ router.post('/parse-resume-file', auth, (req, res, next) => {
       return res.status(400).json({ message: '请上传简历文件' });
     }
 
-    if (!DEEPSEEK_API_KEY) {
-      return res.status(500).json({ message: 'AI 服务未配置 API Key' });
+    const isEnabled = await Settings.isApiEnabled('resumeParse');
+    if (!isEnabled) {
+      return res.status(503).json({ message: '简历解析功能已暂停使用，请联系管理员' });
     }
 
     const filePath = req.file.path;
@@ -254,14 +278,20 @@ router.post('/parse-resume-file', auth, (req, res, next) => {
     } else {
       const imageBuffer = fs.readFileSync(filePath);
       const base64 = imageBuffer.toString('base64');
-      const visionResponse = await fetch(DEEPSEEK_API_URL, {
+      const { endpoint: visionEndpoint, model: visionModel, apiKey: visionApiKey } = await getApiConfig('resumeParse');
+      const visionFinalKey = visionApiKey || process.env.DEEPSEEK_API_KEY || '';
+      if (!visionFinalKey) {
+        fs.unlinkSync(filePath);
+        return res.status(500).json({ message: 'AI 服务未配置 API Key' });
+      }
+      const visionResponse = await fetch(visionEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          'Authorization': `Bearer ${visionFinalKey}`
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: visionModel,
           messages: [
             {
               role: 'system',
@@ -298,7 +328,7 @@ router.post('/parse-resume-file', auth, (req, res, next) => {
       return res.status(400).json({ message: '未能识别出足够的文本内容，请确保上传的是文字清晰的简历' });
     }
 
-    const resumeData = await callDeepSeekParse(extractedText);
+    const resumeData = await callDeepSeekParse(extractedText, req.user._id);
     res.json({ resume: resumeData, rawText: extractedText });
   } catch (error) {
     if (req.file?.path && fs.existsSync(req.file.path)) {
@@ -324,11 +354,18 @@ router.post('/generate-resume', auth, async (req, res) => {
       return res.status(400).json({ message: '请至少输入10个字的描述' });
     }
 
-    if (!DEEPSEEK_API_KEY) {
-      return res.status(500).json({ message: 'AI 服务未配置 API Key，请在 .env 中设置 DEEPSEEK_API_KEY' });
+    const isEnabled = await Settings.isApiEnabled('resumeParse');
+    if (!isEnabled) {
+      return res.status(503).json({ message: '简历生成功能已暂停使用，请联系管理员' });
     }
 
-    const resumeData = await callDeepSeekParse(`用户对自己的一段描述（非正式简历格式），请从以下描述中提取简历信息：\n\n${description}`);
+    const { apiKey: resumeKey } = await getApiConfig('resumeParse');
+    const resumeFinalKey = resumeKey || process.env.DEEPSEEK_API_KEY || '';
+    if (!resumeFinalKey) {
+      return res.status(500).json({ message: 'AI 服务未配置 API Key' });
+    }
+
+    const resumeData = await callDeepSeekParse(`用户对自己的一段描述（非正式简历格式），请从以下描述中提取简历信息：\n\n${description}`, req.user._id);
 
     res.json({ resume: resumeData });
   } catch (error) {
@@ -348,7 +385,14 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ message: '请输入消息内容' });
     }
 
-    if (!DEEPSEEK_API_KEY) {
+    const isEnabled = await Settings.isApiEnabled('aiChat');
+    if (!isEnabled) {
+      return res.status(503).json({ message: '宠物聊天功能已暂停使用，请联系管理员' });
+    }
+
+    const { endpoint: chatEndpoint, model: chatModel, apiKey: chatApiKey } = await getApiConfig('aiChat');
+    const chatFinalKey = chatApiKey || process.env.DEEPSEEK_API_KEY || '';
+    if (!chatFinalKey) {
       return res.status(500).json({ message: 'AI 服务未配置 API Key，请在 .env 中设置 DEEPSEEK_API_KEY' });
     }
 
@@ -358,14 +402,14 @@ router.post('/chat', async (req, res) => {
       customCategory || ''
     );
 
-    const response = await fetch(DEEPSEEK_API_URL, {
+    const response = await fetch(chatEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        'Authorization': `Bearer ${chatFinalKey}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: chatModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
@@ -381,6 +425,18 @@ router.post('/chat', async (req, res) => {
 
     const data = await response.json();
     const responseText = data.choices?.[0]?.message?.content || '喵~ 我没听懂呢~';
+    
+    // 记录API使用
+    const usage = data.usage || {};
+    await ApiUsage.recordUsage({
+      apiType: 'aiChat',
+      userId: null,
+      promptTokens: usage.prompt_tokens || estimateTokens(systemPrompt + message),
+      completionTokens: usage.completion_tokens || estimateTokens(responseText),
+      totalTokens: usage.total_tokens,
+      status: 'success',
+      model: chatModel,
+    });
 
     res.json({ response: responseText });
   } catch (error) {

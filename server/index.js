@@ -8,6 +8,7 @@ dotenv.config();
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const inviteRoutes = require('./routes/invite');
 const itemRoutes = require('./routes/item');
 const resourceRoutes = require('./routes/resource');
 const messageRoutes = require('./routes/message');
@@ -52,6 +53,7 @@ mongoose.connection.on('reconnected', () => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/invite', inviteRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/messages', messageRoutes);

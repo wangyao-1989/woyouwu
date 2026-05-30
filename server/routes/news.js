@@ -3,8 +3,19 @@ const NewsPreference = require('../models/NewsPreference');
 const NewsItem = require('../models/NewsItem');
 const { auth } = require('../middleware/auth');
 const { fetchAllHeadlines } = require('../newsFetcher');
+const Settings = require('../models/Settings');
+const ApiUsage = require('../models/ApiUsage');
+const { getApiConfig } = require('../utils/apiConfig');
 
 const router = express.Router();
+
+// 估算token数量 (中文通常是1字符≈1token，英文是4字符≈1token)
+const estimateTokens = (text) => {
+  if (!text) return 0;
+  let chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  let otherChars = text.length - chineseChars;
+  return chineseChars + Math.ceil(otherChars / 4);
+};
 
 const CATEGORY_LABELS = {
   tech: '技术',
@@ -79,20 +90,21 @@ router.put('/preferences', auth, async (req, res) => {
   }
 });
 
-async function callDeepSeek(messages, maxTokens = 3000) {
-  const apiKey = process.env.DEEPSEEK_API_KEY || '';
-  if (!apiKey) {
+async function callDeepSeek(messages, maxTokens = 3000, userId = null) {
+  const { endpoint, model, apiKey } = await getApiConfig('newsGeneration');
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
+  if (!finalKey) {
     throw new Error('AI 服务未配置 API Key');
   }
 
-  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${finalKey}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model,
       messages,
       temperature: 0.7,
       max_tokens: maxTokens,
@@ -100,11 +112,25 @@ async function callDeepSeek(messages, maxTokens = 3000) {
   });
 
   if (!response.ok) {
-    throw new Error('DeepSeek API returned ' + response.status);
+    throw new Error('AI API returned ' + response.status);
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  const result = data.choices?.[0]?.message?.content || '';
+  
+  // 记录API使用
+  const usage = data.usage || {};
+  await ApiUsage.recordUsage({
+    apiType: 'newsGeneration',
+    userId,
+    promptTokens: usage.prompt_tokens || estimateTokens(JSON.stringify(messages)),
+    completionTokens: usage.completion_tokens || estimateTokens(result),
+    totalTokens: usage.total_tokens,
+    status: 'success',
+    model,
+  });
+  
+  return result;
 }
 
 function cleanJsonResponse(raw) {
@@ -133,12 +159,15 @@ function filterFresh(items) {
   return items.filter(i => !hasOldContent(i));
 }
 
-async function generateAiNews(promptInput, count = 10) {
-  let realHeadlines = [];
-  try {
-    realHeadlines = await fetchAllHeadlines();
-  } catch (e) {
-    console.log('[generateAiNews] RSS 获取失败');
+async function generateAiNews(promptInput, count = 10, existingHeadlines = null) {
+  let realHeadlines = existingHeadlines;
+  if (!realHeadlines) {
+    try {
+      realHeadlines = await fetchAllHeadlines();
+    } catch (e) {
+      console.log('[generateAiNews] RSS 获取失败');
+      return [];
+    }
   }
 
   if (realHeadlines.length < 10) {
@@ -174,12 +203,15 @@ ${headlinesText}
 
   const userContent = '请从上述真实资讯中精选 10 条，确保覆盖不同的分类领域。';
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userContent },
-  ];
+  let convoMessages = [];
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+      ...convoMessages,
+    ];
+    
     const raw = await callDeepSeek(messages, 4000);
     const cleaned = cleanJsonResponse(raw);
 
@@ -187,47 +219,55 @@ ${headlinesText}
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      const retryRaw = await callDeepSeek([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-        { role: 'assistant', content: raw },
-        { role: 'user', content: 'JSON 格式有误，请重新返回严格的 JSON 数组。' },
-      ], 4000);
-      parsed = JSON.parse(cleanJsonResponse(retryRaw));
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: 'JSON 格式有误，请只返回严格的 JSON 数组，不要任何解释。' },
+      ];
+      continue;
     }
 
-    if (!Array.isArray(parsed)) continue;
+    if (!Array.isArray(parsed)) {
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: '请返回一个 JSON 数组。' },
+      ];
+      continue;
+    }
 
     const fresh = filterFresh(parsed);
-    if (fresh.length >= count - 2 || attempt === 2) {
-      return fresh.slice(0, count).map((item, index) => ({
-        title: (item.title || '今日资讯').substring(0, 200),
-        summary: (item.summary || '').substring(0, 600),
-        detail: (item.detail || '').substring(0, 2000),
-        category: CATEGORY_LABELS[item.category] ? item.category : 'custom',
-        author: { nickname: 'AI 资讯助手' },
-        isAiGenerated: true,
-        relatedKeywords: (item.keywords || []).slice(0, 5),
-        hotScore: 100 - index * 5,
-        publishDate: new Date(Date.now() - index * 60000),
-      }));
+    if (fresh.length === 0) {
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: `你返回的内容中包含了过去的年份信息（如2024、2023等），请严格按照今天（${todayDate}）的时间来重新生成。` },
+      ];
+      continue;
     }
 
-    messages.push(
-      { role: 'assistant', content: raw },
-      { role: 'user', content: `你返回的内容中包含了过去的年份信息（如2024、2023等），请严格按照今天（${todayDate}）的时间来重新生成。去掉所有提及过去年份的内容。` }
-    );
+    return fresh.slice(0, count).map((item, index) => ({
+      title: (item.title || '今日资讯').substring(0, 200),
+      summary: (item.summary || '').substring(0, 600),
+      detail: (item.detail || '').substring(0, 2000),
+      category: CATEGORY_LABELS[item.category] ? item.category : 'custom',
+      author: { nickname: 'AI 资讯助手' },
+      isAiGenerated: true,
+      relatedKeywords: (item.keywords || []).slice(0, 5),
+      hotScore: 100 - index * 5,
+      publishDate: new Date(Date.now() - index * 60000),
+    }));
   }
 
   return [];
 }
 
-async function generatePersonalizedAiNews(userCategories, userKeywords, count = 10) {
-  let realHeadlines = [];
-  try {
-    realHeadlines = await fetchAllHeadlines();
-  } catch (e) {
-    console.log('[generatePersonalizedAiNews] RSS 获取失败');
+async function generatePersonalizedAiNews(userCategories, userKeywords, count = 10, existingHeadlines = null) {
+  let realHeadlines = existingHeadlines;
+  if (!realHeadlines) {
+    try {
+      realHeadlines = await fetchAllHeadlines();
+    } catch (e) {
+      console.log('[generatePersonalizedAiNews] RSS 获取失败');
+      return [];
+    }
   }
 
   if (realHeadlines.length < 10) {
@@ -276,12 +316,15 @@ ${preferenceText}
 
   const userContent = `请为我精选 ${count} 条资讯，优先选择与「${preferenceText}」相关的内容。如果真实头条中确无直接相关内容，请挑选最贴近的条目并尽量在分析中关联用户的关注点。`;
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userContent },
-  ];
+  let convoMessages = [];
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+      ...convoMessages,
+    ];
+    
     const raw = await callDeepSeek(messages, 4000);
     const cleaned = cleanJsonResponse(raw);
 
@@ -289,36 +332,41 @@ ${preferenceText}
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      const retryRaw = await callDeepSeek([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-        { role: 'assistant', content: raw },
-        { role: 'user', content: 'JSON 格式有误，请重新返回严格的 JSON 数组。' },
-      ], 4000);
-      parsed = JSON.parse(cleanJsonResponse(retryRaw));
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: 'JSON 格式有误，请只返回严格的 JSON 数组，不要任何解释。' },
+      ];
+      continue;
     }
 
-    if (!Array.isArray(parsed)) continue;
+    if (!Array.isArray(parsed)) {
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: '请返回一个 JSON 数组。' },
+      ];
+      continue;
+    }
 
     const fresh = filterFresh(parsed);
-    if (fresh.length >= count - 2 || attempt === 2) {
-      return fresh.slice(0, count).map((item, index) => ({
-        title: (item.title || '今日资讯').substring(0, 200),
-        summary: (item.summary || '').substring(0, 600),
-        detail: (item.detail || '').substring(0, 2000),
-        category: CATEGORY_LABELS[item.category] ? item.category : 'custom',
-        author: { nickname: 'AI 资讯助手' },
-        isAiGenerated: true,
-        relatedKeywords: (item.keywords || []).slice(0, 5),
-        hotScore: 100 - index * 5,
-        publishDate: new Date(Date.now() - index * 60000),
-      }));
+    if (fresh.length === 0) {
+      convoMessages = [
+        { role: 'assistant', content: raw.substring(0, 500) },
+        { role: 'user', content: `你返回的内容中包含了过去的年份信息（如2024、2023等），请严格按照今天（${todayDate}）的时间来重新生成。` },
+      ];
+      continue;
     }
 
-    messages.push(
-      { role: 'assistant', content: raw },
-      { role: 'user', content: `你返回的内容中包含了过去的年份信息（如2024、2023等），请严格按照今天（${todayDate}）的时间来重新生成。去掉所有提及过去年份的内容。` }
-    );
+    return fresh.slice(0, count).map((item, index) => ({
+      title: (item.title || '今日资讯').substring(0, 200),
+      summary: (item.summary || '').substring(0, 600),
+      detail: (item.detail || '').substring(0, 2000),
+      category: CATEGORY_LABELS[item.category] ? item.category : 'custom',
+      author: { nickname: 'AI 资讯助手' },
+      isAiGenerated: true,
+      relatedKeywords: (item.keywords || []).slice(0, 5),
+      hotScore: 100 - index * 5,
+      publishDate: new Date(Date.now() - index * 60000),
+    }));
   }
 
   return [];
@@ -433,8 +481,9 @@ router.post('/refresh', async (req, res) => {
   try {
     await NewsItem.deleteMany({ generatedFor: null });
 
+    const isEnabled = await Settings.isApiEnabled('newsGeneration');
     const apiKey = process.env.DEEPSEEK_API_KEY || '';
-    if (apiKey) {
+    if (isEnabled && apiKey) {
       const aiItems = await generateAiNews('HOT_NEWS', 10);
       if (aiItems.length > 0) {
         await NewsItem.insertMany(
@@ -463,7 +512,11 @@ router.post('/refresh-my', auth, async (req, res) => {
 
     await NewsItem.deleteMany({ generatedFor: req.user._id });
 
+    const isEnabled = await Settings.isApiEnabled('newsGeneration');
     const apiKey = process.env.DEEPSEEK_API_KEY || '';
+    if (!isEnabled) {
+      return res.json({ message: '资讯生成功能已暂停使用，已清除旧数据', count: 0 });
+    }
     if (!apiKey) {
       return res.json({ message: 'AI 服务未配置，已清除旧数据', count: 0 });
     }

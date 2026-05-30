@@ -94,11 +94,14 @@ function Home() {
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 wowoo-heading leading-tight">
-                打开一盒<br />
-                <span className="text-gray-700">灵感惊喜。</span>
+                藏在心里是光，<br />
+                <span className="text-gray-700">走出来就是星芒。</span>
               </h1>
-              <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto lg:mx-0">
-                来自真实用户的随机发现，每次访问都有新惊喜。
+              <p className="text-lg text-gray-600 mb-2 max-w-md mx-auto lg:mx-0">
+                你的随手分享，或许正照亮某人的夜空。
+              </p>
+              <p className="text-base text-gray-500 mb-8 max-w-md mx-auto lg:mx-0">
+                因物而见，因悟而明！
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link

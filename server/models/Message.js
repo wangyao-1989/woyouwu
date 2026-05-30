@@ -21,7 +21,7 @@ const messageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['borrow_request', 'borrow_approved', 'borrow_rejected', 'borrow_returned', 'resource_comment', 'comment_reply'],
+    enum: ['borrow_request', 'borrow_approved', 'borrow_rejected', 'borrow_shipped', 'borrow_picked_up', 'borrow_returned', 'resource_comment', 'comment_reply'],
     required: true
   },
   title: {

@@ -10,6 +10,7 @@ function Register() {
     phone: '',
     password: '',
     confirmPassword: '',
+    inviteCode: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,10 @@ function Register() {
     }
     if (formData.password.length < 6) {
       setError('密码至少需要6个字符');
+      return;
+    }
+    if (!formData.inviteCode.trim()) {
+      setError('邀请码不能为空');
       return;
     }
 
@@ -108,6 +113,16 @@ function Register() {
               type="tel" name="phone" value={formData.phone} onChange={handleChange}
               className="w-full px-4 py-2.5 border border-[#E8E0D5] rounded-btn text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
               placeholder="选填"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#4A3728] mb-1">
+              邀请码 <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text" name="inviteCode" value={formData.inviteCode} onChange={handleChange}
+              className="w-full px-4 py-2.5 border border-[#E8E0D5] rounded-btn text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all uppercase"
+              placeholder="请输入8位邀请码" required maxLength={8}
             />
           </div>
           <div>
