@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI 修复验证测试</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes press {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
+    .active-press:active {
+      animation: press 0.15s ease-out;
+      transform: scale(0.95);
+    }
+    .scale-hover:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-4xl mx-auto px-4">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">🎉 UI 修复验证测试</h1>
+    <p class="text-gray-500 text-center mb-8">验证按钮按压状态和 SVG 图标显示效果</p>
+
+    <!-- 测试 1: 按钮按压状态 -->
+    <section class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">1</span>
+        按钮按压状态测试
+      </h2>
+      <p class="text-gray-500 text-sm mb-4">点击按钮查看按压缩放效果 (active:scale-95)</p>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- 主按钮 -->
+        <button class="px-6 py-3 bg-[#4A3728] text-white font-medium rounded-xl hover:bg-[#3A2A1E] active:scale-95 transition-all shadow-md">
+          主按钮
+        </button>
+        
+        <!-- 次要按钮 -->
+        <button class="px-6 py-3 bg-[#F5F0E8] text-[#4A3728] font-medium rounded-xl hover:bg-[#E8E0D5] active:scale-95 transition-all border border-[#C8BAAA]">
+          次要按钮
+        </button>
+        
+        <!-- 成功按钮 -->
+        <button class="px-6 py-3 bg-green-500 text-white font-medium rounded-xl hover:bg-green-600 active:scale-95 transition-all">
+          成功按钮
+        </button>
+        
+        <!-- 危险按钮 -->
+        <button class="px-6 py-3 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 active:scale-95 transition-all">
+          危险按钮
+        </button>
+      </div>
+
+      <div class="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+        <p class="text-yellow-700 text-sm">✅ 修复内容：所有按钮添加了 <code class="bg-yellow-100 px-1 rounded">active:scale-95</code> 类，按下时会缩小 5%，松手后恢复。</p>
+      </div>
+    </section>
+
+    <!-- 测试 2: SVG 图标展示 -->
+    <section class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">2</span>
+        SVG 图标展示
+      </h2>
+      <p class="text-gray-500 text-sm mb-4">使用 Heroicons 风格的 SVG 图标替代 Emoji</p>
+      
+      <div class="grid grid-cols-3 md:grid-cols-6 gap-4">
+        <!-- trophy -->
+        <div class="flex flex-col items-center p-4 bg-purple-50 rounded-xl">
+          <svg class="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">trophy</span>
+        </div>
+
+        <!-- lightbulb -->
+        <div class="flex flex-col items-center p-4 bg-yellow-50 rounded-xl">
+          <svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">lightbulb</span>
+        </div>
+
+        <!-- sparkles -->
+        <div class="flex flex-col items-center p-4 bg-pink-50 rounded-xl">
+          <svg class="w-10 h-10 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">sparkles</span>
+        </div>
+
+        <!-- bot/robot -->
+        <div class="flex flex-col items-center p-4 bg-indigo-50 rounded-xl">
+          <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">bot</span>
+        </div>
+
+        <!-- cube -->
+        <div class="flex flex-col items-center p-4 bg-teal-50 rounded-xl">
+          <svg class="w-10 h-10 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">cube</span>
+        </div>
+
+        <!-- file -->
+        <div class="flex flex-col items-center p-4 bg-gray-100 rounded-xl">
+          <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">file</span>
+        </div>
+
+        <!-- folder -->
+        <div class="flex flex-col items-center p-4 bg-amber-50 rounded-xl">
+          <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">folder</span>
+        </div>
+
+        <!-- check -->
+        <div class="flex flex-col items-center p-4 bg-green-50 rounded-xl">
+          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">check</span>
+        </div>
+
+        <!-- x (close) -->
+        <div class="flex flex-col items-center p-4 bg-red-50 rounded-xl">
+          <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">x</span>
+        </div>
+
+        <!-- antenna (rss) -->
+        <div class="flex flex-col items-center p-4 bg-orange-50 rounded-xl">
+          <svg class="w-10 h-10 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">antenna</span>
+        </div>
+
+        <!-- mail -->
+        <div class="flex flex-col items-center p-4 bg-blue-50 rounded-xl">
+          <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">mail</span>
+        </div>
+
+        <!-- hand (gift) -->
+        <div class="flex flex-col items-center p-4 bg-rose-50 rounded-xl">
+          <svg class="w-10 h-10 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+          </svg>
+          <span class="text-xs text-gray-600 mt-2">hand</span>
+        </div>
+      </div>
+
+      <div class="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+        <p class="text-green-700 text-sm">✅ 修复内容：所有结构性图标从 Emoji 替换为统一风格的 SVG 图标（Heroicons 风格）。</p>
+      </div>
+    </section>
+
+    <!-- 测试 3: 分类按钮组 -->
+    <section class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">3</span>
+        分类按钮组（CreateItem 样式）
+      </h2>
+      <p class="text-gray-500 text-sm mb-4">模拟创建闲置物品时的分类选择，带按压状态和 SVG 图标</p>
+      
+      <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <button class="p-3 rounded-xl border-2 border-[#4A3728] bg-[#F5F0E8] text-[#4A3728] transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">数码电子</div>
+        </button>
+
+        <button class="p-3 rounded-xl border-2 border-gray-200 hover:border-[#C8BAAA] text-gray-500 transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">家居生活</div>
+        </button>
+
+        <button class="p-3 rounded-xl border-2 border-gray-200 hover:border-[#C8BAAA] text-gray-500 transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">美妆护肤</div>
+        </button>
+
+        <button class="p-3 rounded-xl border-2 border-gray-200 hover:border-[#C8BAAA] text-gray-500 transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">图书文具</div>
+        </button>
+
+        <button class="p-3 rounded-xl border-2 border-gray-200 hover:border-[#C8BAAA] text-gray-500 transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">运动户外</div>
+        </button>
+
+        <button class="p-3 rounded-xl border-2 border-gray-200 hover:border-[#C8BAAA] text-gray-500 transition-all active:scale-95">
+          <div class="flex justify-center mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <div class="text-xs font-medium">其他</div>
+        </button>
+      </div>
+
+      <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+        <p class="text-blue-700 text-sm">💡 这是 CreateItem.jsx 中分类选择按钮的模拟效果，选中状态和按压状态都已正确实现。</p>
+      </div>
+    </section>
+
+    <!-- 测试 4: 对比展示 -->
+    <section class="bg-white rounded-2xl shadow-lg p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center">4</span>
+        Emoji vs SVG 对比
+      </h2>
+      <p class="text-gray-500 text-sm mb-4">对比 Emoji 和 SVG 图标在视觉和可维护性上的差异</p>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="p-4 bg-red-50 rounded-xl border border-red-200">
+          <h3 class="font-bold text-red-700 mb-3">❌ 使用 Emoji（修复前）</h3>
+          <div class="flex gap-4 mb-4">
+            <span class="text-4xl">🏆</span>
+            <span class="text-4xl">💡</span>
+            <span class="text-4xl">📦</span>
+            <span class="text-4xl">📝</span>
+          </div>
+          <ul class="text-sm text-red-600 space-y-1">
+            <li>• 平台渲染不一致</li>
+            <li>• 无法统一控制颜色/大小</li>
+            <li>• 无法添加按压效果</li>
+            <li>• 无障碍支持差</li>
+            <li>• 维护困难</li>
+          </ul>
+        </div>
+
+        <div class="p-4 bg-green-50 rounded-xl border border-green-200">
+          <h3 class="font-bold text-green-700 mb-3">✅ 使用 SVG（修复后）</h3>
+          <div class="flex gap-4 mb-4">
+            <svg class="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <svg class="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <svg class="w-12 h-12 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <svg class="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <ul class="text-sm text-green-600 space-y-1">
+            <li>• ✅ 跨平台一致性</li>
+            <li>• ✅ 精确控制样式</li>
+            <li>• ✅ 支持 CSS 动画</li>
+            <li>• ✅ 优秀的无障碍支持</li>
+            <li>• ✅ 易于维护和扩展</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center text-gray-400 text-sm mt-8 pb-8">
+      <p>我有权 - UI/UX Pro Max 规范修复验证页面</p>
+    </footer>
+  </div>
+</body>
+</html>

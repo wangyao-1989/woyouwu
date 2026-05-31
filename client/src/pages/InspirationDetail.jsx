@@ -246,7 +246,7 @@ function InspirationDetail() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={handleLike}
-                  className={`flex items-center space-x-1.5 px-4 py-2 rounded-btn text-sm transition-all ${
+                  className={`flex items-center space-x-1.5 px-4 py-2 rounded-btn text-sm transition-all active:scale-95 ${
                     isLiked
                       ? 'bg-red-100 text-red-600'
                       : 'bg-[#F5F0E8] text-[#8B7355] hover:bg-red-50 hover:text-red-600'
@@ -265,7 +265,7 @@ function InspirationDetail() {
 
                 <button
                   onClick={handleFavorite}
-                  className={`flex items-center space-x-1.5 px-4 py-2 rounded-btn text-sm transition-all ${
+                  className={`flex items-center space-x-1.5 px-4 py-2 rounded-btn text-sm transition-all active:scale-95 ${
                     isFavorited
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-[#F5F0E8] text-[#8B7355] hover:bg-yellow-50 hover:text-yellow-700'
@@ -302,7 +302,7 @@ function InspirationDetail() {
                 <div className="flex justify-end mt-2">
                   <button
                     type="submit"
-                    className="btn-primary text-sm"
+                    className="btn-primary text-sm active:scale-95"
                   >
                     发布评论
                   </button>

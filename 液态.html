@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen 磁流体交互引擎</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --primary-glow: rgba(0, 242, 254, 0.6);
+            --bg-glass: rgba(15, 15, 20, 0.4);
+            --border-glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #050508;
+            font-family: 'Outfit', -apple-system, sans-serif;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 渲染层 */
+        #canvas-container { 
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh; 
+            z-index: 1;
+        }
+        canvas { display: block; }
+
+        /* UI 容器层：禁用事件，防止阻挡底部鼠标交互 */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* 恢复需要交互的元素的事件 */
+        header, .glass-card, .footer { pointer-events: auto; }
+
+        header {
+            padding: 24px 5%;
+            display: flex;
+            justify-content: space-between;
+        }
+        .brand {
+            font-size: 24px; font-weight: 800;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .brand span { color: var(--primary); }
+
+        .hero-section {
+            flex: 1; display: flex;
+            align-items: center; padding: 0 5%;
+        }
+
+        /* 毛玻璃面板 */
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px; padding: 48px;
+            max-width: 420px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .glass-card:hover { border-color: rgba(0, 242, 254, 0.3); }
+
+        .badge {
+            display: inline-block; padding: 6px 12px;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary); border-radius: 20px;
+            font-size: 12px; font-weight: 600;
+            letter-spacing: 1px; margin-bottom: 24px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        h1 { font-size: 42px; font-weight: 800; line-height: 1.2; margin: 0 0 16px 0; }
+        p.desc { font-size: 15px; color: #8892b0; line-height: 1.6; margin-bottom: 32px; font-weight: 300; }
+
+        .upload-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 100%; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #000; padding: 16px 32px; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer; border: none;
+            box-shadow: 0 10px 20px var(--primary-glow);
+            transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+            box-sizing: border-box;
+        }
+        .upload-btn:hover {
+            box-shadow: 0 15px 30px var(--primary-glow);
+            transform: translateY(-2px); filter: brightness(1.1);
+        }
+        input[type="file"] { display: none; }
+
+        .footer {
+            padding: 24px 5%; display: flex; justify-content: space-between;
+            font-size: 12px; color: #8892b0; letter-spacing: 1px;
+        }
+        .status { display: flex; align-items: center; gap: 8px; }
+        .dot {
+            width: 8px; height: 8px; background-color: var(--primary);
+            border-radius: 50%; box-shadow: 0 0 10px var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <main class="ui-layer">
+        <header>
+            <div class="brand">KINETIC<span>Matrix</span></div>
+        </header>
+
+        <section class="hero-section">
+            <div class="glass-card">
+                <span class="badge">高密度磁流体物理引擎</span>
+                <h1>交互式<br>粒子力场</h1>
+                <p class="desc">
+                    内置自适应黑幕抠图算法。请在画面上移动鼠标，体验真实摩擦力与弹簧阻尼带来的微观撕裂感。
+                </p>
+                <label class="upload-btn">
+                    注入新形态源文件
+                    <input type="file" id="upload" accept="image/*">
+                </label>
+            </div>
+        </section>
+
+        <div class="footer">
+            <div class="status"><div class="dot"></div>PHYSICS ENGINE ONLINE</div>
+            <div>HOVER TO INTERACT</div>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+        
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        let particlesArray = [];
+        
+        // 鼠标力场设置
+        let mouse = { x: -1000, y: -1000, radius: 80 }; // 半径适中，既有张力又不会全盘崩溃
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        
+        // 鼠标离开屏幕，停止排斥
+        window.addEventListener('mouseout', () => {
+            mouse.x = -1000;
+            mouse.y = -1000;
+        });
+        
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            // 简单处理：窗口变化较大时，可以刷新页面重置，此处仅重置尺寸
+        });
+
+        // 核心物理粒子类
+        class Particle {
+            constructor(x, y, color) {
+                // 出生在屏幕边缘附近，产生一开始汇聚的视觉冲击力
+                this.x = width / 2 + (Math.random() - 0.5) * width * 1.5;
+                this.y = height / 2 + (Math.random() - 0.5) * height * 1.5;
+                
+                // 最终必须归位的地方
+                this.originX = x;
+                this.originY = y;
+                this.color = color;
+                
+                // 粒子尺寸，配合 step=2 实现无缝拼接
+                this.size = 2; 
+                
+                // 核心动力学参数
+                this.vx = 0; 
+                this.vy = 0; 
+                this.ease = 0.12;       // 弹簧回拉力度
+                this.friction = 0.82;   // 摩擦力（决定了回弹时的"Q弹"感）
+                this.mass = Math.random() * 1.5 + 1; // 质量不均，排斥时更有层次
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+            
+            update() {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 1. 撕裂（排斥力）
+                if (distance < mouse.radius) {
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let force = (mouse.radius - distance) / mouse.radius;
+                    
+                    // 被鼠标推开的速度向量
+                    let pushX = forceDirectionX * force * 15 / this.mass;
+                    let pushY = forceDirectionY * force * 15 / this.mass;
+                    
+                    this.vx -= pushX;
+                    this.vy -= pushY;
+                }
+                
+                // 2. 重组（弹簧拉力）
+                this.vx += (this.originX - this.x) * this.ease;
+                this.vy += (this.originY - this.y) * this.ease;
+                
+                // 3. 摩擦减速
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                
+                // 4. 更新坐标
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        }
+
+        // 数据解析与生成阵列
+        function init(imgData, imgW, imgH) {
+            particlesArray = [];
+            
+            // 为了让焦点不被左侧卡片挡住，我们将整个图像稍微向右下方偏移
+            const offsetX = (width - imgW) / 2 + (width > 768 ? 150 : 0);
+            const offsetY = (height - imgH) / 2;
+            
+            const step = 2; // 高密度采样
+
+            for (let y = 0; y < imgH; y += step) {
+                for (let x = 0; x < imgW; x += step) {
+                    const index = (y * imgW + x) * 4;
+                    
+                    const r = imgData[index];
+                    const g = imgData[index+1];
+                    const b = imgData[index+2];
+                    const alpha = imgData[index + 3];
+
+                    // 【核心滤镜引擎】
+                    // 1. 过滤完全透明的背景
+                    // 2. 过滤自带的纯黑/极暗背景 (r>15 || g>15 || b>15)
+                    if (alpha > 128 && (r > 15 || g > 15 || b > 15)) {
+                        const color = `rgb(${r},${g},${b})`;
+                        particlesArray.push(new Particle(x + offsetX, y + offsetY, color));
+                    }
+                }
+            }
+        }
+
+        // 默认载入动画
+        function initDefault() {
+            const canvasOff = document.createElement('canvas');
+            canvasOff.width = 800; canvasOff.height = 300;
+            const ctxOff = canvasOff.getContext('2d');
+            
+            ctxOff.fillStyle = '#00f2fe';
+            ctxOff.font = '900 150px "Outfit", sans-serif';
+            ctxOff.textAlign = 'center';
+            ctxOff.textBaseline = 'middle';
+            ctxOff.fillText('N E X U S', canvasOff.width/2, canvasOff.height/2);
+            
+            const data = ctxOff.getImageData(0, 0, canvasOff.width, canvasOff.height).data;
+            init(data, canvasOff.width, canvasOff.height);
+        }
+
+        // 处理图像上传并缩放
+        document.getElementById('upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvasOff = document.createElement('canvas');
+                    const ctxOff = canvasOff.getContext('2d');
+                    
+                    // 将上传的 Logo 控制在最适宜观看的尺寸（约450像素宽）
+                    const maxDim = 450;
+                    let scale = Math.min(maxDim / img.width, maxDim / img.height);
+                    let w = Math.floor(img.width * scale);
+                    let h = Math.floor(img.height * scale);
+                    
+                    canvasOff.width = w; 
+                    canvasOff.height = h;
+                    ctxOff.drawImage(img, 0, 0, w, h);
+                    
+                    const data = ctxOff.getImageData(0, 0, w, h).data;
+                    init(data, w, h);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        // 渲染主循环
+        function animate() {
+            // 背景填充采用极深邃的星空蓝黑，衬托明亮的粒子，不再使用拖影
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, width, height);
+            
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // 启动系统
+        initDefault();
+        animate();
+    </script>
+</body>
+</html>

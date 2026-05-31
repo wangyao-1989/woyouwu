@@ -94,6 +94,15 @@ const PET_TOOLS = [
     route: '/mbti-test',
   },
   {
+    id: 'particle-logo',
+    icon: '✨',
+    label: '粒子 Logo 生成',
+    desc: '粒子聚合动画效果',
+    color: '#dcb464',
+    bgColor: '#fffbeb',
+    route: '/particle-logo',
+  },
+  {
     id: 'doc-converter',
     icon: '📄',
     label: '文档转换工具',
@@ -323,8 +332,8 @@ function PetWidget() {
     if (!isLoggedIn) return;
     try {
       const res = await axios.get('/api/settings/my-pet');
-      const myPet = res.data.pet;
-      const hasPersonalCustom = myPet && (myPet.image || myPet.walkGif || myPet.name !== '果果仁');
+      const myPet = res.data.pet || {};
+      const hasPersonalCustom = myPet.image || myPet.walkGif || myPet.name !== '果果仁';
       if (hasPersonalCustom) {
         setPetName(myPet.name || '果果仁');
         setCustomPetImage(myPet.image || '');
@@ -415,7 +424,7 @@ function PetWidget() {
         setPetCategory('custom');
         setCustomCategory('');
         setMessages(buildInitialMessages(globalPetData.name || '果果仁', 'custom'));
-      } else {
+      } else if (!petInfoLoaded) {
         setPetName('果果仁');
         setCustomPetImage('');
         setWalkGif('');

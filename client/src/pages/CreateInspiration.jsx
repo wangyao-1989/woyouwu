@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 const categories = [
-  { value: '产品想法', label: '产品想法', icon: '🚀' },
-  { value: '设计灵感', label: '设计灵感', icon: '🎨' },
-  { value: '技术方案', label: '技术方案', icon: '⚙️' },
-  { value: '商业模式', label: '商业模式', icon: '📊' },
-  { value: '其他', label: '其他', icon: '📌' },
+  { value: '产品想法', label: '产品想法', icon: 'rocket' },
+  { value: '设计灵感', label: '设计灵感', icon: 'palette' },
+  { value: '技术方案', label: '技术方案', icon: 'settings' },
+  { value: '商业模式', label: '商业模式', icon: 'bar-chart' },
+  { value: '其他', label: '其他', icon: 'pin' },
 ];
 
 const statuses = [
@@ -153,13 +154,13 @@ function CreateInspiration() {
                     key={cat.value}
                     type="button"
                     onClick={() => setFormData({ ...formData, category: cat.value })}
-                    className={`p-2.5 rounded-xl border-2 text-center transition-all ${
+                    className={`p-2.5 rounded-xl border-2 text-center transition-all active:scale-95 ${
                       formData.category === cat.value
                         ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]'
                         : 'border-[#E8E0D5] hover:border-[#C8BAAA] text-[#8B7355]'
                     }`}
                   >
-                    <div className="text-lg mb-0.5">{cat.icon}</div>
+                    <div className="flex justify-center mb-0.5"><Icon name={cat.icon} className="w-5 h-5" /></div>
                     <div className="text-xs font-medium">{cat.label}</div>
                   </button>
                 ))}
@@ -266,14 +267,14 @@ function CreateInspiration() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] transition disabled:opacity-50 text-sm"
+              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] active:scale-95 transition disabled:opacity-50 text-sm"
             >
               {loading ? '提交中...' : isEdit ? '保存修改' : '发布灵感'}
             </button>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] transition text-sm border border-[#E8E0D5]"
+              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] active:scale-95 transition text-sm border border-[#E8E0D5]"
             >
               取消
             </button>

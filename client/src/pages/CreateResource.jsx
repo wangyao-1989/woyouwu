@@ -215,7 +215,7 @@ function CreateResource() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-3 bg-secondary-600 text-white font-semibold rounded-lg hover:bg-secondary-700 transition disabled:opacity-50"
+            className="flex-1 py-3 bg-secondary-600 text-white font-semibold rounded-lg hover:bg-secondary-700 active:scale-95 transition disabled:opacity-50"
           >
             {loading ? '提交中...' : isEdit ? '保存修改' : '发布资源'}
           </button>

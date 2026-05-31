@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import Icon from '../components/Icon';
 
 function ItemDetail() {
   const { id } = useParams();
@@ -202,7 +203,9 @@ function ItemDetail() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl">📦</div>
+                <div className="w-full h-full flex items-center justify-center">
+                  <Icon name="cube" className="w-12 h-12 text-[#B8A899]" />
+                </div>
               )}
             </div>
           </div>
@@ -212,7 +215,12 @@ function ItemDetail() {
               className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium mb-3 self-start"
               style={{ backgroundColor: tagStyle.bg, color: tagStyle.color }}
             >
-              {item.type === 'stuff' ? '📦' : '📄'} {getStatusLabel(item.status)}
+              {item.type === 'stuff' ? (
+                <Icon name="cube" className="w-3 h-3" />
+              ) : (
+                <Icon name="file" className="w-3 h-3" />
+              )}{' '}
+              {getStatusLabel(item.status)}
             </span>
 
             <h1 className="text-2xl font-bold text-[#4A3728] mb-4">{item.name}</h1>
@@ -243,8 +251,8 @@ function ItemDetail() {
               {item.link && (
                 <div>
                   <span className="text-xs text-[#B8A899]">链接</span>
-                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    查看 🔗
+                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                    查看 <Icon name="link" className="w-3.5 h-3.5" />
                   </a>
                 </div>
               )}
@@ -296,7 +304,8 @@ function ItemDetail() {
 
             {!isOwner && !hasApprovedBorrow && (item.owner?.contactWechat || item.owner?.contactPhone || item.owner?.contactEmail || item.contactWechat || item.contactPhone || item.contactEmail) && (
               <div className="mb-6 p-4 bg-gray-50 rounded-card border border-gray-200 text-center">
-                <p className="text-sm text-gray-500">🔒 申请通过后将显示发布者联系方式</p>
+                <div className="flex justify-center mb-1"><Icon name="lock" className="w-5 h-5 text-gray-400" /></div>
+                <p className="text-sm text-gray-500">申请通过后将显示发布者联系方式</p>
               </div>
             )}
 
@@ -334,15 +343,15 @@ function ItemDetail() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleApprove(borrow, borrow.messageId)}
-                                className="flex-1 py-2 bg-green-500 text-white font-medium rounded hover:bg-green-600 transition"
+                                className="flex-1 py-2 bg-green-500 text-white font-medium rounded hover:bg-green-600 active:scale-95 transition"
                               >
-                                ✅ 通过
+                                <span className="flex items-center justify-center gap-1"><Icon name="check" className="w-4 h-4" /> 通过</span>
                               </button>
                               <button
                                 onClick={() => handleReject(borrow.messageId)}
-                                className="flex-1 py-2 bg-red-500 text-white font-medium rounded hover:bg-red-600 transition"
+                                className="flex-1 py-2 bg-red-500 text-white font-medium rounded hover:bg-red-600 active:scale-95 transition"
                               >
-                                ❌ 拒绝
+                                <span className="flex items-center justify-center gap-1"><Icon name="x" className="w-4 h-4" /> 拒绝</span>
                               </button>
                             </div>
                           </div>
@@ -366,9 +375,15 @@ function ItemDetail() {
                             </div>
                             <button
                               onClick={() => borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? handleShip(borrow._id) : handlePickup(borrow._id)}
-                              className={`w-full py-2 ${borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-medium rounded transition`}
+                              className={`w-full py-2 ${borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-medium rounded active:scale-95 transition`}
                             >
-                              {borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? '📮 确认发货' : '👋 确认对方已取货'}
+                              <span className="flex items-center justify-center gap-1.5">
+                                {borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? (
+                                  <><Icon name="mail" className="w-4 h-4" /> 确认发货</>
+                                ) : (
+                                  <><Icon name="hand" className="w-4 h-4" /> 确认对方已取货</>
+                                )}
+                              </span>
                             </button>
                           </div>
                         ))}
@@ -378,13 +393,13 @@ function ItemDetail() {
                   
                   <Link
                     to={`/items/edit/${item._id}`}
-                    className="block w-full py-3 bg-warm-600 text-white font-semibold rounded-lg hover:bg-warm-900 transition text-center"
+                    className="block w-full py-3 bg-warm-600 text-white font-semibold rounded-lg hover:bg-warm-900 active:scale-95 transition text-center"
                   >
                     编辑物品
                   </Link>
                   <button
                     onClick={handleDelete}
-                    className="w-full py-3 bg-red-50 text-red-500 font-semibold rounded-lg hover:bg-red-100 transition"
+                    className="w-full py-3 bg-red-50 text-red-500 font-semibold rounded-lg hover:bg-red-100 active:scale-95 transition"
                   >
                     删除物品
                   </button>
@@ -397,7 +412,7 @@ function ItemDetail() {
                       <p className="text-sm text-gray-600 mb-3">登录后可以申请借用此物品</p>
                       <Link
                         to="/login"
-                        className="inline-block px-6 py-2 bg-[#4A3728] text-white font-medium rounded-lg hover:bg-[#3A2A1E] transition"
+                        className="inline-block px-6 py-2 bg-[#4A3728] text-white font-medium rounded-lg hover:bg-[#3A2A1E] active:scale-95 transition"
                       >
                         登录 / 注册
                       </Link>
@@ -408,7 +423,7 @@ function ItemDetail() {
                     !showBorrowForm ? (
                       <button
                         onClick={openBorrowForm}
-                        className="w-full py-3 bg-[#4A3728] text-white font-semibold rounded-lg hover:bg-[#3A2A1E] transition"
+                        className="w-full py-3 bg-[#4A3728] text-white font-semibold rounded-lg hover:bg-[#3A2A1E] active:scale-95 transition"
                       >
                         申请借用
                       </button>
@@ -483,7 +498,7 @@ function ItemDetail() {
                           <button
                             onClick={handleBorrow}
                             disabled={submitting}
-                            className="flex-1 py-2 bg-[#4A3728] text-white font-semibold rounded-lg hover:bg-[#3A2A1E] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 py-2 bg-[#4A3728] text-white font-semibold rounded-lg hover:bg-[#3A2A1E] active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {submitting ? '提交中...' : '提交申请'}
                           </button>
@@ -497,7 +512,7 @@ function ItemDetail() {
                                 contactInfo: ''
                               });
                             }}
-                            className="px-4 py-2 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 transition"
+                            className="px-4 py-2 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 active:scale-95 transition"
                           >
                             取消
                           </button>
@@ -548,13 +563,13 @@ function ItemDetail() {
                     <div className="flex flex-col gap-2 ml-4">
                       <button
                         onClick={() => handleApprove(borrow, borrow.messageId)}
-                        className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition whitespace-nowrap"
+                        className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 active:scale-95 transition whitespace-nowrap"
                       >
                         通过
                       </button>
                       <button
                         onClick={() => handleReject(borrow.messageId)}
-                        className="px-3 py-1.5 text-xs bg-red-100 text-red-500 rounded-lg hover:bg-red-200 transition whitespace-nowrap"
+                        className="px-3 py-1.5 text-xs bg-red-100 text-red-500 rounded-lg hover:bg-red-200 active:scale-95 transition whitespace-nowrap"
                       >
                         拒绝
                       </button>
@@ -565,14 +580,14 @@ function ItemDetail() {
                       {borrow.pickupMethod === 'delivery' || borrow.pickupMethod === '邮寄' ? (
                         <button
                           onClick={() => handleShip(borrow._id)}
-                          className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition whitespace-nowrap"
+                          className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 active:scale-95 transition whitespace-nowrap"
                         >
                           确认发货
                         </button>
                       ) : (
                         <button
                           onClick={() => handlePickup(borrow._id)}
-                          className="px-3 py-1.5 text-xs bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition whitespace-nowrap"
+                          className="px-3 py-1.5 text-xs bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 active:scale-95 transition whitespace-nowrap"
                         >
                           确认取货
                         </button>
@@ -582,7 +597,7 @@ function ItemDetail() {
                   {(borrow.status === 'approved' || borrow.status === 'shipped' || borrow.status === 'picked_up') && isOwner && (
                     <button
                       onClick={() => handleReturn(borrow._id)}
-                      className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition whitespace-nowrap ml-4"
+                      className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 active:scale-95 transition whitespace-nowrap ml-4"
                     >
                       确认归还
                     </button>

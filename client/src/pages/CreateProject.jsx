@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 const categories = [
   { value: '', label: '请选择分类' },
@@ -341,7 +342,7 @@ function CreateProject() {
                     onChange={handleChange}
                     className="sr-only"
                   />
-                  ✨ 原创作品
+                  <span className="flex items-center gap-1"><Icon name="sparkles" className="w-4 h-4" /> 原创作品</span>
                 </label>
                 <label className={`flex items-center gap-2 px-4 py-2.5 rounded-btn border-2 cursor-pointer transition-all text-sm ${
                   formData.videoSource === '转载' ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]' : 'border-gray-200 text-gray-500'
@@ -423,14 +424,14 @@ function CreateProject() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#4A3728] text-white font-medium rounded-btn hover:bg-[#3A2A1E] transition-all disabled:opacity-50"
+              className="flex-1 py-3 bg-[#4A3728] text-white font-medium rounded-btn hover:bg-[#3A2A1E] active:scale-95 transition-all disabled:opacity-50"
             >
               {loading ? '提交中...' : isEdit ? '保存修改' : '发布项目'}
             </button>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex-1 py-3 bg-white text-[#4A3728] font-medium rounded-btn border border-[#E8E0D5] hover:bg-[#F5F0E8] transition-all"
+              className="flex-1 py-3 bg-white text-[#4A3728] font-medium rounded-btn border border-[#E8E0D5] hover:bg-[#F5F0E8] active:scale-95 transition-all"
             >
               取消
             </button>

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 const categories = [
-  { value: '经验分享', label: '经验分享', icon: '💡' },
-  { value: '教程', label: '教程', icon: '📚' },
-  { value: '随笔', label: '随笔', icon: '✍️' },
-  { value: '书评影评', label: '书评影评', icon: '🎬' },
-  { value: '技术文章', label: '技术文章', icon: '💻' },
-  { value: '其他', label: '其他', icon: '📝' }
+  { value: '经验分享', label: '经验分享', icon: 'lightbulb' },
+  { value: '教程', label: '教程', icon: 'book-open' },
+  { value: '随笔', label: '随笔', icon: 'pen-tool' },
+  { value: '书评影评', label: '书评影评', icon: 'film' },
+  { value: '技术文章', label: '技术文章', icon: 'code' },
+  { value: '其他', label: '其他', icon: 'file' }
 ];
 
 const defaultMeta = {
@@ -169,7 +170,7 @@ function CreateArticle() {
       case '经验分享':
         return (
           <div className="space-y-4 bg-[#FAFAF7] rounded-card border border-[#E8E0D5] p-5">
-            <p className="text-sm font-semibold text-[#4A3728] mb-2">💡 经验详情</p>
+            <p className="text-sm font-semibold text-[#4A3728] mb-2 flex items-center gap-1"><Icon name="lightbulb" className="w-4 h-4" /> 经验详情</p>
             <div>
               <label className={labelClass}>应用场景 / 领域</label>
               <input type="text" name="scenario" value={meta.scenario || ''} onChange={handleMetaChange} className={inputClass} placeholder="例如：前端开发、团队管理、自由职业..." />
@@ -327,13 +328,13 @@ function CreateArticle() {
                   key={ct.value}
                   type="button"
                   onClick={() => handleCategorySelect(ct.value)}
-                  className={`p-3 rounded-card border-2 text-center transition-all ${
+                  className={`p-3 rounded-card border-2 text-center transition-all active:scale-95 ${
                     formData.category === ct.value
                       ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]'
                       : 'border-gray-200 hover:border-[#C8BAAA] text-gray-500'
                   }`}
                 >
-                  <div className="text-2xl mb-1">{ct.icon}</div>
+                  <div className="flex justify-center mb-1"><Icon name={ct.icon} className="w-6 h-6" /></div>
                   <div className="text-sm font-medium">{ct.label}</div>
                 </button>
               ))}
@@ -439,14 +440,14 @@ function CreateArticle() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] transition disabled:opacity-50"
+              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] active:scale-95 transition disabled:opacity-50"
             >
               {loading ? '提交中...' : isEdit ? '保存修改' : '发布文章'}
             </button>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] border border-[#E8E0D5] transition"
+              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] border border-[#E8E0D5] active:scale-95 transition"
             >
               取消
             </button>

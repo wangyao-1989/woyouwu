@@ -29,6 +29,15 @@ const AVATAR_PROMPTS = {
 
 const API_BASE = 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image';
 
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 router.get('/questions', async (req, res) => {
   try {
     const mode = req.query.mode || 'express';
@@ -45,11 +54,29 @@ router.get('/questions', async (req, res) => {
       query.scene = scene;
     }
 
-    const questions = await MBTIQuestion.find(query).sort({ order: 1, _id: 1 }).lean();
+    const allQuestions = await MBTIQuestion.find(query).sort({ order: 1, _id: 1 }).lean();
 
-    if (questions.length === 0) {
+    if (allQuestions.length === 0) {
       return res.status(404).json({ message: '题库尚未初始化，请联系管理员' });
     }
+
+    const dims = ['EI', 'SN', 'TF', 'JP'];
+    const perDim = mode === 'express' ? 5 : 15;
+
+    const grouped = {};
+    dims.forEach(d => { grouped[d] = []; });
+    allQuestions.forEach(q => {
+      if (grouped[q.dimension]) grouped[q.dimension].push(q);
+    });
+
+    const selected = [];
+    dims.forEach(d => {
+      const pool = shuffleArray(grouped[d]);
+      const taken = pool.slice(0, perDim);
+      selected.push(...taken);
+    });
+
+    const questions = shuffleArray(selected);
 
     const safeQuestions = questions.map(q => ({
       _id: q._id,

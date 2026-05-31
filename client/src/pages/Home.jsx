@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import NewsCorner from '../components/NewsCorner';
+import LiquidText from '../components/LiquidText';
+import Icon from '../components/Icon';
 
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -88,16 +90,18 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-cream-50 fade-in">
+      <LiquidText />
+      <div className="relative z-10">
       {/* 主视觉区域 */}
       <section className="relative pb-16 pt-2 px-4 gradient-hero">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 wowoo-heading leading-tight">
+              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-0 wowoo-heading leading-tight liquid-text">
                 藏在心里是光，<br />
                 <span className="text-gray-700">走出来就是星芒。</span>
               </h1>
-              <p className="text-lg text-gray-600 mb-2 max-w-md mx-auto lg:mx-0">
+              <p id="hero-subtitle" className="text-lg text-gray-600 mb-2 max-w-md mx-auto lg:mx-0" style={{ marginTop: '-24px' }}>
                 你的随手分享，或许正照亮某人的夜空。
               </p>
               <p className="text-base text-gray-500 mb-8 max-w-md mx-auto lg:mx-0">
@@ -106,13 +110,13 @@ function Home() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
                   to="/items/create"
-                  className="px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
+                  className="inline-flex items-center gap-1.5 px-8 py-3 bg-primary-500 text-white font-medium rounded-xl hover:bg-primary-600 active:scale-95 transition-all shadow-wowoo hover:shadow-wowoo-lg scale-hover"
                 >
-                  我要发布 ✨
+                  我要发布 <Icon name="sparkles" className="w-4 h-4" />
                 </Link>
                 <button 
                   onClick={() => setActiveFilter('all')}
-                  className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-all scale-hover"
+                  className="px-8 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all scale-hover"
                 >
                   刷新内容 ↻
                 </button>
@@ -176,7 +180,7 @@ function Home() {
                         return (
                           <div className="mt-2 pt-2 border-t border-gray-100">
                             <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                              ✨ 原创
+                              <Icon name="sparkles" className="w-3 h-3" /> 原创
                             </span>
                           </div>
                         );
@@ -241,7 +245,7 @@ function Home() {
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-all active:scale-95 ${
                     activeFilter === filter
                       ? 'bg-gray-100 text-gray-900'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -254,7 +258,7 @@ function Home() {
             <div className="flex items-center space-x-2 bg-gray-50 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-2 rounded-lg transition-all active:scale-90 ${
                   viewMode === 'grid'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-400 hover:text-gray-600'
@@ -262,12 +266,12 @@ function Home() {
                 aria-label="网格视图"
               >
                 <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-2 rounded-lg transition-all active:scale-90 ${
                   viewMode === 'list'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-400 hover:text-gray-600'
@@ -304,7 +308,7 @@ function Home() {
           ) : filteredContent.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-gray-500 mb-2">还没有人发布物品，来做第一个吧！</p>
-              <Link to="/items/create" className="text-primary-500 hover:underline">立即发布 ✨</Link>
+              <Link to="/items/create" className="inline-flex items-center gap-1 text-primary-500 hover:underline active:scale-95 transition">立即发布 <Icon name="sparkles" className="w-4 h-4" /></Link>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -463,6 +467,7 @@ function Home() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

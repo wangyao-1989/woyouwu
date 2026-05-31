@@ -268,6 +268,44 @@ router.get('/mbti-avatar/:type', (req, res) => {
   }
 });
 
+// 检查网站Logo是否存在
+router.get('/logo', async (req, res) => {
+  const logoPath = path.join(__dirname, '../uploads/logo.png');
+  if (fs.existsSync(logoPath)) {
+    res.status(200).json({ exists: true });
+  } else {
+    res.status(404).json({ exists: false });
+  }
+});
+
+// 上传网站Logo
+router.post('/upload-logo', auth, admin, upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请选择要上传的文件' });
+    }
+
+    const logoPath = path.join(__dirname, '../uploads/logo.png');
+
+    await sharp(req.file.path)
+      .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toFile(logoPath);
+
+    if (req.file.path !== logoPath) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.json({ message: 'Logo上传成功！', url: '/uploads/logo.png' });
+  } catch (error) {
+    console.error('Logo upload error:', error);
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: 'Logo上传失败: ' + error.message });
+  }
+});
+
 // 获取全局设置
 router.get('/settings', auth, admin, async (req, res) => {
   try {

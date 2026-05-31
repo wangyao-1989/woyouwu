@@ -13,6 +13,7 @@ const API_TYPE_NAMES = {
 function AdminSettings() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [isVideoFile, setIsVideoFile] = useState(false);
   const [currentLogo, setCurrentLogo] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
@@ -135,17 +136,37 @@ function AdminSettings() {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
+      const isVideo = file.type.startsWith('video/');
+      setIsVideoFile(isVideo);
+
+      if (isVideo) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true;
+        const url = URL.createObjectURL(file);
+        video.onloadeddata = () => { video.currentTime = 0.5; };
+        video.onseeked = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          setPreview(canvas.toDataURL('image/jpeg', 0.9));
+          URL.revokeObjectURL(url);
+        };
+        video.src = url;
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPreview(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      setMessage('请选择要上传的图片');
+      setMessage('请选择要上传的图片或视频');
       setMessageType('error');
       return;
     }
@@ -155,7 +176,39 @@ function AdminSettings() {
     setMessageType('');
 
     const formData = new FormData();
-    formData.append('logo', selectedFile);
+
+    if (selectedFile.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      const videoUrl = URL.createObjectURL(selectedFile);
+
+      try {
+        await new Promise((resolve, reject) => {
+          video.onloadeddata = () => { video.currentTime = 0.5; };
+          video.onseeked = () => resolve();
+          video.onerror = () => reject(new Error('视频加载失败'));
+          video.src = videoUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        formData.append('logo', blob, 'logo.png');
+        URL.revokeObjectURL(videoUrl);
+      } catch (err) {
+        URL.revokeObjectURL(videoUrl);
+        setMessage('视频帧提取失败: ' + err.message);
+        setMessageType('error');
+        setUploading(false);
+        return;
+      }
+    } else {
+      formData.append('logo', selectedFile);
+    }
 
     try {
       const res = await axios.post('/api/admin/upload-logo', formData);
@@ -165,6 +218,7 @@ function AdminSettings() {
       setCurrentLogo(`/uploads/logo.png?t=${Date.now()}`);
       setSelectedFile(null);
       setPreview(null);
+      setIsVideoFile(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -265,7 +319,7 @@ function AdminSettings() {
 
         <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">网站Logo</h2>
-          <p className="text-gray-600 mb-4">上传您的网站Logo，建议尺寸为200x200像素</p>
+          <p className="text-gray-600 mb-4">上传您的网站Logo，支持图片和视频（视频将自动提取首帧），建议尺寸为200x200像素</p>
           
           <div className="mb-6">
             <p className="text-sm font-medium text-gray-700 mb-2">当前Logo：</p>
@@ -284,7 +338,7 @@ function AdminSettings() {
               <input
                 type="file"
                 ref={fileInputRef}
-                accept="image/*"
+                accept="image/*,video/mp4,video/webm,video/ogg"
                 onChange={handleFileChange}
                 className="hidden"
               />

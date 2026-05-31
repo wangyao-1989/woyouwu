@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 const categories = [
-  { value: '数码电子', label: '数码电子', icon: '📱' },
-  { value: '家居生活', label: '家居生活', icon: '🏠' },
-  { value: '服饰配饰', label: '服饰配饰', icon: '👗' },
-  { value: '图书文具', label: '图书文具', icon: '📖' },
-  { value: '运动户外', label: '运动户外', icon: '⚽' },
-  { value: '母婴用品', label: '母婴用品', icon: '🍼' },
-  { value: '美妆护肤', label: '美妆护肤', icon: '💄' },
-  { value: '食品饮料', label: '食品饮料', icon: '🍜' },
-  { value: '工具器械', label: '工具器械', icon: '🔧' },
-  { value: '会员卡券', label: '会员卡券', icon: '💳' },
-  { value: '其他', label: '其他', icon: '📦' },
+  { value: '数码电子', label: '数码电子', icon: 'smartphone' },
+  { value: '家居生活', label: '家居生活', icon: 'home' },
+  { value: '服饰配饰', label: '服饰配饰', icon: 'shirt' },
+  { value: '图书文具', label: '图书文具', icon: 'book' },
+  { value: '运动户外', label: '运动户外', icon: 'activity' },
+  { value: '母婴用品', label: '母婴用品', icon: 'baby' },
+  { value: '美妆护肤', label: '美妆护肤', icon: 'sparkle' },
+  { value: '食品饮料', label: '食品饮料', icon: 'coffee' },
+  { value: '工具器械', label: '工具器械', icon: 'wrench' },
+  { value: '会员卡券', label: '会员卡券', icon: 'creditcard' },
+  { value: '其他', label: '其他', icon: 'cube' },
 ];
 
 const statusOptions = [
@@ -200,13 +201,13 @@ function CreateItem() {
                   key={ct.value}
                   type="button"
                   onClick={() => setFormData({ ...formData, category: ct.value })}
-                  className={`p-2.5 rounded-card border-2 text-center transition-all ${
+                  className={`p-2.5 rounded-card border-2 text-center transition-all active:scale-95 ${
                     formData.category === ct.value
                       ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]'
                       : 'border-gray-200 hover:border-[#C8BAAA] text-gray-500'
                   }`}
                 >
-                  <div className="text-lg mb-0.5">{ct.icon}</div>
+                  <div className="flex justify-center mb-0.5"><Icon name={ct.icon} className="w-5 h-5" /></div>
                   <div className="text-xs font-medium">{ct.label}</div>
                 </button>
               ))}
@@ -367,14 +368,14 @@ function CreateItem() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] transition disabled:opacity-50"
+              className="flex-1 py-3 bg-[#4A3728] text-white font-semibold rounded-btn hover:bg-[#3A2A1E] active:scale-95 transition disabled:opacity-50"
             >
               {loading ? '提交中...' : isEdit ? '保存修改' : '发布物品'}
             </button>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] border border-[#E8E0D5] transition"
+              className="flex-1 py-3 bg-[#F5F0E8] text-[#4A3728] font-semibold rounded-btn hover:bg-[#E8E0D5] border border-[#E8E0D5] active:scale-95 transition"
             >
               取消
             </button>

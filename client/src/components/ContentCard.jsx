@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Icon from './Icon';
 
 const tagStyles = {
   achievement: { bg: '#F5E6C8', color: '#7a5e2e', label: '个人成果' },
@@ -31,14 +32,14 @@ function ContentCard({ item: rawItem, viewMode = 'grid' }) {
   const item = normalize(rawItem);
   const tag = tagStyles[item.type] || { bg: '#E8E0D5', color: '#8B7355', label: '项目' };
 
-  const getDefaultEmoji = () => {
+  const getDefaultIcon = () => {
     switch (item.type) {
-      case 'achievement': return '🏆';
-      case 'idea':        return '💭';
-      case 'project':     return '🎨';
-      case 'article':     return '📝';
-      case 'stuff':       return '📦';
-      default:            return '📄';
+      case 'achievement': return { name: 'trophy', label: '个人成果' };
+      case 'idea':        return { name: 'lightbulb', label: '灵感碎片' };
+      case 'project':     return { name: 'doc', label: '项目/作品' };
+      case 'article':     return { name: 'file', label: '文章/故事' };
+      case 'stuff':       return { name: 'cube', label: '闲置交换' };
+      default:            return { name: 'doc', label: '项目' };
     }
   };
 
@@ -59,7 +60,7 @@ function ContentCard({ item: rawItem, viewMode = 'grid' }) {
           </div>
         ) : (
           <div className="w-32 h-24 rounded-lg bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD] flex items-center justify-center flex-shrink-0">
-            <span className="text-3xl">{getDefaultEmoji()}</span>
+            <Icon name={getDefaultIcon().name} className="w-8 h-8 text-[#8B7355]" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -120,7 +121,7 @@ function ContentCard({ item: rawItem, viewMode = 'grid' }) {
         </div>
       ) : (
         <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-[#F5F0E8] to-[#F0E8DD]">
-          <span className="text-4xl opacity-80">{getDefaultEmoji()}</span>
+          <Icon name={getDefaultIcon().name} className="w-12 h-12 text-[#8B7355]" />
         </div>
       )}
 

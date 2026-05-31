@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>悬浮全息体 + 全景星流背景</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: radial-gradient(circle at center, #0a0a12 0%, #000000 100%); 
+            font-family: sans-serif; 
+        }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #ui {
+            position: absolute; top: 30px; width: 100%;
+            text-align: center; pointer-events: none; z-index: 10;
+        }
+        .btn {
+            pointer-events: auto; background: rgba(0, 242, 254, 0.05);
+            border: 1px solid rgba(0, 242, 254, 0.5); color: #00f2fe;
+            padding: 10px 24px; border-radius: 30px; cursor: pointer;
+            backdrop-filter: blur(4px); transition: 0.3s;
+            font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
+        }
+        .btn:hover { background: rgba(0, 242, 254, 0.2); box-shadow: 0 0 20px rgba(0, 242, 254, 0.6); }
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <label class="btn">
+            [+] 注入新形态源文件
+            <input type="file" id="upload" accept="image/*">
+        </label>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+        uniform float uTime;
+        uniform float uProgress;
+        attribute vec3 aTarget;
+        attribute vec3 aColor;
+        varying vec3 vColor;
+
+        vec3 noise(vec3 p) {
+            return vec3(
+                sin(p.y * 0.02 + uTime * 0.5) * cos(p.z * 0.02 + uTime * 0.3),
+                sin(p.z * 0.02 + uTime * 0.4) * cos(p.x * 0.02 + uTime * 0.5),
+                sin(p.x * 0.02 + uTime * 0.3) * cos(p.y * 0.02 + uTime * 0.4)
+            );
+        }
+
+        void main() {
+            vColor = aColor;
+            
+            // 放大散开时的游走半径，让粒子瞬间充斥全屏 (300 -> 800)
+            vec3 wanderPos = position + noise(position) * 800.0;
+            
+            vec3 finalPos = mix(wanderPos, aTarget, uProgress);
+            
+            // 聚合时保持极度轻微的呼吸感，确保轮廓清晰
+            finalPos += noise(finalPos * 1.5) * (1.0 - uProgress) * 50.0;
+            finalPos.y += sin(uTime * 2.0 + finalPos.x * 0.01) * uProgress * 2.0;
+
+            vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+            
+            gl_PointSize = (800.0 / -mvPosition.z) * (0.6 + uProgress * 0.4); 
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        varying vec3 vColor;
+        void main() {
+            vec2 uv = gl_PointCoord.xy - vec2(0.5);
+            float dist = length(uv);
+            if (dist > 0.5) discard;
+            float alpha = smoothstep(0.5, 0.2, dist);
+            gl_FragColor = vec4(vColor, alpha * 0.9);
+        }
+    </script>
+
+    <script>
+        let scene, camera, renderer, particles, material, controls, bgParticles;
+        let isGathered = true;
+        let autoTimer;
+        const container = document.getElementById('canvas-container');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a12, 0.001); 
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 4000);
+            camera.position.z = 550;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.autoRotate = true; 
+            controls.autoRotateSpeed = 1.0; 
+            controls.enablePan = false; 
+
+            initBackgroundParticles(); // 初始化铺满屏幕的环境星流
+            initTextParticles();
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+            startAutoCycle();
+        }
+
+        // 新增：生成铺满整个 3D 空间的背景环境粒子
+        function initBackgroundParticles() {
+            const bgCount = 15000;
+            const bgGeometry = new THREE.BufferGeometry();
+            const bgPositions = new Float32Array(bgCount * 3);
+
+            for(let i = 0; i < bgCount; i++) {
+                // 在一个巨大的球形空间内散布
+                const r = 2000 * Math.cbrt(Math.random());
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                bgPositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                bgPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                bgPositions[i*3+2] = r * Math.cos(phi);
+            }
+
+            bgGeometry.setAttribute('position', new THREE.BufferAttribute(bgPositions, 3));
+            
+            // 使用基础材质，带有微弱的蓝色幽光
+            const bgMaterial = new THREE.PointsMaterial({
+                color: 0x0055ff,
+                size: 3,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            bgParticles = new THREE.Points(bgGeometry, bgMaterial);
+            scene.add(bgParticles);
+        }
+
+        function createParticleSystem(imgData, imgWidth, imgHeight) {
+            if (particles) {
+                scene.remove(particles);
+                particles.geometry.dispose();
+                particles.material.dispose();
+            }
+
+            const step = 2; 
+            const positions = [];
+            const targets = [];
+            const colors = [];
+
+            const offsetX = -imgWidth / 2;
+            const offsetY = imgHeight / 2;
+
+            for (let y = 0; y < imgHeight; y += step) {
+                for (let x = 0; x < imgWidth; x += step) {
+                    const pxIndex = (y * imgWidth + x) * 4;
+                    const alpha = imgData[pxIndex + 3];
+
+                    if (alpha > 128) {
+                        const radius = 1200; // 初始随机分布范围加大
+                        const theta = Math.random() * 2 * Math.PI;
+                        const phi = Math.acos((Math.random() * 2) - 1);
+                        
+                        positions.push(
+                            radius * Math.sin(phi) * Math.cos(theta),
+                            radius * Math.sin(phi) * Math.sin(theta),
+                            radius * Math.cos(phi)
+                        );
+
+                        // 扁平锐利的 Z 轴厚度
+                        targets.push(
+                            x + offsetX,
+                            offsetY - y,
+                            (Math.random() - 0.5) * 15
+                        );
+
+                        colors.push(
+                            Math.min(imgData[pxIndex] / 255 + 0.1, 1.0),
+                            Math.min(imgData[pxIndex + 1] / 255 + 0.1, 1.0),
+                            Math.min(imgData[pxIndex + 2] / 255 + 0.1, 1.0)
+                        );
+                    }
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('aTarget', new THREE.Float32BufferAttribute(targets, 3));
+            geometry.setAttribute('aColor', new THREE.Float32BufferAttribute(colors, 3));
+
+            material = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragmentShader').textContent,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uProgress: { value: 1.0 } 
+                },
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending 
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            isGathered = true;
+            startAutoCycle();
+        }
+
+        function initTextParticles() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1000; canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#00f2fe';
+            ctx.font = 'italic bold 180px "Segoe UI", Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('M A T R I X', canvas.width/2, canvas.height/2);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            createParticleSystem(imgData, canvas.width, canvas.height);
+        }
+
+        document.getElementById('upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const maxDim = 350;
+                    let scale = Math.min(maxDim / img.width, maxDim / img.height);
+                    let w = Math.floor(img.width * scale);
+                    let h = Math.floor(img.height * scale);
+                    
+                    canvas.width = w; canvas.height = h;
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    const imgData = ctx.getImageData(0, 0, w, h).data;
+                    createParticleSystem(imgData, w, h);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        function startAutoCycle() {
+            if (autoTimer) clearInterval(autoTimer);
+            
+            autoTimer = setInterval(() => {
+                if (!material) return;
+                isGathered = !isGathered;
+                
+                gsap.to(material.uniforms.uProgress, {
+                    value: isGathered ? 1.0 : 0.0,
+                    duration: 3, 
+                    ease: isGathered ? "expo.out" : "power3.inOut" 
+                });
+            }, 4500); 
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            if (material) {
+                material.uniforms.uTime.value = clock.getElapsedTime();
+            }
+            
+            // 让背景星流也产生极其缓慢的自转，增加宇宙空间的辽阔感
+            if (bgParticles) {
+                bgParticles.rotation.y += 0.0005;
+                bgParticles.rotation.x += 0.0002;
+            }
+
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -147,7 +147,7 @@ function Register() {
           </div>
           <button
             type="submit" disabled={loading}
-            className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary w-full py-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '注册中...' : '注册'}
           </button>

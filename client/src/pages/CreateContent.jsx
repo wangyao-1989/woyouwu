@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 function CreateContent() {
   const navigate = useNavigate();
@@ -68,8 +69,8 @@ function CreateContent() {
     <div className="min-h-screen bg-[#F5F0E8] pb-8">
       <div className="max-w-2xl mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-            🎨 发布内容
+          <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center flex items-center justify-center gap-2">
+            <Icon name="palette" className="w-7 h-7" /> 发布内容
           </h1>
 
           <form onSubmit={handleSubmit}>
@@ -81,13 +82,13 @@ function CreateContent() {
                 <button
                   type="button"
                   onClick={() => setType('achievement')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all active:scale-95 ${
                     type === 'achievement'
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
                       : 'border-gray-200 hover:border-purple-300'
                   }`}
                 >
-                  <div className="text-3xl mb-2">✨</div>
+                  <div className="flex justify-center mb-2"><Icon name="trophy" className="w-8 h-8" /></div>
                   <div className="font-medium">个人成果</div>
                   <div className="text-xs text-gray-500 mt-1">网页/文章/项目</div>
                 </button>
@@ -95,13 +96,13 @@ function CreateContent() {
                 <button
                   type="button"
                   onClick={() => setType('inspiration')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all active:scale-95 ${
                     type === 'inspiration'
                       ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
                       : 'border-gray-200 hover:border-yellow-300'
                   }`}
                 >
-                  <div className="text-3xl mb-2">💡</div>
+                  <div className="flex justify-center mb-2"><Icon name="lightbulb" className="w-8 h-8" /></div>
                   <div className="font-medium">瞬间灵感</div>
                   <div className="text-xs text-gray-500 mt-1">想法/创意/灵感</div>
                 </button>
@@ -268,9 +269,9 @@ function CreateContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50"
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? '发布中...' : '✨ 发布内容'}
+              {loading ? '发布中...' : <><Icon name="sparkles" className="w-5 h-5" /> 发布内容</>}
             </button>
           </form>
         </div>

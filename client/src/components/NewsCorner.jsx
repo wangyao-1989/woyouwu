@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import Icon from './Icon';
 
 const CATEGORY_LABELS = {
   tech: '技术',
@@ -215,8 +216,9 @@ function NewsCorner() {
         <h2 className="text-2xl font-bold text-gray-900 wowoo-heading">
           资讯好望角
         </h2>
-        <span className="text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-          🤖 AI 每日精选
+        <span className="inline-flex items-center gap-1 text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+          <Icon name="bot" className="w-3.5 h-3.5" />
+          AI 每日精选
         </span>
       </div>
       {user ? (
@@ -224,7 +226,7 @@ function NewsCorner() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-50"
             title="刷新资讯"
           >
             <svg aria-hidden="true" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +236,7 @@ function NewsCorner() {
           </button>
           <button
             onClick={openPreferenceModal}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 bg-primary-50 rounded-xl hover:bg-primary-100 transition-all"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 bg-primary-50 rounded-xl hover:bg-primary-100 active:scale-95 transition-all"
           >
             <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -248,7 +250,7 @@ function NewsCorner() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-50"
             title="刷新资讯"
           >
             <svg aria-hidden="true" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,7 +304,7 @@ function NewsCorner() {
         ))}
         <button
           onClick={openPreferenceModal}
-          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-400 bg-white rounded-full border border-gray-200 hover:text-primary-500 hover:border-primary-200 transition-all"
+          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-400 bg-white rounded-full border border-gray-200 hover:text-primary-500 hover:border-primary-200 active:scale-95 transition-all"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
@@ -406,7 +408,7 @@ function NewsCorner() {
           </div>
         ) : (
           <div className="bg-gradient-to-br from-primary-50/30 via-amber-50/20 to-teal-50/30 rounded-2xl border border-gray-100 p-8 text-center">
-            <div className="text-4xl mb-4">📡</div>
+            <div className="flex justify-center mb-4"><Icon name="antenna" className="w-10 h-10 text-gray-400" /></div>
             <h3 className="text-lg font-semibold text-gray-700 mb-2">暂无最新资讯</h3>
             <p className="text-sm text-gray-500 max-w-md mx-auto">
               当前未能获取到最新资讯数据，请稍后再来查看。
@@ -415,7 +417,7 @@ function NewsCorner() {
             {!user && (
               <Link
                 to="/login"
-                className="inline-block mt-4 px-6 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition"
+                className="inline-flex items-center mt-4 px-6 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 active:scale-95 transition-all"
               >
                 登录探索更多 →
               </Link>
@@ -454,7 +456,7 @@ function NewsCorner() {
                     <button
                       key={cat.value}
                       onClick={() => toggleCategory(cat.value)}
-                      className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                      className={`px-4 py-2 text-sm font-medium rounded-xl transition-all active:scale-95 ${
                         selected
                           ? `${colorStyle.bg} ${colorStyle.text} border-2 ${colorStyle.border}`
                           : 'bg-gray-50 text-gray-500 border-2 border-transparent hover:bg-gray-100'
@@ -502,7 +504,7 @@ function NewsCorner() {
                 />
                 <button
                   onClick={addKeyword}
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 active:scale-95 transition-all"
                 >
                   添加
                 </button>
@@ -513,14 +515,14 @@ function NewsCorner() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPrefModal(false)}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
               >
                 取消
               </button>
               <button
                 onClick={savePreferences}
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 active:scale-95 transition disabled:opacity-50"
               >
                 {saving ? '保存中...' : '保存偏好'}
               </button>

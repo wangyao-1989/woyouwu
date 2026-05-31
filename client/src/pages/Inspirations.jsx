@@ -117,7 +117,7 @@ function Inspirations() {
             <h1 className="heading-xl">灵感碎片</h1>
             <Link
               to="/inspirations/create"
-              className="btn-primary flex items-center space-x-2"
+              className="btn-primary flex items-center space-x-2 active:scale-95"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -205,7 +205,7 @@ function Inspirations() {
             <p className="text-gray-400 text-sm mt-2">记录你的第一个灵感吧</p>
             <Link
               to="/inspirations/create"
-              className="btn-primary mt-6 inline-flex items-center"
+              className="btn-primary mt-6 inline-flex items-center active:scale-95"
             >
               记录灵感
             </Link>

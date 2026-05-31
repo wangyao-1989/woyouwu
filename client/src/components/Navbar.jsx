@@ -5,11 +5,11 @@ import axios from 'axios';
 import Icon from './Icon';
 
 const publishOptions = [
-  { label: '闲置交换', icon: '📦', to: '/items/create' },
-  { label: '项目作品', icon: '🎨', to: '/projects/create' },
-  { label: '文章故事', icon: '📝', to: '/articles/create' },
-  { label: '灵感碎片', icon: '💡', to: '/inspirations/create' },
-  { label: '资源分享', icon: '📁', to: '/resources/create' },
+  { label: '闲置交换', icon: 'cube', to: '/items/create' },
+  { label: '项目作品', icon: 'folder', to: '/projects/create' },
+  { label: '文章故事', icon: 'file', to: '/articles/create' },
+  { label: '灵感碎片', icon: 'lightbulb', to: '/inspirations/create' },
+  { label: '资源分享', icon: 'doc', to: '/resources/create' },
 ];
 
 function Navbar() {
@@ -189,7 +189,7 @@ function Navbar() {
                 <div className="relative" ref={publishDropdownRef}>
                   <button
                     onClick={() => setShowPublishDropdown(!showPublishDropdown)}
-                    className="btn-primary text-sm py-2 px-5 flex items-center"
+                    className="btn-primary text-sm py-2 px-5 flex items-center active:scale-95"
                   >
                     <Icon name="plus" className="w-5 h-5 mr-1" />
                     发布
@@ -205,9 +205,9 @@ function Navbar() {
                           key={opt.label}
                           to={opt.to}
                           onClick={() => setShowPublishDropdown(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#4A3728] hover:bg-[#F5F0E8] transition-colors"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#4A3728] hover:bg-[#F5F0E8] active:scale-98 transition-colors"
                         >
-                          <span className="text-lg">{opt.icon}</span>
+                          <Icon name={opt.icon} className="w-5 h-5 text-[#8B7355]" />
                           <span>{opt.label}</span>
                         </Link>
                       ))}
@@ -215,7 +215,7 @@ function Navbar() {
                   )}
                 </div>
 
-                <Link to="/messages" className="relative p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-white/70 rounded-btn transition-all" aria-label="通知">
+                <Link to="/messages" className="relative p-2 text-[#8B7355] hover:text-[#4A3728] hover:bg-white/70 rounded-btn active:scale-95 transition-all" aria-label="通知">
                   <Icon name="bell" className="w-6 h-6" />
                   {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
@@ -227,7 +227,7 @@ function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="flex items-center space-x-2 p-1 rounded-btn hover:bg-white/70 transition-all"
+                    className="flex items-center space-x-2 p-1 rounded-btn hover:bg-white/70 active:scale-95 transition-all"
                     aria-label="用户菜单"
                   >
                     <img
@@ -249,14 +249,14 @@ function Navbar() {
                       <Link
                         to={`/profile/${user.id}`}
                         onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       >
                         个人资料
                       </Link>
                       <Link
                         to="/profile/edit"
                         onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       >
                         简历编辑
                       </Link>
@@ -265,14 +265,14 @@ function Navbar() {
                           <Link
                             to="/admin/settings"
                             onClick={() => setShowDropdown(false)}
-                            className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+                            className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 active:bg-purple-100 transition-colors"
                           >
                             系统设置
                           </Link>
                           <Link
                             to="/admin/users"
                             onClick={() => setShowDropdown(false)}
-                            className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                            className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                           >
                             用户管理
                           </Link>
@@ -281,7 +281,7 @@ function Navbar() {
                       <div className="border-t border-gray-100 mt-2 pt-2">
                         <button
                           onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
                         >
                           退出登录
                         </button>
