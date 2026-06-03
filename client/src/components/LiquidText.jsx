@@ -7,7 +7,7 @@ const MOUSE_RADIUS = 90;
 const EASE = 0.12;
 const FRICTION = 0.85;
 const PUSH_FORCE = 15;
-const BG_COLOR = '#FDFBF7';
+const BG_COLOR = '#F7F5F2';
 
 class Particle {
   constructor(x, y, color) {
