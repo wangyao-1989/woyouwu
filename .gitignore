@@ -26,3 +26,4 @@ nginx-ssl.conf
 nginx.conf.backup
 *.backup
 .ssh_key/
+swap
