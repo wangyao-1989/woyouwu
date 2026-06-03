@@ -405,15 +405,15 @@ body {
 .liquid-text * {
   color: transparent !important;
   user-select: none;
+  line-height: 1.25 !important;
 }
 
 .liquid-text-canvas {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
   z-index: 1;
+  background-color: #FDFBF7;
 }
 
 /* ═══ MBTI Test — Apple-Style ═══ */

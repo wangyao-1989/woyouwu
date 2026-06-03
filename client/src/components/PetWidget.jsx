@@ -113,6 +113,15 @@ const PET_TOOLS = [
     disabled: true,
   },
   {
+    id: 'image-cropper',
+    icon: '✂️',
+    label: '图片裁剪工具',
+    desc: '网格切图，打包下载',
+    color: '#7c3aed',
+    bgColor: '#f5f3ff',
+    route: '/image-cropper',
+  },
+  {
     id: 'more',
     icon: '🔮',
     label: '更多小工具',

@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const PARTICLE_SIZE = 1.2;
 const SAMPLE_STEP = 1;
@@ -53,14 +54,30 @@ function LiquidText() {
   const particlesRef = useRef([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const animRef = useRef(null);
+  const debugRef = useRef({ enabled: false, items: [] });
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const debug = new URLSearchParams(window.location.search).get('debug') === '1';
+    debugRef.current.enabled = debug;
+
+    const dpr = window.devicePixelRatio || 1;
     const width = window.innerWidth;
     const height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = BG_COLOR;
+    ctx.fillRect(0, 0, width, height);
+
 
     function createParticles() {
       particlesRef.current = [];
@@ -73,56 +90,30 @@ function LiquidText() {
       offCanvas.width = w;
       offCanvas.height = h;
       const offCtx = offCanvas.getContext('2d');
+      offCtx.scale(dpr, dpr);
 
       const textElements = document.querySelectorAll('.liquid-text');
-
-      const subtitle = document.querySelector('#hero-subtitle');
-      if (subtitle) {
-        const subRect = subtitle.getBoundingClientRect();
-        console.log('副标题 rect:', { top: subRect.top, bottom: subRect.bottom, height: subRect.height });
-      }
+      const debugItems = [];
+      offCtx.fillStyle = '#1e2432';
+      offCtx.textBaseline = 'top';
+      offCtx.textAlign = 'left';
 
       textElements.forEach(el => {
-        const elRect = el.getBoundingClientRect();
-        console.log('液态文字 h1 rect:', { top: elRect.top, bottom: elRect.bottom, height: elRect.height });
-        if (subtitle) {
-          const subRect = subtitle.getBoundingClientRect();
-          console.log('h1.bottom → subtitle.top 距离:', subRect.top - elRect.bottom, 'px');
-        }
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
 
-        const computedStyle = window.getComputedStyle(el);
-        const fontSize = parseFloat(computedStyle.fontSize);
-        const fontWeight = computedStyle.fontWeight;
-        const fontFamily = computedStyle.fontFamily;
+        const cs = window.getComputedStyle(el);
+        const text = el.textContent.trim();
+        if (!text) return;
 
-        const range = document.createRange();
-        const textNodes = [];
+        offCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
 
-        function collectTextNodes(node) {
-          for (const child of node.childNodes) {
-            if (child.nodeType === Node.TEXT_NODE) {
-              textNodes.push(child);
-            } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === 'BR') {
-            } else if (child.nodeType === Node.ELEMENT_NODE) {
-              collectTextNodes(child);
-            }
-          }
-        }
-        collectTextNodes(el);
+        offCtx.fillText(text, rect.left, rect.top);
 
-        offCtx.fillStyle = '#1e2432';
-        offCtx.textBaseline = 'top';
-
-        textNodes.forEach(node => {
-          const text = node.textContent;
-          if (!text.trim()) return;
-          range.selectNodeContents(node);
-          const nodeRect = range.getBoundingClientRect();
-          console.log(`文本节点 "${text.slice(0, 20)}" rect:`, { top: nodeRect.top, bottom: nodeRect.bottom, left: nodeRect.left });
-          offCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-          offCtx.fillText(text, nodeRect.left, nodeRect.top + fontSize * 0.22);
-        });
+        if (debug) debugItems.push(rect);
       });
+
+      debugRef.current.items = debugItems;
 
       const imgData = offCtx.getImageData(0, 0, w, h).data;
 
@@ -132,7 +123,7 @@ function LiquidText() {
           const alpha = imgData[idx + 3];
           if (alpha > 40) {
             const color = `rgba(30, 36, 50, ${alpha / 255})`;
-            particlesRef.current.push(new Particle(x, y, color));
+            particlesRef.current.push(new Particle(x / dpr, y / dpr, color));
           }
         }
       }
@@ -153,7 +144,7 @@ function LiquidText() {
       }
 
       ctx.fillStyle = BG_COLOR;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
@@ -161,12 +152,34 @@ function LiquidText() {
         particles[i].update(mouse);
         particles[i].draw(ctx);
       }
+
+      if (debugRef.current.enabled) {
+        debugRef.current.items.forEach(rect => {
+          ctx.strokeStyle = 'rgba(255,50,50,0.9)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(rect.left, rect.top, rect.width, rect.height);
+
+          ctx.font = '11px monospace';
+          ctx.fillStyle = 'rgba(255,50,50,0.9)';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(
+            `${rect.width.toFixed(0)}x${rect.height.toFixed(0)} top=${rect.top.toFixed(0)}`,
+            rect.left + 2,
+            rect.top - 2
+          );
+        });
+      }
+
       animRef.current = requestAnimationFrame(animate);
     }
 
     function handleResize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       prevScrollY = window.scrollY;
       createParticles();
     }
@@ -185,11 +198,17 @@ function LiquidText() {
     window.addEventListener('mouseout', handleMouseOut);
     window.addEventListener('resize', handleResize);
 
-    document.fonts.ready.then(() => {
+    function startAnimation() {
       prevScrollY = window.scrollY;
       createParticles();
       animate();
-    });
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(startAnimation).catch(startAnimation);
+    } else {
+      setTimeout(startAnimation, 100);
+    }
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -199,12 +218,13 @@ function LiquidText() {
     };
   }, []);
 
-  return (
+  return createPortal(
     <canvas
       ref={canvasRef}
       className="liquid-text-canvas"
       aria-hidden="true"
-    />
+    />,
+    document.body
   );
 }
 

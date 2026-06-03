@@ -97,11 +97,11 @@ function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-0 wowoo-heading leading-tight liquid-text">
-                藏在心里是光，<br />
-                <span className="text-gray-700">走出来就是星芒。</span>
+              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-0 wowoo-heading leading-tight">
+                <span className="liquid-text">藏在心里是光，</span><br />
+                <span className="liquid-text text-gray-700">走出来就是星芒。</span>
               </h1>
-              <p id="hero-subtitle" className="text-lg text-gray-600 mb-2 max-w-md mx-auto lg:mx-0" style={{ marginTop: '-24px' }}>
+              <p id="hero-subtitle" className="text-lg text-gray-600 mb-2 max-w-md mx-auto lg:mx-0 mt-0 lg:-mt-6">
                 你的随手分享，或许正照亮某人的夜空。
               </p>
               <p className="text-base text-gray-500 mb-8 max-w-md mx-auto lg:mx-0">
@@ -443,8 +443,7 @@ function Home() {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
                 );
               })}
             </div>
