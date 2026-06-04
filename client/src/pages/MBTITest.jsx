@@ -509,8 +509,23 @@ function MBTITest() {
   const combinedAnalysis = result ? getCombinedAnalysis(result.type, selectedZodiac || savedZodiac) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fbfbfd] to-[#f5f5f7] py-20">
-      <div className="max-w-[540px] mx-auto px-5">
+    <div className="min-h-screen bg-gradient-to-b from-[#fbfbfd] to-[#f5f5f7]">
+      {/* 返回按钮 */}
+      <div className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b border-gray-100">
+        <div className="max-w-[540px] mx-auto px-5 py-3">
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            返回首页
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-[540px] mx-auto px-5 py-8">
 
         {/* ─────────── INTRO STEP ─────────── */}
         {step === 'intro' && (

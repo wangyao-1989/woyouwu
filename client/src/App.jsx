@@ -29,7 +29,7 @@ import ResumeEdit from './pages/ResumeEdit';
 import ResumePreview from './pages/ResumePreview';
 import UserResume from './pages/UserResume';
 import MBTITest from './pages/MBTITest';
-import ParticleLogoPage from './pages/ParticleLogoPage';
+import FinanceTracker from './pages/FinanceTracker';
 import ImageCropper from './pages/ImageCropper';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -115,7 +115,7 @@ function App() {
             } />
             <Route path="/user/:userId/resume" element={<UserResume />} />
             <Route path="/mbti-test" element={<MBTITest />} />
-            <Route path="/particle-logo" element={<ParticleLogoPage />} />
+            <Route path="/finance-tracker" element={<FinanceTracker />} />
             <Route path="/image-cropper" element={<ImageCropper />} />
             <Route path="/admin/settings" element={
               <AdminRoute><AdminSettings /></AdminRoute>
