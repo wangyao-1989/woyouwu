@@ -30,9 +30,10 @@ function Users() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div className="min-h-screen pt-16 fade-in" style={{ backgroundColor: '#F7F5F2' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">发现用户</h1>
+        <h1 className="heading-xl mb-6">发现用户</h1>
         
         <div className="relative max-w-md">
           <input
@@ -141,6 +142,7 @@ function Users() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

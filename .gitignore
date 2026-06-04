@@ -27,3 +27,4 @@ nginx.conf.backup
 *.backup
 .ssh_key/
 swap
+.env.production

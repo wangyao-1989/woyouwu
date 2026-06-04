@@ -123,6 +123,73 @@ body {
   color: white;
 }
 
+/* ── Apple-Style Input ── */
+.apple-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #F0F0F5;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #222;
+  outline: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.apple-input::placeholder {
+  color: #C0C0C8;
+}
+
+.apple-input:focus {
+  background: #E8E8EE;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+.apple-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: #F0F0F5;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #222;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.apple-select:focus {
+  background: #E8E8EE;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+.apple-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  background: #F0F0F5;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #222;
+  outline: none;
+  resize: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.apple-textarea::placeholder {
+  color: #C0C0C8;
+}
+
+.apple-textarea:focus {
+  background: #E8E8EE;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
 /* ── Buttons ── */
 .btn-primary {
   display: inline-flex;

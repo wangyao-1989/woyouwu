@@ -9,15 +9,31 @@ router.get('/', optionalAuth, async (req, res) => {
   try {
     const { category, search, sort = '-createdAt', page = 1, limit = 20, hasVideo } = req.query;
     const query = {};
+    const andConditions = [];
 
     if (category) query.category = category;
-    if (hasVideo === 'true') query.video = { $ne: '', $exists: true };
+
+    if (hasVideo === 'true') {
+      andConditions.push({
+        $or: [
+          { video: { $ne: '', $exists: true } },
+          { videoFileId: { $ne: '', $exists: true } },
+        ],
+      });
+    }
+
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { summary: { $regex: search, $options: 'i' } },
-        { techTags: { $regex: search, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { summary: { $regex: search, $options: 'i' } },
+          { techTags: { $regex: search, $options: 'i' } }
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -69,7 +85,7 @@ router.post('/', auth, (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    const { title, category, summary, content, link, techTags, completionDate, collaborators, video, videoSource, videoSourceLink } = req.body;
+    const { title, category, summary, content, link, techTags, completionDate, collaborators, video, videoSource, videoSourceLink, videoFileId, videoCoverUrl } = req.body;
 
     if (!title || !category || !summary || !content) {
       return res.status(400).json({ message: '标题、分类、简介和详情不能为空' });
@@ -79,6 +95,8 @@ router.post('/', auth, (req, res, next) => {
       title,
       cover: req.file ? `/uploads/${req.file.filename}` : '',
       video: video || '',
+      videoFileId: videoFileId || '',
+      videoCoverUrl: videoCoverUrl || '',
       videoSource: videoSource || '原创',
       videoSourceLink: videoSourceLink || '',
       category,
@@ -130,6 +148,9 @@ router.put('/:id', auth, (req, res, next) => {
         updates[field] = req.body[field];
       }
     });
+    // 处理 VOD 视频字段（videoFileId 和 videoCoverUrl 可能通过 FormData 传递）
+    if (req.body.videoFileId !== undefined) updates.videoFileId = req.body.videoFileId;
+    if (req.body.videoCoverUrl !== undefined) updates.videoCoverUrl = req.body.videoCoverUrl;
 
     if (req.body.techTags) updates.techTags = JSON.parse(req.body.techTags);
     if (req.body.completionDate !== undefined) updates.completionDate = req.body.completionDate || null;

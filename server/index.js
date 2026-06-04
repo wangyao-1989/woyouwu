@@ -23,6 +23,7 @@ const newsRoutes = require('./routes/news');
 const settingsRoutes = require('./routes/settings');
 const mbtiRoutes = require('./routes/mbti');
 const tempUploadRoutes = require('./routes/temp-upload');
+const vodRoutes = require('./routes/vod');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/news', newsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/mbti', mbtiRoutes);
 app.use('/api/temp-upload', tempUploadRoutes);
+app.use('/api/vod', vodRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));

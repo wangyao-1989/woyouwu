@@ -108,30 +108,27 @@ function Projects() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen fade-in" style={{ backgroundColor: '#F7F5F2' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="heading-xl">项目作品</h1>
             <Link
               to="/projects/create"
-              className="inline-flex items-center px-5 py-2.5 bg-[#4A3728] text-white rounded-btn text-sm font-medium hover:bg-[#3A2A1E] transition-all shadow-sm"
+              className="btn-primary text-sm py-2"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
               发布作品
             </Link>
           </div>
 
-          <div className="bg-white rounded-card border border-[#E8E0D5] shadow-card p-5 mb-6">
+          <div className="card p-5 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">分类</label>
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+                  className="apple-select"
                 >
                   {categories.map(cat => (
                     <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -144,9 +141,9 @@ function Projects() {
                 <select
                   value={filters.sort}
                   onChange={(e) => handleFilterChange('sort', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
-                >
-                  <option value="-createdAt">最新优先</option>
+                  className="apple-select"
+                  >
+                    <option value="-createdAt">最新优先</option>
                   <option value="createdAt">最早优先</option>
                   <option value="-likes">最多点赞</option>
                 </select>
@@ -162,7 +159,7 @@ function Projects() {
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     placeholder="搜索项目作品..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+                    className="apple-input pl-10"
                   />
                   <svg aria-hidden="true" className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -176,7 +173,7 @@ function Projects() {
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">{pagination.total} 个项目</span>
             </div>
-            <div className="flex items-center space-x-2 bg-[#F5F0E8] rounded-btn p-1">
+            <div className="flex items-center gap-1 bg-[#F0EDE8] rounded-full p-1">
               <button
                 onClick={() => {
                   setViewMode('grid');
@@ -184,10 +181,10 @@ function Projects() {
                   params.set('view', 'grid');
                   setSearchParams(params);
                 }}
-                className={`rounded-btn p-2 transition-all ${
+                className={`rounded-full p-2 transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-white text-[#4A3728] shadow-sm'
-                    : 'text-[#B8A899] hover:text-[#4A3728]'
+                    ? 'bg-white text-[#222] shadow-sm'
+                    : 'text-[#999] hover:text-[#555]'
                 }`}
                 aria-label="网格视图"
               >
@@ -202,10 +199,10 @@ function Projects() {
                   params.set('view', 'list');
                   setSearchParams(params);
                 }}
-                className={`rounded-btn p-2 transition-all ${
+                className={`rounded-full p-2 transition-all ${
                   viewMode === 'list'
-                    ? 'bg-white text-[#4A3728] shadow-sm'
-                    : 'text-[#B8A899] hover:text-[#4A3728]'
+                    ? 'bg-white text-[#222] shadow-sm'
+                    : 'text-[#999] hover:text-[#555]'
                 }`}
                 aria-label="列表视图"
               >
@@ -219,7 +216,7 @@ function Projects() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4A3728]"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#555]"></div>
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-16">
@@ -230,7 +227,7 @@ function Projects() {
             <p className="text-gray-400 text-sm mt-2">来发布第一个作品吧</p>
             <Link
               to="/projects/create"
-              className="inline-block mt-4 px-5 py-2.5 bg-[#4A3728] text-white rounded-btn text-sm font-medium hover:bg-[#3A2A1E] transition-all"
+              className="btn-primary text-sm py-2 inline-block mt-4"
             >
               发布作品
             </Link>
@@ -241,9 +238,9 @@ function Projects() {
               <Link
                 key={project._id || project.id}
                 to={`/projects/${project._id || project.id}`}
-                className="group bg-white rounded-card border border-[#E8E0D5] shadow-card overflow-hidden hover:shadow-lg hover:border-[#C8BAAA] transition-all"
+                className="card overflow-hidden group"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
+                <div className="aspect-[4/3] overflow-hidden bg-[#F0EDE8] relative">
                   {project.cover ? (
                     <img
                       src={project.cover}
@@ -257,10 +254,19 @@ function Projects() {
                       </svg>
                     </div>
                   )}
+                  {(project.video || project.videoFileId) && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-[#4A3728] group-hover:text-[#8B7355] transition-colors line-clamp-1 pr-2">
+                    <h3 className="font-semibold text-[#222] group-hover:text-[#555] transition-colors line-clamp-1 pr-2">
                       {project.title}
                     </h3>
                   </div>
@@ -270,7 +276,7 @@ function Projects() {
                   <div className="flex items-center justify-between">
                     <div className="flex flex-wrap gap-1.5">
                       {project.category && (
-                        <span className="inline-block px-2 py-0.5 bg-[#F5F0E8] text-[#8B7355] text-xs rounded-full">
+                        <span className="inline-block px-2 py-0.5 bg-[#F0EDE8] text-[#555] text-xs rounded-full">
                           {project.category}
                         </span>
                       )}
@@ -306,9 +312,9 @@ function Projects() {
               <Link
                 key={project._id || project.id}
                 to={`/projects/${project._id || project.id}`}
-                className="group flex bg-white rounded-card border border-[#E8E0D5] shadow-card overflow-hidden hover:shadow-lg hover:border-[#C8BAAA] transition-all"
+                className="card overflow-hidden group flex"
               >
-                <div className="w-48 h-36 flex-shrink-0 overflow-hidden bg-[#F5F0E8]">
+                <div className="w-48 h-36 flex-shrink-0 overflow-hidden bg-[#F0EDE8] relative">
                   {project.cover ? (
                     <img
                       src={project.cover}
@@ -322,15 +328,24 @@ function Projects() {
                       </svg>
                     </div>
                   )}
+                  {(project.video || project.videoFileId) && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-10 h-10 bg-black/60 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 p-5 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-[#4A3728] group-hover:text-[#8B7355] transition-colors text-lg">
+                      <h3 className="font-semibold text-[#222] group-hover:text-[#555] transition-colors text-lg">
                         {project.title}
                       </h3>
                       {project.category && (
-                        <span className="inline-block px-2.5 py-0.5 bg-[#F5F0E8] text-[#8B7355] text-xs rounded-full ml-2">
+                        <span className="inline-block px-2.5 py-0.5 bg-[#F0EDE8] text-[#555] text-xs rounded-full ml-2">
                           {project.category}
                         </span>
                       )}
@@ -341,7 +356,7 @@ function Projects() {
                     {project.techTags && project.techTags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {project.techTags.map((tag, i) => (
-                          <span key={i} className="inline-block px-2 py-0.5 bg-[#F5F0E8] text-[#4A3728] text-xs rounded-full">
+                          <span key={i} className="inline-block px-2 py-0.5 bg-[#F0EDE8] text-[#555] text-xs rounded-full">
                             {tag}
                           </span>
                         ))}
@@ -381,7 +396,7 @@ function Projects() {
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page <= 1}
-              className="px-3 py-2 text-sm text-[#4A3728] bg-white border border-[#E8E0D5] rounded-btn hover:bg-[#F5F0E8] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-2 text-sm text-[#555] bg-white border border-[#EBE7E0] rounded-full hover:bg-[#F7F5F2] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -391,10 +406,10 @@ function Projects() {
               <button
                 key={page}
                 onClick={() => handlePageChange(page)}
-                className={`px-3 py-2 text-sm rounded-btn transition-all ${
+                className={`px-3 py-2 text-sm rounded-full transition-all ${
                   page === pagination.page
-                    ? 'bg-[#4A3728] text-white'
-                    : 'text-[#4A3728] bg-white border border-[#E8E0D5] hover:bg-[#F5F0E8]'
+                    ? 'bg-[#222] text-white'
+                    : 'text-[#555] bg-white border border-[#EBE7E0] hover:bg-[#F7F5F2]'
                 }`}
               >
                 {page}
@@ -403,7 +418,7 @@ function Projects() {
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-2 text-sm text-[#4A3728] bg-white border border-[#E8E0D5] rounded-btn hover:bg-[#F5F0E8] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-2 text-sm text-[#555] bg-white border border-[#EBE7E0] rounded-full hover:bg-[#F7F5F2] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

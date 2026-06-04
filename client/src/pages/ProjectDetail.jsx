@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import VideoPlayer from '../components/VideoPlayer';
 
 function ProjectDetail() {
   const { id } = useParams();
@@ -172,6 +173,17 @@ function ProjectDetail() {
                 src={project.cover}
                 alt={project.title}
                 className="max-w-full max-h-[60vh] object-contain"
+              />
+            </div>
+          )}
+
+          {/* 视频播放器 */}
+          {(project.videoFileId || project.video) && (
+            <div className="w-full bg-black">
+              <VideoPlayer
+                fileId={project.videoFileId || undefined}
+                playUrl={(!project.videoFileId && project.video) ? project.video : undefined}
+                coverUrl={project.videoCoverUrl || project.cover}
               />
             </div>
           )}

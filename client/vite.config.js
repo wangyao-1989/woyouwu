@@ -6,15 +6,15 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      targets: ['chrome >= 64', 'edge >= 79', 'firefox >= 67', 'safari >= 12'],
+      targets: ['chrome >= 80', 'edge >= 80', 'firefox >= 80', 'safari >= 14'],
       additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-      renderLegacyChunks: true,
+      renderLegacyChunks: false,
       modernPolyfills: true,
     }),
   ],
   build: {
-    target: ['es2015', 'chrome64'],
-    cssTarget: ['chrome64'],
+    target: ['es2021', 'chrome80'],
+    cssTarget: ['chrome80'],
   },
   server: {
     port: 3000,

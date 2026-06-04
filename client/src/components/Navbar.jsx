@@ -90,7 +90,18 @@ function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            {location.pathname !== '/' && (
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 text-[#999] hover:text-[#222] transition-colors rounded-lg hover:bg-[#F0EDE8]"
+                title="返回上一页"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
             <Link to="/" className="flex items-center gap-2" style={{ letterSpacing: '0.05em' }}>
               {logoFailed ? (
                 <div className="w-9 h-9 bg-[#222] rounded-lg flex items-center justify-center">

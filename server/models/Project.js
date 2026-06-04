@@ -12,6 +12,8 @@ const projectSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 100 },
   cover: { type: String, default: '' },
   video: { type: String, default: '' },
+  videoFileId: { type: String, default: '' },
+  videoCoverUrl: { type: String, default: '' },
   videoSource: { type: String, default: '原创' },
   videoSourceLink: { type: String, trim: true, default: '' },
   category: {

@@ -5,6 +5,14 @@ import NewsCorner from '../components/NewsCorner';
 import LiquidText from '../components/LiquidText';
 import Icon from '../components/Icon';
 
+const shareOptions = [
+  { label: '闲置交换', icon: 'cube', to: '/items/create' },
+  { label: '项目作品', icon: 'folder', to: '/projects/create' },
+  { label: '文章故事', icon: 'file', to: '/articles/create' },
+  { label: '灵感碎片', icon: 'lightbulb', to: '/inspirations/create' },
+  { label: '资源分享', icon: 'doc', to: '/resources/create' },
+];
+
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
@@ -14,7 +22,9 @@ function Home() {
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [itemsError, setItemsError] = useState(null);
+  const [showShareDropdown, setShowShareDropdown] = useState(false);
   const videoIntervalRef = useRef(null);
+  const shareDropdownRef = useRef(null);
 
   useEffect(() => {
     axios.get('/api/projects', { params: { hasVideo: 'true', limit: 20 } })
@@ -27,6 +37,16 @@ function Home() {
       .catch(() => {
         setVideosLoaded(true);
       });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (shareDropdownRef.current && !shareDropdownRef.current.contains(e.target)) {
+        setShowShareDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -105,12 +125,29 @@ function Home() {
             因物而见，因悟而明！
           </p>
           <div className="flex justify-center">
-            <Link
-              to="/items/create"
-              className="btn-primary text-base"
-            >
-              我要分享 <Icon name="sparkles" className="w-4 h-4 ml-1" />
-            </Link>
+            <div className="relative" ref={shareDropdownRef}>
+              <button
+                onClick={() => setShowShareDropdown(!showShareDropdown)}
+                className="btn-primary text-base"
+              >
+                我要分享 <Icon name="sparkles" className="w-4 h-4 ml-1" />
+              </button>
+              {showShareDropdown && (
+                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-44 bg-white rounded-2xl border border-[#EBE7E0] shadow-lg py-2 z-50">
+                  {shareOptions.map(opt => (
+                    <Link
+                      key={opt.label}
+                      to={opt.to}
+                      onClick={() => setShowShareDropdown(false)}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-[#555] hover:text-[#222] hover:bg-[#F7F5F2] transition-colors"
+                    >
+                      <Icon name={opt.icon} className="w-4 h-4 text-[#999]" />
+                      <span>{opt.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

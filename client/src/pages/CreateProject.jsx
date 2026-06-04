@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Icon from '../components/Icon';
+import VideoUploader from '../components/VideoUploader';
 
 const categories = [
   { value: '', label: '请选择分类' },
@@ -36,6 +37,9 @@ function CreateProject() {
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState('');
   const [existingCover, setExistingCover] = useState('');
+  const [videoFileId, setVideoFileId] = useState('');
+  const [videoPlayUrl, setVideoPlayUrl] = useState('');
+  const [videoCoverUrl, setVideoCoverUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
@@ -67,6 +71,11 @@ function CreateProject() {
       if (project.cover) {
         setExistingCover(project.cover);
       }
+      if (project.videoFileId) {
+        setVideoFileId(project.videoFileId);
+        setVideoPlayUrl(project.video || '');
+        setVideoCoverUrl(project.videoCoverUrl || '');
+      }
     } catch (error) {
       console.error('Failed to fetch project');
       navigate('/projects');
@@ -96,6 +105,25 @@ function CreateProject() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleVideoUploadSuccess = (info) => {
+    if (info === null) {
+      // 视频被移除
+      setVideoFileId('');
+      setVideoPlayUrl('');
+      setVideoCoverUrl('');
+      setFormData(prev => ({ ...prev, video: '' }));
+    } else {
+      setVideoFileId(info.fileId);
+      setVideoPlayUrl(info.videoUrl);
+      setVideoCoverUrl(info.coverUrl);
+      setFormData(prev => ({ ...prev, video: info.videoUrl }));
+    }
+  };
+
+  const handleVideoUploadError = (err) => {
+    setError(`视频上传失败: ${err?.message || '未知错误'}`);
   };
 
   const handleSubmit = async (e) => {
@@ -133,6 +161,8 @@ function CreateProject() {
       formDataToSend.append('content', formData.content.trim());
       formDataToSend.append('link', formData.link.trim());
       formDataToSend.append('video', formData.video.trim());
+      formDataToSend.append('videoFileId', videoFileId);
+      formDataToSend.append('videoCoverUrl', videoCoverUrl);
       formDataToSend.append('videoSource', formData.videoSource);
       formDataToSend.append('videoSourceLink', formData.videoSourceLink.trim());
 
@@ -172,26 +202,26 @@ function CreateProject() {
 
   if (fetching) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-[#F5F0E8]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4A3728]"></div>
+      <div className="min-h-[80vh] flex items-center justify-center" style={{ backgroundColor: '#F7F5F2' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#555]"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen fade-in" style={{ backgroundColor: '#F7F5F2' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <h1 className="text-3xl font-bold text-[#4A3728] mb-6">
+        <h1 className="heading-xl mb-8">
           {isEdit ? '编辑项目' : '发布项目作品'}
         </h1>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-btn text-red-600 text-sm">
-            {error}
-          </div>
-        )}
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-card border border-[#E8E0D5] shadow-card p-6 lg:p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="card p-6 lg:p-8 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               项目标题 <span className="text-red-500">*</span>
@@ -201,7 +231,7 @@ function CreateProject() {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+              className="apple-input"
               placeholder="给你的项目起个名字"
               required
             />
@@ -209,9 +239,9 @@ function CreateProject() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              封面图 <span className="text-xs text-[#B8A899] font-normal">（选填）</span>
+              封面图 <span className="text-xs text-[#999] font-normal">（选填）</span>
             </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-[#E8E0D5] rounded-btn hover:border-[#C8BAAA] transition-all">
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 bg-[#F0F0F5] rounded-[10px] hover:bg-[#E8E8EE] transition-colors cursor-pointer">
               <div className="space-y-1 text-center">
                 {(coverPreview || existingCover) ? (
                   <div className="relative inline-block">
@@ -230,11 +260,11 @@ function CreateProject() {
                   </div>
                 ) : (
                   <>
-                    <svg className="mx-auto h-12 w-12 text-[#B8A899]" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    <svg className="mx-auto h-10 w-10 text-[#B0B0B8]" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <div className="flex text-sm text-gray-600 justify-center">
-                      <label htmlFor="cover-upload" className="relative cursor-pointer rounded-md font-medium text-[#8B7355] hover:text-[#4A3728] focus-within:outline-none transition-colors">
+                    <div className="flex text-sm justify-center">
+                      <label htmlFor="cover-upload" className="relative cursor-pointer text-[#555] hover:text-[#222] transition-colors">
                         <span>上传封面图片</span>
                         <input
                           ref={fileInputRef}
@@ -246,9 +276,8 @@ function CreateProject() {
                           onChange={handleCoverChange}
                         />
                       </label>
-                      <p className="pl-1">或拖拽到此处</p>
                     </div>
-                    <p className="text-xs text-[#B8A899]">PNG, JPG, WebP 最大5MB</p>
+                    <p className="text-xs text-[#B0B0B8]">PNG, JPG, WebP 最大5MB</p>
                   </>
                 )}
               </div>
@@ -263,7 +292,7 @@ function CreateProject() {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+              className="apple-select"
             >
               {categories.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -280,7 +309,7 @@ function CreateProject() {
               value={formData.summary}
               onChange={handleChange}
               rows={3}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] resize-none transition-all"
+              className="apple-textarea"
               placeholder="用一两句话简要介绍你的项目..."
             />
           </div>
@@ -294,7 +323,7 @@ function CreateProject() {
               value={formData.content}
               onChange={handleChange}
               rows={8}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] resize-none transition-all"
+              className="apple-textarea"
               placeholder="详细描述你的项目背景、目标、成果等..."
             />
           </div>
@@ -308,31 +337,47 @@ function CreateProject() {
               name="link"
               value={formData.link}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+              className="apple-input"
               placeholder="https://..."
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              演示视频链接 <span className="text-xs text-[#B8A899] font-normal">（选填）</span>
+              演示视频 <span className="text-xs text-[#999] font-normal">（选填，上传到腾讯云点播）</span>
+            </label>
+            <VideoUploader
+              onUploadSuccess={handleVideoUploadSuccess}
+              onUploadError={handleVideoUploadError}
+              existingVideo={videoFileId ? { fileId: videoFileId, videoUrl: videoPlayUrl } : null}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              上传视频将使用腾讯云点播服务进行转码和分发
+            </p>
+          </div>
+
+          {/* 视频链接（兼容过去的直接链接方式） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              或粘贴视频直链 <span className="text-xs text-[#999] font-normal">（与上传二选一）</span>
             </label>
             <input
               type="url"
               name="video"
               value={formData.video}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+              className="apple-input"
               placeholder="视频直链，如 https://example.com/demo.mp4"
+              disabled={!!videoFileId}
             />
           </div>
 
-          {formData.video.trim() && (
-            <div className="space-y-3 bg-[#FAFAF7] rounded-card border border-[#E8E0D5] p-5">
-              <p className="text-sm font-semibold text-[#4A3728]">🎬 视频来源声明</p>
+          {(formData.video.trim() || videoFileId) && (
+            <div className="space-y-3 bg-[#F7F5F2] rounded-2xl border border-[#EBE7E0] p-5">
+              <p className="text-sm font-semibold text-[#222]">视频来源声明</p>
               <div className="flex gap-4">
-                <label className={`flex items-center gap-2 px-4 py-2.5 rounded-btn border-2 cursor-pointer transition-all text-sm ${
-                  formData.videoSource === '原创' ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]' : 'border-gray-200 text-gray-500'
+                <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-sm ${
+                  formData.videoSource === '原创' ? 'border-[#222] bg-[#F7F5F2] text-[#222]' : 'border-[#EBE7E0] text-[#999]'
                 }`}>
                   <input
                     type="radio"
@@ -344,8 +389,8 @@ function CreateProject() {
                   />
                   <span className="flex items-center gap-1"><Icon name="sparkles" className="w-4 h-4" /> 原创作品</span>
                 </label>
-                <label className={`flex items-center gap-2 px-4 py-2.5 rounded-btn border-2 cursor-pointer transition-all text-sm ${
-                  formData.videoSource === '转载' ? 'border-[#4A3728] bg-[#F5F0E8] text-[#4A3728]' : 'border-gray-200 text-gray-500'
+                <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-sm ${
+                  formData.videoSource === '转载' ? 'border-[#222] bg-[#F7F5F2] text-[#222]' : 'border-[#EBE7E0] text-[#999]'
                 }`}>
                   <input
                     type="radio"
@@ -368,10 +413,10 @@ function CreateProject() {
                     name="videoSourceLink"
                     value={formData.videoSourceLink}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+                    className="apple-input"
                     placeholder="请注明原作者出处链接，尊重知识产权"
                   />
-                  <p className="text-xs text-[#B8A899] mt-1">转载他人作品请务必注明来源，尊重知识产权</p>
+                  <p className="text-xs text-[#999] mt-1">转载他人作品请务必注明来源，尊重知识产权</p>
                 </div>
               )}
             </div>
@@ -387,7 +432,7 @@ function CreateProject() {
                 name="techTags"
                 value={formData.techTags}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+                className="apple-input"
                 placeholder="React, Node.js, Figma...（逗号分隔）"
               />
             </div>
@@ -401,7 +446,7 @@ function CreateProject() {
                 name="completionDate"
                 value={formData.completionDate}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+                className="apple-input"
               />
             </div>
           </div>
@@ -415,23 +460,23 @@ function CreateProject() {
               name="collaborators"
               value={formData.collaborators}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-[#E8E0D5] rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
-              placeholder="张三, 李四...（逗号分隔）"
+              className="apple-input"
+                placeholder="张三, 李四...（逗号分隔）"
             />
           </div>
 
-          <div className="flex space-x-4 pt-4">
+          <div className="flex gap-4 pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#4A3728] text-white font-medium rounded-btn hover:bg-[#3A2A1E] active:scale-95 transition-all disabled:opacity-50"
+              className="flex-1 btn-primary py-3"
             >
               {loading ? '提交中...' : isEdit ? '保存修改' : '发布项目'}
             </button>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex-1 py-3 bg-white text-[#4A3728] font-medium rounded-btn border border-[#E8E0D5] hover:bg-[#F5F0E8] active:scale-95 transition-all"
+              className="flex-1 btn-outline py-3"
             >
               取消
             </button>

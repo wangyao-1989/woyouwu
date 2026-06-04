@@ -16,7 +16,10 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.1",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "vod-js-sdk-v6": "^1.8.0",
+    "xgplayer": "^3.0.24",
+    "xgplayer-hls.js": "^3.0.24"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
