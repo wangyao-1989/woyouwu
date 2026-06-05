@@ -30,7 +30,8 @@ function Home() {
     axios.get('/api/projects', { params: { hasVideo: 'true', limit: 20 } })
       .then(res => {
         if (res.data.projects && res.data.projects.length > 0) {
-          setVideos(res.data.projects.filter(p => p.video && p.video.trim()));
+          // 首页轮播只用直链/本地视频，排除云点播视频（videoFileId 的走点击播放，避免消耗CDN流量）
+          setVideos(res.data.projects.filter(p => p.video && p.video.trim() && !p.videoFileId));
         }
         setVideosLoaded(true);
       })
@@ -175,6 +176,7 @@ function Home() {
                     loop
                     playsInline
                     autoPlay
+                    preload="none"
                     className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   />
                 ))}

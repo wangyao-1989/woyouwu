@@ -91,47 +91,51 @@ function VideoUploader({
       // 获取上传签名
       const signature = await getUploadSignature();
 
-      // 初始化上传器
-      const uploader = VOD.start({
+      // 创建 VOD 实例
+      const vodInstance = new VOD({
         getSignature: () => Promise.resolve(signature),
+      });
+
+      // 初始化上传器（内部自动调用 .start()）
+      const uploader = vodInstance.upload({
         videoFile: file,
-        progressCallback: (result) => {
-          // 进度百分比
-          const percent = result.percent ? Math.floor(result.percent * 100) : 0;
-          setProgress(percent);
-        },
-        finishCallback: (result) => {
-          setUploading(false);
-
-          const fileId = result.fileId || '';
-          const videoUrl = result.video?.url || '';
-          const coverUrl = result.cover?.url || '';
-
-          if (!fileId) {
-            const errMsg = '上传完成但未获取到 fileId';
-            setError(errMsg);
-            onUploadError?.(new Error(errMsg));
-            return;
-          }
-
-          const info = { fileId, videoUrl, coverUrl, fileName: file.name };
-          setVideoInfo(info);
-          setProgress(100);
-          onUploadSuccess?.(info);
-        },
-        errorCallback: (err) => {
-          setUploading(false);
-          const errMsg = err?.message || err?.toString() || '上传失败';
-          setError(errMsg);
-          onUploadError?.(new Error(errMsg));
-        },
       });
 
       uploaderRef.current = uploader;
-      uploader.start();
+
+      // 监听上传进度（SDK 使用 EventEmitter 模式）
+      uploader.on('video_progress', (data) => {
+        const percent = data.percent ? Math.round(data.percent * 100) : 0;
+        setProgress(percent);
+      });
+
+      // 等待上传完成（使用 done() promise 而非回调参数）
+      const result = await uploader.done();
+
+      setUploading(false);
+
+      const fileId = result.fileId || '';
+      const videoUrl = result.video?.url || '';
+      const coverUrl = result.cover?.url || '';
+
+      if (!fileId) {
+        const errMsg = '上传完成但未获取到 fileId';
+        setError(errMsg);
+        onUploadError?.(new Error(errMsg));
+        return;
+      }
+
+      const info = { fileId, videoUrl, coverUrl, fileName: file.name };
+      setVideoInfo(info);
+      setProgress(100);
+      onUploadSuccess?.(info);
     } catch (err) {
       setUploading(false);
-      const errMsg = err?.message || err?.toString() || '上传启动失败';
+      // 如果是用户取消，不显示错误
+      if (err?.message === 'canceled' || err?.code === 'cos_canceled') {
+        return;
+      }
+      const errMsg = err?.message || err?.toString() || '上传失败';
       setError(errMsg);
       onUploadError?.(new Error(errMsg));
     }
