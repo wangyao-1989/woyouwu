@@ -1,0 +1,112 @@
+/* 打印样式 - 专门用于导出 PDF */
+
+@media print {
+  /* 页面设置 */
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+
+  /* 使用 body wrapper 隐藏所有内容 */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* 隐藏 body 的所有直接子元素 */
+  body > div {
+    display: none !important;
+  }
+
+  /* 但显示最后一个子元素（打印容器） */
+  body > div:last-child {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 9999 !important;
+  }
+
+  /* 只显示简历容器 */
+  #resume-preview {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    background: white !important;
+  }
+
+  /* 简历内部的 grid 容器 */
+  #resume-preview > .grid {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: 280px 1fr 250px !important;
+  }
+
+  /* 左栏 */
+  #resume-preview > .grid > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 中栏 */
+  #resume-preview > .grid > div:nth-child(2) {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 右栏 */
+  #resume-preview > .grid > div:last-child {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 允许内容分页 */
+  #resume-preview > * {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* 避免在段落中间分页 */
+  p, div, li, section {
+    page-break-inside: avoid;
+  }
+
+  /* 确保所有颜色正确打印 */
+  #resume-preview * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 隐藏所有交互元素 */
+  #resume-preview button,
+  #resume-preview input,
+  #resume-preview textarea,
+  #resume-preview select {
+    display: none !important;
+  }
+
+  /* 隐藏编辑图标 */
+  #resume-preview .lucide-Edit2,
+  #resume-preview .lucide-Check,
+  #resume-preview .lucide-X,
+  #resume-preview .lucide-Camera {
+    display: none !important;
+  }
+
+  /* 隐藏文件上传输入框 */
+  #resume-preview input[type="file"] {
+    display: none !important;
+  }
+}

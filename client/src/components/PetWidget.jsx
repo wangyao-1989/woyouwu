@@ -122,6 +122,15 @@ const PET_TOOLS = [
     route: '/image-cropper',
   },
   {
+    id: 'resume-builder',
+    icon: '📝',
+    label: 'AI 简历生成器',
+    desc: '输入文本，AI 排版专业简历',
+    color: '#f97316',
+    bgColor: '#fff7ed',
+    route: '/resume-builder',
+  },
+  {
     id: 'more',
     icon: '🔮',
     label: '更多小工具',
