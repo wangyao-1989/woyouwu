@@ -31,6 +31,7 @@ import UserResume from './pages/UserResume';
 import MBTITest from './pages/MBTITest';
 import FinanceTracker from './pages/FinanceTracker';
 import ImageCropper from './pages/ImageCropper';
+import DocumentConverter from './pages/DocumentConverter';
 import ResumeBuilder from './pages/ResumeBuilder';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -118,6 +119,7 @@ function App() {
             <Route path="/mbti-test" element={<MBTITest />} />
             <Route path="/finance-tracker" element={<FinanceTracker />} />
             <Route path="/image-cropper" element={<ImageCropper />} />
+            <Route path="/doc-converter" element={<DocumentConverter />} />
             <Route path="/resume-builder" element={<ResumeBuilder />} />
             <Route path="/admin/settings" element={
               <AdminRoute><AdminSettings /></AdminRoute>

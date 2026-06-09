@@ -106,11 +106,10 @@ const PET_TOOLS = [
     id: 'doc-converter',
     icon: '📄',
     label: '文档转换工具',
-    desc: '格式转换，即将上线',
+    desc: '格式转换，图片/文本/编码',
     color: '#f59e0b',
     bgColor: '#fffbeb',
-    route: null,
-    disabled: true,
+    route: '/doc-converter',
   },
   {
     id: 'image-cropper',

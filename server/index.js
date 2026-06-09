@@ -25,6 +25,7 @@ const mbtiRoutes = require('./routes/mbti');
 const tempUploadRoutes = require('./routes/temp-upload');
 const vodRoutes = require('./routes/vod');
 const resumeRoutes = require('./routes/resume');
+const convertRoutes = require('./routes/convert');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -73,6 +74,7 @@ app.use('/api/mbti', mbtiRoutes);
 app.use('/api/temp-upload', tempUploadRoutes);
 app.use('/api/vod', vodRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/convert', convertRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
