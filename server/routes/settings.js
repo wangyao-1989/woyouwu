@@ -234,7 +234,7 @@ router.put('/my-pet/name', auth, async (req, res) => {
 router.put('/my-pet/category', auth, async (req, res) => {
   try {
     const { petCategory, customCategory } = req.body;
-    const validCategories = ['cat', 'dog', 'rabbit', 'hamster', 'bird', 'fox', 'panda', 'custom'];
+    const validCategories = ['ox', 'horse', 'fox', 'cat', 'monkey', 'panda', 'custom'];
     if (!petCategory || !validCategories.includes(petCategory)) {
       return res.status(400).json({ message: '无效的宠物品类' });
     }
@@ -249,7 +249,8 @@ router.put('/my-pet/category', auth, async (req, res) => {
     await user.save();
     res.json({ message: '宠物品类更新成功', pet: user.pet });
   } catch (error) {
-    res.status(500).json({ message: '服务器错误' });
+    console.error('PUT /my-pet/category error:', error.message, error.stack);
+    res.status(500).json({ message: '服务器错误', detail: error.message });
   }
 });
 

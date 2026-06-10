@@ -264,7 +264,7 @@ export default function DocumentConverter() {
     <div className="min-h-screen bg-[#FDF8F0] pt-20 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">📄 文档转换工具</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">📄 文档/图片转换工具</h1>
           <p className="text-gray-500">PDF/图片转 Word 通过后端专业引擎处理，其他转换在浏览器本地完成</p>
         </div>
 

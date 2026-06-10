@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import Live2DPet from './Live2DPet';
 
 const PET_STATES = {
   IDLE: 'idle',
@@ -39,15 +40,36 @@ const ACTION_MESSAGES = {
 };
 
 const PET_CATEGORIES = [
-  { value: 'cat', label: '🐱 猫咪', species: '橘色小猫咪' },
-  { value: 'dog', label: '🐶 小狗', species: '金色小狗' },
-  { value: 'rabbit', label: '🐰 兔子', species: '雪白小兔子' },
-  { value: 'hamster', label: '🐹 仓鼠', species: '圆滚滚小仓鼠' },
-  { value: 'bird', label: '🐦 鹦鹉', species: '翠绿小鹦鹉' },
-  { value: 'fox', label: '🦊 狐狸', species: '赤毛小狐狸' },
-  { value: 'panda', label: '🐼 熊猫', species: '憨态可掬的小熊猫' },
-  { value: 'custom', label: '✨ 自定义', species: '神秘小动物' },
+  { value: 'ox', label: '日和', species: '温柔治愈的看板娘 · Live2D出道生' },
+  { value: 'horse', label: '春', species: '活泼可爱的校园少女 · Live2D当家花旦' },
+  { value: 'fox', label: '毛毛', species: '元气猫耳少女 · 活力满满的治愈担当' },
+  { value: 'cat', label: '诗织', species: '安静温柔的黑长直少女' },
+  { value: 'monkey', label: 'Z16', species: '碧蓝航线的铁血驱逐舰少女' },
+  { value: 'panda', label: '优妮', species: '活泼开朗的游戏引擎精灵' },
+  { value: 'custom', label: '✨ 自定义', species: '你专属的神秘伙伴' },
 ];
+
+const AVATAR_COLORS = {
+  ox: '#5b8c5a', horse: '#ef5350', fox: '#ffa726',
+  cat: '#7e57c2', monkey: '#42a5f5', panda: '#26c6da', custom: '#e91e63',
+};
+
+function DefaultPetAvatar({ category, size }) {
+  const info = PET_CATEGORIES.find(c => c.value === category);
+  const name = info?.label?.charAt(0) || '?';
+  const bg = AVATAR_COLORS[category] || '#ab47bc';
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: `linear-gradient(135deg, ${bg}, ${bg}dd)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.45),
+      boxShadow: '0 1px 3px rgba(0,0,0,0.15)', userSelect: 'none',
+    }}>
+      {name}
+    </div>
+  );
+}
 
 const MBTI_PROFILES = {
   INTJ: { title: '建筑师', emoji: '🏛️', color: '#6366f1' },
@@ -105,7 +127,7 @@ const PET_TOOLS = [
   {
     id: 'doc-converter',
     icon: '📄',
-    label: '文档转换工具',
+    label: '文档/图片转换工具',
     desc: '格式转换，图片/文本/编码',
     color: '#f59e0b',
     bgColor: '#fffbeb',
@@ -142,13 +164,12 @@ const PET_TOOLS = [
 ];
 
 const CATEGORY_GREETINGS = {
-  cat: (name) => `喵~ 我是${name}！(=^ω^=) 有什么可以帮你的吗？`,
-  dog: (name) => `汪~ 我是${name}！(´▽\`ʃ♡ƪ) 有什么可以帮你的吗？`,
-  rabbit: (name) => `蹦~ 我是${name}！(｡･ω･｡) 有什么可以帮你的吗？`,
-  hamster: (name) => `吱吱~ 我是${name}！(*/ω＼*) 有什么可以帮你的吗？`,
-  bird: (name) => `啾~ 我是${name}！(๑•̀ㅂ•́)و✧ 有什么可以帮你的吗？`,
-  fox: (name) => `嗷~ 我是${name}！(￣▽￣*) 有什么可以帮你的吗？`,
-  panda: (name) => `嗯~ 我是${name}！(￣ω￣) 有什么可以帮你的吗？`,
+  ox: (name) => `こんにちは~ 我是${name}！有什么可以帮你的吗？`,
+  horse: (name) => `はい~ 我是${name}！(。・ω・。) 有什么可以帮你的吗？`,
+  fox: (name) => `にゃん~ 我是${name}！(^・ω・^ ) 有什么可以帮你的吗？`,
+  cat: (name) => `诗织在此~ 我是${name}！(✿◡‿◡) 有什么可以帮你的吗？`,
+  monkey: (name) => `Z16报到~ 我是${name}！有什么可以帮你的吗？`,
+  panda: (name) => `Unity~ 我是${name}！有什么可以帮你的吗？`,
   custom: (name) => `嗨~ 我是${name}！有什么可以帮你的吗？`,
 };
 
@@ -276,8 +297,8 @@ function PetWidget() {
     const dialogH = 420;
     const margin = 16;
     const gap = 4;
-    const petW = 130;
-    const petH = 150;
+    const petW = 150;
+    const petH = 180;
 
     const petX = posRef.current.x;
     const petY = posRef.current.y;
@@ -313,7 +334,9 @@ function PetWidget() {
   const [imageBounce, setImageBounce] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
   const [facingRight, setFacingRight] = useState(true);
+  const toolboxGifUrl = useMemo(() => `/toolbox.gif?v=${Date.now()}`, []);
   const [toast, setToast] = useState(null);
+  const [isToolModalOpen, setIsToolModalOpen] = useState(false);
   const showToast = useCallback((message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
@@ -334,9 +357,9 @@ function PetWidget() {
   const scratchTimerRef = useRef(null);
   const walkPhaseRef = useRef(0);
 
-  const posRef = useRef({ x: window.innerWidth - 140, y: window.innerHeight - 160 });
+  const posRef = useRef({ x: window.innerWidth - 160, y: window.innerHeight - 190 });
   const velocityRef = useRef({ vx: 0, vy: 0 });
-  const targetRef = useRef({ x: window.innerWidth - 140, y: window.innerHeight - 160 });
+  const targetRef = useRef({ x: window.innerWidth - 160, y: window.innerHeight - 190 });
   const isDraggingRef = useRef(false);
   const dragMovedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -346,7 +369,7 @@ function PetWidget() {
   const isAdmin = authUser?.role === 'admin';
 
   const reloadMyPetDisplay = async () => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) return null;
     try {
       const res = await axios.get('/api/settings/my-pet');
       const myPet = res.data.pet || {};
@@ -362,8 +385,10 @@ function PetWidget() {
       }
       setPetMbti(myPet.mbti || '');
       setPetZodiac(myPet.zodiac || '');
+      return myPet;
     } catch (err) {
       console.error('Failed to reload my pet:', err);
+      return null;
     }
   };
 
@@ -451,6 +476,7 @@ function PetWidget() {
         setCustomCategory('');
         setPetMbti('');
         setPetZodiac('');
+        setDialogAccentColor(AVATAR_COLORS.cat);
       }
 
       setPetInfoLoaded(true);
@@ -473,8 +499,8 @@ function PetWidget() {
   useEffect(() => {
     const pickNewTarget = () => {
       const margin = 60;
-      const maxX = window.innerWidth - 120;
-      const maxY = window.innerHeight - 140;
+      const maxX = window.innerWidth - 160;
+      const maxY = window.innerHeight - 190;
       targetRef.current = {
         x: margin + Math.random() * (maxX - margin * 2),
         y: margin + Math.random() * (maxY - margin * 2),
@@ -514,8 +540,8 @@ function PetWidget() {
         };
 
         posRef.current = {
-          x: Math.max(10, Math.min(window.innerWidth - 120, pos.x + velocityRef.current.vx)),
-          y: Math.max(10, Math.min(window.innerHeight - 140, pos.y + velocityRef.current.vy)),
+          x: Math.max(10, Math.min(window.innerWidth - 160, pos.x + velocityRef.current.vx)),
+          y: Math.max(10, Math.min(window.innerHeight - 190, pos.y + velocityRef.current.vy)),
         };
       }
 
@@ -548,8 +574,8 @@ function PetWidget() {
       if (wanderingEnabled && !isDraggingRef.current && Math.random() > 0.4) {
         const margin = 60;
         targetRef.current = {
-          x: margin + Math.random() * (window.innerWidth - margin * 2 - 120),
-          y: margin + Math.random() * (window.innerHeight - margin * 2 - 140),
+          x: margin + Math.random() * (window.innerWidth - margin * 2 - 160),
+          y: margin + Math.random() * (window.innerHeight - margin * 2 - 190),
         };
       }
     }, 4000 + Math.random() * 3000);
@@ -646,8 +672,8 @@ function PetWidget() {
       if (!isDraggingRef.current) return;
       dragMovedRef.current = true;
       posRef.current = {
-        x: Math.max(10, Math.min(window.innerWidth - 120, e.clientX + dragOffsetRef.current.x)),
-        y: Math.max(10, Math.min(window.innerHeight - 140, e.clientY + dragOffsetRef.current.y)),
+        x: Math.max(10, Math.min(window.innerWidth - 160, e.clientX + dragOffsetRef.current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - 190, e.clientY + dragOffsetRef.current.y)),
       };
       if (petRef.current) {
         petRef.current.style.left = posRef.current.x + 'px';
@@ -688,8 +714,8 @@ function PetWidget() {
       e.preventDefault();
       dragMovedRef.current = true;
       posRef.current = {
-        x: Math.max(10, Math.min(window.innerWidth - 120, e.touches[0].clientX + dragOffsetRef.current.x)),
-        y: Math.max(10, Math.min(window.innerHeight - 140, e.touches[0].clientY + dragOffsetRef.current.y)),
+        x: Math.max(10, Math.min(window.innerWidth - 160, e.touches[0].clientX + dragOffsetRef.current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - 190, e.touches[0].clientY + dragOffsetRef.current.y)),
       };
       if (petRef.current) {
         petRef.current.style.left = posRef.current.x + 'px';
@@ -916,7 +942,7 @@ function PetWidget() {
             </div>
           )}
 
-          {customPetImage ? (
+          {(customPetImage || walkGif) && petCategory === 'custom' ? (
             <div className="relative inline-block" style={{
               filter: isFrightened ? 'drop-shadow(0 8px 16px rgba(255,0,0,0.3))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
             }}>
@@ -948,163 +974,8 @@ function PetWidget() {
                 </div>
               ))}
             </div>
-          ) : walkGif ? (
-            <div className="relative inline-block" style={{
-              filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
-            }}>
-              <img
-                ref={imgRef}
-                src={getImageUrl(walkGif)}
-                alt={petName}
-                width="150"
-                height="140"
-                className="object-contain"
-                style={{
-                  maxWidth: '150px',
-                  maxHeight: '140px',
-                  transform: `scaleX(${facingRight ? 1 : -1})`,
-                  transition: 'transform 0.15s ease-out, margin-top 0.2s ease-out',
-                }}
-                draggable="false"
-              />
-              {hearts.map(h => (
-                <div key={h.id} className="absolute pointer-events-none"
-                  style={{
-                    left: '50%', top: '50%',
-                    transform: `translate(${h.x}px, ${h.y}px)`,
-                    animation: 'heartFloat 1.2s ease-out forwards',
-                    fontSize: '18px',
-                  }}>
-                  {['❤️', '💕', '💖'][h.id % 3]}
-                </div>
-              ))}
-            </div>
           ) : (
-            <svg
-              viewBox="0 0 220 190"
-              width="110"
-              height="95"
-              className={`drop-shadow-lg transition-all duration-300 ${isFrightened ? 'scale-110' : 'scale-100'}`}
-              style={{
-                filter: isFrightened ? 'drop-shadow(0 8px 16px rgba(255,0,0,0.3))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.2))',
-              }}
-            >
-              {isFrightened && (
-                <>
-                  <circle cx="5" cy="40" r="10" fill="#f59e0b" opacity="0.5" />
-                  <circle cx="5" cy="60" r="7" fill="#f59e0b" opacity="0.4" />
-                  <circle cx="215" cy="40" r="10" fill="#f59e0b" opacity="0.5" />
-                  <circle cx="215" cy="60" r="7" fill="#f59e0b" opacity="0.4" />
-                </>
-              )}
-
-              <g style={{
-                transformOrigin: '190px 110px',
-                transition: 'transform 0.3s ease-in-out',
-                transform: tailWag ? 'rotate(-30deg)' : 'rotate(-5deg)'
-              }}>
-                <path d="M190 110 Q215 85 230 55 Q235 42 225 38 Q210 34 212 55 Q208 78 195 105" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-                <path d="M225 42 Q222 36 228 38" fill="#fffbeb" stroke="none" />
-              </g>
-
-              <ellipse cx="70" cy="170" rx="18" ry="12" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-              <ellipse cx="115" cy="170" rx="18" ry="12" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-              <ellipse cx="70" cy="174" rx="12" ry="7" fill="#fffbeb" />
-              <ellipse cx="115" cy="174" rx="12" ry="7" fill="#fffbeb" />
-
-              <ellipse cx="85" cy="125" rx="48" ry={breathing ? 38 : 34} fill="#fcd34d" stroke="#f59e0b" strokeWidth="1.5"
-                style={{ transition: 'ry 0.5s ease-in-out' }} />
-              <ellipse cx="82" cy="130" rx="30" ry={breathing ? 24 : 21} fill="#fffbeb"
-                style={{ transition: 'ry 0.5s ease-in-out' }} />
-
-              <path d="M105 95 Q108 100 105 105" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
-              <path d="M112 105 Q115 110 112 115" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
-              <path d="M108 117 Q111 122 108 127" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
-
-              <ellipse cx="55" cy="148" rx="16" ry="10" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-              <ellipse cx="95" cy="150" rx="16" ry="10" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-              <ellipse cx="55" cy="152" rx="10" ry="5" fill="#fffbeb" />
-              <ellipse cx="95" cy="154" rx="10" ry="5" fill="#fffbeb" />
-
-              <g style={{ transform: scratchingEar ? 'rotate(12deg)' : 'rotate(0deg)', transformOrigin: '65px 85px' }}>
-                <ellipse cx="65" cy="80" rx="38" ry="32" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1.2" />
-
-                <path d="M30 65 Q20 30 50 52 Q55 55 35 68" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-                <ellipse cx="35" cy="48" rx="12" ry="18" fill="#fca5a5" opacity="0.7" />
-
-                <path d="M85 52 Q105 22 85 50 Q80 53 88 55" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-                <ellipse cx="90" cy="42" rx="10" ry="15" fill="#fca5a5" opacity="0.7" />
-
-                <ellipse cx="32" cy="45" rx="5" ry="8" fill="#fca5a5" />
-                <ellipse cx="98" cy="38" rx="5" ry="8" fill="#fca5a5" />
-
-                <ellipse cx="65" cy="92" rx="26" ry="20" fill="#fffbeb" />
-
-                <ellipse cx="48" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937"
-                  style={{ transition: 'all 0.1s' }} />
-                <ellipse cx="82" cy="78" rx="9" ry={blinking || yawning ? 1.5 : 10} fill="#1f2937"
-                  style={{ transition: 'all 0.1s' }} />
-                {!blinking && !yawning && (
-                  <>
-                    <circle cx="51" cy="75" r="4" fill="white" />
-                    <circle cx="85" cy="75" r="4" fill="white" />
-                    <circle cx="53" cy="74" r="1.5" fill="#1f2937" />
-                    <circle cx="87" cy="74" r="1.5" fill="#1f2937" />
-                  </>
-                )}
-
-                <ellipse cx="65" cy="94" rx="5" ry="3.5" fill="#f97316" />
-
-                {yawning ? (
-                  <path d="M65 98 Q58 115 48 108 Q65 125 82 108 Q72 115 65 98" fill="#78350f" stroke="#572d0a" strokeWidth="1.2" />
-                ) : (
-                  <>
-                    <path d={`M65 96 Q56 ${104 + (faceIndex % 2) * 3} 52 100`} fill="none" stroke="#9a3412" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d={`M65 96 Q74 ${104 + (faceIndex % 2) * 3} 78 100`} fill="none" stroke="#9a3412" strokeWidth="1.5" strokeLinecap="round" />
-                  </>
-                )}
-
-                <line x1="15" y1="85" x2="40" y2="90" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-                <line x1="12" y1="92" x2="38" y2="94" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-                <line x1="15" y1="99" x2="40" y2="98" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-                <line x1="90" y1="90" x2="115" y2="85" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-                <line x1="92" y1="94" x2="118" y2="92" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-                <line x1="90" y1="98" x2="115" y2="99" stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" />
-
-                <ellipse cx="42" cy="96" rx="8" ry="5" fill="#fca5a5" opacity="0.5" />
-                <ellipse cx="88" cy="96" rx="8" ry="5" fill="#fca5a5" opacity="0.5" />
-
-                <circle cx="65" cy="55" r="3" fill="#f59e0b" />
-                <circle cx="55" cy="58" r="2" fill="#f59e0b" />
-                <circle cx="75" cy="58" r="2" fill="#f59e0b" />
-              </g>
-
-              <g>
-                <ellipse cx="75" cy="128" rx="15" ry="8" fill="#ec4899" />
-                <path d="M62 125 Q60 115 75 120 Q90 115 88 125" fill="none" stroke="#be185d" strokeWidth="1.5" />
-              </g>
-
-              {scratchingEar && (
-                <g style={{ transformOrigin: '90px 140px', animation: 'scratch 0.3s infinite' }}>
-                  <ellipse cx="95" cy="140" rx="14" ry="9" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1" />
-                  <ellipse cx="95" cy="144" rx="9" ry="5" fill="#fffbeb" />
-                  <line x1="95" y1="130" x2="85" y2="60" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
-                  <line x1="98" y1="128" x2="92" y2="58" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
-                  <line x1="101" y1="130" x2="100" y2="62" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
-                </g>
-              )}
-
-              <g style={{ pointerEvents: 'all' }}>
-                <rect x="25" y="45" width="30" height="40" fill="rgba(0,0,0,0.01)"
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('ear'); }} className="cursor-pointer" />
-                <rect x="35" y="75" width="50" height="35" fill="rgba(0,0,0,0.01)"
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('head'); }} className="cursor-pointer" />
-                <rect x="60" y="110" width="55" height="45" fill="rgba(0,0,0,0.01)"
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('body'); }} className="cursor-pointer" />
-                <rect x="180" y="80" width="35" height="45" fill="rgba(0,0,0,0.01)"
-                  onClick={(e) => { e.stopPropagation(); handlePetClick('tail'); }} className="cursor-pointer" />
-              </g>
-            </svg>
+            <Live2DPet key={petCategory} type={petCategory} />
           )}
 
           <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
@@ -1145,7 +1016,7 @@ function PetWidget() {
       </div>
 
       {isChatOpen && (
-        <div className="fixed bottom-4 right-4 z-50 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+        <div key={`dialog-${petCategory}-${petName}`} className="fixed bottom-4 right-4 z-50 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
           style={{ maxHeight: '600px' }}>
           <div className="text-white px-4 py-3 flex items-center justify-between" style={{
             background: `linear-gradient(135deg, ${dialogAccentColor}, ${dialogAccentColor.replace('rgb', 'rgba').replace(')', ',0.7)')})`
@@ -1154,21 +1025,7 @@ function PetWidget() {
               {(petAvatar || customPetImage) ? (
                 <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="32" height="32" className="rounded-full object-cover" />
               ) : (
-                <svg viewBox="0 0 40 40" width="32" height="32">
-                  <ellipse cx="20" cy="22" rx="15" ry="13" fill="#f59e0b" />
-                  <polygon points="8,14 4,3 17,12" fill="#f59e0b" />
-                  <polygon points="32,14 36,3 23,12" fill="#f59e0b" />
-                  <polygon points="10,12 6,8 15,12" fill="#fca5a5" />
-                  <polygon points="30,12 34,8 25,12" fill="#fca5a5" />
-                  <ellipse cx="20" cy="26" rx="11" ry="9" fill="#fef3c7" />
-                  <ellipse cx="15" cy="22" rx="3" ry="3.5" fill="#1c1917" />
-                  <ellipse cx="25" cy="22" rx="3" ry="3.5" fill="#1c1917" />
-                  <circle cx="17" cy="20" r="1.2" fill="white" />
-                  <circle cx="27" cy="20" r="1.2" fill="white" />
-                  <ellipse cx="20" cy="28" rx="2" ry="1.5" fill="#f97316" />
-                  <path d="M20 29.5 Q16 33 13 31" fill="none" stroke="#9a3412" strokeWidth="0.8" strokeLinecap="round" />
-                  <path d="M20 29.5 Q24 33 27 31" fill="none" stroke="#9a3412" strokeWidth="0.8" strokeLinecap="round" />
-                </svg>
+                <DefaultPetAvatar category={petCategory} size={32} />
               )}
               <div>
                 <p className="font-semibold text-sm">{petName}</p>
@@ -1227,52 +1084,19 @@ function PetWidget() {
                       {(petAvatar || customPetImage) ? (
                         <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                       ) : (
-                        <svg viewBox="0 0 24 24" width="22" height="22">
-                          <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
-                          <polygon points="6,8 4,3 10,7" fill="#f59e0b" />
-                          <polygon points="18,8 20,3 14,7" fill="#f59e0b" />
-                          <polygon points="7,7 5,5 9,7" fill="#fca5a5" />
-                          <polygon points="17,7 19,5 15,7" fill="#fca5a5" />
-                          <ellipse cx="12" cy="16" rx="7" ry="5" fill="#fef3c7" />
-                          <ellipse cx="9" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                          <ellipse cx="15" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                          <circle cx="10" cy="12" r="0.8" fill="white" />
-                          <circle cx="16" cy="12" r="0.8" fill="white" />
-                          <ellipse cx="12" cy="17" rx="1.5" ry="1" fill="#f97316" />
-                        </svg>
+                        <DefaultPetAvatar category={petCategory} size={22} />
                       )}
                     </div>
                     <div className="max-w-[95%] bg-white rounded-2xl rounded-bl-md border border-orange-200 p-3">
                       <p className="text-xs text-gray-500 mb-2 font-medium">🔧 我的小工具包</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {PET_TOOLS.map(tool => (
-                          tool.disabled ? (
-                            <div
-                              key={tool.id}
-                              className="rounded-xl p-2.5 text-center opacity-50 cursor-not-allowed"
-                              style={{ backgroundColor: tool.bgColor }}
-                            >
-                              <span className="text-xl block mb-0.5">{tool.icon}</span>
-                              <span className="text-xs font-medium text-gray-500">{tool.label}</span>
-                              <span className="text-[10px] text-gray-400 block">{tool.desc}</span>
-                            </div>
-                          ) : (
-                            <button
-                              key={tool.id}
-                              onClick={() => {
-                                setIsChatOpen(false);
-                                window.location.href = tool.route;
-                              }}
-                              className="rounded-xl p-2.5 text-center hover:scale-105 transition-transform hover:shadow-md"
-                              style={{ backgroundColor: tool.bgColor }}
-                            >
-                              <span className="text-xl block mb-0.5">{tool.icon}</span>
-                              <span className="text-xs font-medium" style={{ color: tool.color }}>{tool.label}</span>
-                              <span className="text-[10px] text-gray-400 block">{tool.desc}</span>
-                            </button>
-                          )
-                        ))}
-                      </div>
+                      <button
+                        onClick={() => { setIsChatOpen(false); setIsToolModalOpen(true); }}
+                        className="w-full rounded-xl px-4 py-3 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-center hover:shadow-md transition-all duration-200 group"
+                      >
+                        <img src={toolboxGifUrl} alt="工具箱" className="w-12 h-12 mx-auto mb-1 rounded-lg object-cover group-hover:scale-110 transition-transform" />
+                        <span className="text-sm font-medium text-orange-600 block">打开工具箱</span>
+                        <span className="text-xs text-gray-400">{PET_TOOLS.filter(t => !t.disabled).length} 个实用工具</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -1285,19 +1109,7 @@ function PetWidget() {
                     {(petAvatar || customPetImage) ? (
                       <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                     ) : (
-                      <svg viewBox="0 0 24 24" width="22" height="22">
-                        <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
-                        <polygon points="6,8 4,3 10,7" fill="#f59e0b" />
-                        <polygon points="18,8 20,3 14,7" fill="#f59e0b" />
-                        <polygon points="7,7 5,5 9,7" fill="#fca5a5" />
-                        <polygon points="17,7 19,5 15,7" fill="#fca5a5" />
-                        <ellipse cx="12" cy="16" rx="7" ry="5" fill="#fef3c7" />
-                        <ellipse cx="9" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                        <ellipse cx="15" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                        <circle cx="10" cy="12" r="0.8" fill="white" />
-                        <circle cx="16" cy="12" r="0.8" fill="white" />
-                        <ellipse cx="12" cy="17" rx="1.5" ry="1" fill="#f97316" />
-                      </svg>
+                      <DefaultPetAvatar category={petCategory} size={22} />
                     )}
                   </div>
                 )}
@@ -1317,15 +1129,7 @@ function PetWidget() {
                   {(petAvatar || customPetImage) ? (
                     <img src={getImageUrl(petAvatar || customPetImage)} alt={petName} width="22" height="22" className="rounded-full object-cover" />
                   ) : (
-                    <svg viewBox="0 0 24 24" width="22" height="22">
-                      <ellipse cx="12" cy="14" rx="9" ry="8" fill="#f59e0b" />
-                      <polygon points="6,8 4,3 10,7" fill="#f59e0b" />
-                      <polygon points="18,8 20,3 14,7" fill="#f59e0b" />
-                      <ellipse cx="12" cy="16" rx="7" ry="5" fill="#fef3c7" />
-                      <ellipse cx="9" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                      <ellipse cx="15" cy="13" rx="2" ry="2.5" fill="#1c1917" />
-                      <ellipse cx="12" cy="17" rx="1.5" ry="1" fill="#f97316" />
-                    </svg>
+                    <DefaultPetAvatar category={petCategory} size={22} />
                   )}
                 </div>
                 <div className="bg-white text-gray-400 px-3 py-2 rounded-2xl rounded-bl-md border border-orange-200 text-sm">
@@ -1626,7 +1430,29 @@ function PetWidget() {
                     value={petCategory}
                     onChange={async (e) => {
                       const newCat = e.target.value;
-                      setPetCategory(newCat);
+                      setIsChatOpen(false);
+                      setIsSettingsOpen(false);
+                      const catInfo = PET_CATEGORIES.find(c => c.value === newCat);
+                      let newName = newCat !== 'custom' ? (catInfo?.label || petName) : petName;
+                      if (newName !== petName) setPetName(newName);
+                      if (newCat !== 'custom') {
+                        setPetCategory(newCat);
+                        setCustomCategory('');
+                        setCustomPetImage('');
+                        setPetAvatar('');
+                        setDialogAccentColor(AVATAR_COLORS[newCat] || '#6366f1');
+                      } else {
+                        // 切换回自定义时，先加载数据再切换品类（避免Live2D闪现）
+                        const myPet = await reloadMyPetDisplay();
+                        if (myPet) newName = myPet.name || '果果仁';
+                        const hasCustom = myPet?.image || myPet?.customCategory;
+                        if (!hasCustom) {
+                          setDialogAccentColor('#8b5cf6');
+                        }
+                        setPetCategory('custom');
+                      }
+                      setMessages(buildInitialMessages(newName, newCat));
+                      setTimeout(() => setIsChatOpen(true), 400);
                       try {
                         await axios.put('/api/settings/my-pet/category', {
                           petCategory: newCat,
@@ -1893,6 +1719,49 @@ function PetWidget() {
           'bg-blue-500 text-white'
         }`}>
           {toast.message}
+        </div>
+      )}
+
+      {/* Tool Modal */}
+      {isToolModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          onClick={() => setIsToolModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] overflow-y-auto animate-[fadeIn_0.25s_ease-out]"
+            onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <img src={toolboxGifUrl} alt="工具箱" className="w-6 h-6 rounded object-cover" />
+                工具箱
+              </h2>
+              <button
+                onClick={() => setIsToolModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-3">
+              {PET_TOOLS.filter(t => !t.disabled).map((tool, idx) => (
+                <button
+                  key={tool.id}
+                  onClick={() => {
+                    setIsToolModalOpen(false);
+                    window.location.href = tool.route;
+                  }}
+                  className="rounded-xl p-4 text-center hover:scale-[1.03] transition-all duration-200 hover:shadow-md animate-[fadeIn_0.3s_ease-out_both]"
+                  style={{
+                    backgroundColor: tool.bgColor,
+                    animationDelay: `${idx * 60}ms`,
+                  }}
+                >
+                  <span className="text-2xl block mb-1.5">{tool.icon}</span>
+                  <span className="text-xs font-semibold" style={{ color: tool.color }}>{tool.label}</span>
+                  <span className="text-[10px] text-gray-400 block mt-0.5">{tool.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </>

@@ -161,7 +161,7 @@ const userSchema = new mongoose.Schema({
     },
     petCategory: {
       type: String,
-      enum: ['cat', 'dog', 'rabbit', 'hamster', 'bird', 'fox', 'panda', 'custom'],
+      enum: ['cat', 'fox', 'ox', 'horse', 'monkey', 'panda', 'custom'],
       default: 'cat'
     },
     customCategory: {
