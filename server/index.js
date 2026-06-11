@@ -26,6 +26,8 @@ const tempUploadRoutes = require('./routes/temp-upload');
 const vodRoutes = require('./routes/vod');
 const resumeRoutes = require('./routes/resume');
 const convertRoutes = require('./routes/convert');
+const stockRoutes = require('./routes/stock');
+const marketRoutes = require('./routes/markets');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -75,6 +77,8 @@ app.use('/api/temp-upload', tempUploadRoutes);
 app.use('/api/vod', vodRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/convert', convertRoutes);
+app.use('/api/stocks', stockRoutes);
+app.use('/api/markets', marketRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));

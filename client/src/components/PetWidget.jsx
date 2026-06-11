@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import Live2DPet from './Live2DPet';
@@ -152,6 +153,15 @@ const PET_TOOLS = [
     route: '/resume-builder',
   },
   {
+    id: 'stock-monitor',
+    icon: '📈',
+    label: '股票监盘',
+    desc: '实时追踪持仓盈亏',
+    color: '#8b5cf6',
+    bgColor: '#f5f3ff',
+    route: '/stock-monitor',
+  },
+  {
     id: 'more',
     icon: '🔮',
     label: '更多小工具',
@@ -219,6 +229,7 @@ function hslToRgb(h, s, l) {
 
 function PetWidget() {
   const { user: authUser, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const [petState, setPetState] = useState(PET_STATES.IDLE);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -1747,7 +1758,7 @@ function PetWidget() {
                   key={tool.id}
                   onClick={() => {
                     setIsToolModalOpen(false);
-                    window.location.href = tool.route;
+                    navigate(tool.route);
                   }}
                   className="rounded-xl p-4 text-center hover:scale-[1.03] transition-all duration-200 hover:shadow-md animate-[fadeIn_0.3s_ease-out_both]"
                   style={{
