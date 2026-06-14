@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 
 // ============== 工具函数 ==============
@@ -10,20 +12,41 @@ function formatNumber(num, decimals = 2) {
   return num.toLocaleString('zh-CN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-function renderMarkdown(text) {
-  if (!text) return '';
-  let html = text;
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold text-gray-900 mt-4 mb-2">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-gray-900 mt-5 mb-3">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-gray-900 mt-5 mb-3">$1</h1>');
-  html = html.replace(/^- (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/^\d+\.\s(.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>');
-  html = html.replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed mb-2">');
-  html = html.replace(/\n/g, '<br/>');
-  html = '<p class="text-gray-700 leading-relaxed mb-2">' + html + '</p>';
-  return html;
-}
+// ============== Markdown 组件样式 ==============
+
+const markdownComponents = {
+  h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-200" {...props} />,
+  h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-gray-900 mt-5 mb-3 pb-1.5 border-b border-gray-100" {...props} />,
+  h3: ({ node, ...props }) => <h3 className="text-base font-bold text-gray-900 mt-4 mb-2 flex items-center gap-2"><span className="w-1.5 h-4 bg-indigo-500 rounded-full inline-block shrink-0"></span><span {...props} /></h3>,
+  h4: ({ node, ...props }) => <h4 className="text-sm font-semibold text-gray-800 mt-3 mb-1.5" {...props} />,
+  p: ({ node, ...props }) => <p className="text-gray-700 leading-relaxed mb-3" {...props} />,
+  ul: ({ node, ...props }) => <ul className="my-2 space-y-1.5 list-none" {...props} />,
+  ol: ({ node, ...props }) => <ol className="my-2 space-y-1.5 list-decimal list-inside text-gray-700" {...props} />,
+  li: ({ node, ...props }) => <li className="text-gray-700 leading-relaxed pl-1" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+  em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />,
+  code: ({ node, inline, className, children, ...props }) => {
+    if (inline) {
+      return <code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-xs font-mono border border-amber-200" {...props}>{children}</code>;
+    }
+    const match = /language-(\w+)/.exec(className || '');
+    return (
+      <div className="my-3 rounded-xl overflow-hidden border border-slate-700">
+        {match && <div className="bg-slate-800 text-slate-400 text-xs px-4 py-1.5 font-mono">{match[1]}</div>}
+        <pre className="bg-slate-900 text-green-400 p-4 overflow-x-auto text-xs leading-relaxed"><code className={className} {...props}>{children}</code></pre>
+      </div>
+    );
+  },
+  pre: ({ node, ...props }) => <pre className="bg-slate-900 text-green-400 rounded-xl p-4 my-3 overflow-x-auto text-xs leading-relaxed" {...props} />,
+  blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-400 bg-blue-50/60 rounded-r-lg pl-4 py-2 my-3 text-gray-600 italic" {...props} />,
+  a: ({ node, ...props }) => <a className="text-indigo-600 underline hover:text-indigo-800" target="_blank" rel="noopener noreferrer" {...props} />,
+  hr: ({ node, ...props }) => <hr className="my-5 border-gray-200" {...props} />,
+  table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border border-gray-200 shadow-sm"><table className="w-full" {...props} /></div>,
+  thead: ({ node, ...props }) => <thead className="bg-slate-50" {...props} />,
+  th: ({ node, ...props }) => <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 border-b border-gray-200" {...props} />,
+  td: ({ node, ...props }) => <td className="px-4 py-2.5 text-sm text-gray-700 border-b border-gray-100" {...props} />,
+  tr: ({ node, ...props }) => <tr className="border-b border-gray-100 last:border-b-0 hover:bg-blue-50/30 transition" {...props} />,
+};
 
 function parseTurnoverAnalysis(analysis) {
   if (!analysis) return null;
@@ -421,8 +444,6 @@ export default function StockMonitor() {
                     const m = calculateMetrics(holding);
                     const isIncomplete = !holding.shares || holding.shares === 0 || !holding.costPrice || holding.costPrice === "0";
                     const stockData = holding._stockData || {};
-                    const parsed = parseTurnoverAnalysis(stockData.turnoverAnalysis);
-                    const risks = parseRiskList(stockData.turnoverAnalysis);
 
                     return (
                       <div key={holding._id}
@@ -513,43 +534,6 @@ export default function StockMonitor() {
                                   <span className={`font-medium font-mono ${stockData.turnoverRate >= 5 ? 'text-red-600' : stockData.turnoverRate >= 3 ? 'text-amber-600' : 'text-green-600'}`}>
                                     {stockData.turnoverRate.toFixed(2)}%
                                   </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 换手率分析 Badge */}
-                            {parsed && (
-                              <div className="pt-3 border-t">
-                                <p className="text-xs text-gray-500 mb-2">换手率分析</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {parsed.phase && (
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      parsed.phase === '低位堆量·吸筹' || parsed.phase === '真突破·主升' ? 'bg-blue-100 text-blue-700' :
-                                      parsed.phase === '高位爆量·出货' || parsed.phase === '阴跌出货·减仓' ? 'bg-red-100 text-red-700' :
-                                      'bg-gray-100 text-gray-700'}`}>
-                                      {parsed.phase}
-                                    </span>
-                                  )}
-                                  {parsed.volumeStatus && (
-                                    <span className="px-2 py-0.5 rounded-full text-xs border border-gray-200 text-gray-600">
-                                      {parsed.volumeStatus}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 风险清单 */}
-                            {risks.length > 0 && (
-                              <div className="pt-3 border-t">
-                                <p className="text-xs text-red-600 font-semibold mb-2">重大风险</p>
-                                <div className="space-y-1">
-                                  {risks.slice(0, 2).map((risk, idx) => (
-                                    <div key={idx} className="text-xs text-gray-500 flex items-start gap-1">
-                                      <span className="text-red-500">•</span>
-                                      <span className="truncate">{risk.type}: {risk.condition.substring(0, 20)}...</span>
-                                    </div>
-                                  ))}
                                 </div>
                               </div>
                             )}
@@ -668,8 +652,6 @@ export default function StockMonitor() {
                         {sortedHoldings.map(holding => {
                           const m = calculateMetrics(holding);
                           const stockData = holding._stockData || {};
-                          const parsed = parseTurnoverAnalysis(stockData.turnoverAnalysis);
-                          const risks = parseRiskList(stockData.turnoverAnalysis);
                           return (
                             <tr key={holding._id}
                               className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
@@ -710,18 +692,9 @@ export default function StockMonitor() {
                               </td>
                               <td className="py-2 px-2 text-right"><span className="font-mono text-xs">{formatNumber(m.amplitude, 2)}%</span></td>
                               <td className="py-2 px-2 text-right">
-                                <div className="flex flex-col items-end gap-1">
-                                  <span className={`font-mono text-xs font-bold ${m.turnoverRate >= 5 ? 'text-red-600' : m.turnoverRate >= 3 ? 'text-amber-600' : 'text-green-600'}`}>
-                                    {formatNumber(m.turnoverRate, 2)}%
-                                  </span>
-                                  {parsed?.phase && (
-                                    <span className={`px-1.5 py-0.5 rounded text-xs ${
-                                      parsed.phase === '低位堆量·吸筹' || parsed.phase === '真突破·主升' ? 'bg-blue-100 text-blue-700' :
-                                      parsed.phase === '高位爆量·出货' || parsed.phase === '阴跌出货·减仓' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                                      {parsed.phase}
-                                    </span>
-                                  )}
-                                </div>
+                                <span className={`font-mono text-xs font-bold ${m.turnoverRate >= 5 ? 'text-red-600' : m.turnoverRate >= 3 ? 'text-amber-600' : 'text-green-600'}`}>
+                                  {formatNumber(m.turnoverRate, 2)}%
+                                </span>
                               </td>
                             </tr>
                           );
@@ -869,34 +842,62 @@ export default function StockMonitor() {
       {/* ════════ AI 分析结果弹窗 ════════ */}
       {analysisModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => !analyzing && setAnalysisModal(null)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-3 border-b">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className={`flex items-center justify-between px-6 py-4 rounded-t-2xl ${
+              analysisModal.type === 'analyze'
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-600'
+                : 'bg-gradient-to-r from-cyan-500 to-blue-600'
+            }`}>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
                   {analysisModal.type === 'analyze' ? 'AI 个股分析' : 'AI 换手率分析'}
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-white/80 mt-0.5">
                   {analysisModal.stockName} ({analysisModal.stockCode})
-                  {analysisModal.generatedAt && <span className="ml-2">· 生成于 {new Date(analysisModal.generatedAt).toLocaleTimeString('zh-CN')}</span>}
+                  {analysisModal.generatedAt && <span className="ml-2 text-white/60">· {new Date(analysisModal.generatedAt).toLocaleTimeString('zh-CN')}</span>}
                 </p>
               </div>
               <button onClick={() => setAnalysisModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+                className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            {analysisModal.loading ? (
-              <div className="flex flex-col items-center py-16">
-                <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">AI 正在分析中，请稍候...</p>
-                <p className="text-xs text-gray-400 mt-1">通常需要 5-15 秒</p>
-              </div>
-            ) : (
-              <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(analysisModal.result) }} />
-            )}
+
+            {/* Body */}
+            <div className="overflow-y-auto p-6 flex-1">
+              {analysisModal.loading ? (
+                <div className="flex flex-col items-center py-16">
+                  <div className="w-16 h-16 relative mb-4">
+                    <div className="w-16 h-16 border-4 border-indigo-200 rounded-full"></div>
+                    <div className="absolute inset-0 w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <p className="text-gray-600 font-medium">AI 正在分析中，请稍候...</p>
+                  <p className="text-xs text-gray-400 mt-1">正在调用 DeepSeek 大模型，通常需要 5-15 秒</p>
+                </div>
+              ) : (
+                <div className="analysis-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {analysisModal.result}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t bg-gray-50/50 rounded-b-2xl flex items-center justify-between">
+              <span className="text-xs text-gray-400">内容由 AI 生成，仅供参考，不构成投资建议</span>
+              <button onClick={() => setAnalysisModal(null)}
+                className="px-4 py-1.5 text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition">
+                关闭
+              </button>
+            </div>
           </div>
         </div>
       )}

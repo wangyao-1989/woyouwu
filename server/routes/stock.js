@@ -292,25 +292,24 @@ router.post('/holdings/refresh', auth, async (req, res) => {
 const { getApiConfig } = require('../utils/apiConfig');
 
 // DeepSeek API 配置
-const DEEPSEEK_CONFIG = {
-  endpoint: 'https://api.deepseek.com/v1/chat/completions',
-  model: 'deepseek-chat',
-};
+const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
+const DEEPSEEK_MODEL = 'deepseek-chat';
 
-async function callDeepSeek(messages, temperature = 0.7) {
-  const apiKey = process.env.DEEPSEEK_API_KEY || '';
-  if (!apiKey) {
-    throw new Error('DeepSeek API Key 未配置');
+async function callAI(messages, temperature = 0.7) {
+  const { apiKey } = await getApiConfig('aiChat');
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
+  if (!finalKey) {
+    throw new Error('AI API Key 未配置');
   }
 
-  const response = await fetch(DEEPSEEK_CONFIG.endpoint, {
+  const response = await fetch(DEEPSEEK_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${finalKey}`,
     },
     body: JSON.stringify({
-      model: DEEPSEEK_CONFIG.model,
+      model: DEEPSEEK_MODEL,
       messages,
       temperature,
       max_tokens: 3000,
@@ -414,7 +413,7 @@ ${userContext}
 
 请给出具体、可操作的分析和建议，避免模棱两可的表述。`;
 
-    const analysis = await callDeepSeek([
+    const analysis = await callAI([
       { role: 'system', content: '你是资深股票分析师。请基于提供的行情数据进行客观、专业的分析。使用 Markdown 格式组织回复，重点突出、条理清晰。' },
       { role: 'user', content: prompt },
     ], 0.7);
@@ -508,7 +507,7 @@ router.post('/turnover-analysis', auth, async (req, res) => {
 - 基本面风险
 - 资金面风险`;
 
-    const analysis = await callDeepSeek([
+    const analysis = await callAI([
       { role: 'system', content: '你是专业的量价分析专家，擅长通过换手率分析资金流向和主力意图。严肃、客观、基于数据。使用 Markdown 格式输出。' },
       { role: 'user', content: prompt },
     ], 0.5);
@@ -616,6 +615,352 @@ router.post('/holdings/:id/position-discussion', auth, async (req, res) => {
   } catch (err) {
     console.error('加仓讨论失败:', err.message);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== 技术指标（MACD/KDJ/成交量/量比/资金流向/买卖力道） ====================
+
+function calcEMA(data, period, field = 'close') {
+  if (data.length < period) return [];
+  const k = 2 / (period + 1);
+  const result = [];
+  // 第一个值用 SMA
+  let sum = 0;
+  for (let i = 0; i < period; i++) sum += parseFloat(data[i][field]) || 0;
+  result.push(sum / period);
+  for (let i = period; i < data.length; i++) {
+    result.push((parseFloat(data[i][field]) || 0) * k + result[result.length - 1] * (1 - k));
+  }
+  // 前面填 null 对齐
+  const aligned = new Array(period - 1).fill(null).concat(result);
+  return aligned;
+}
+
+// 根据 K 线数据计算 MACD
+function calcMACD(klineData) {
+  const ema12 = calcEMA(klineData, 12);
+  const ema26 = calcEMA(klineData, 26);
+
+  const dif = [];
+  const deaArr = [];
+  const macdArr = [];
+
+  for (let i = 0; i < klineData.length; i++) {
+    if (ema12[i] == null || ema26[i] == null) {
+      dif.push(null);
+      deaArr.push(null);
+      macdArr.push(null);
+    } else {
+      dif.push(ema12[i] - ema26[i]);
+    }
+  }
+
+  // DEA = 9日 EMA of DIF
+  for (let i = 0; i < dif.length; i++) {
+    if (dif[i] == null) {
+      deaArr.push(null);
+      macdArr.push(null);
+      continue;
+    }
+    if (deaArr.length > 0 && deaArr[deaArr.length - 1] != null) {
+      deaArr.push(dif[i] * (2 / 10) + deaArr[deaArr.length - 1] * (8 / 10));
+    } else {
+      // 找前 9 个非 null DIF 算 SMA
+      let count = 0, sum = 0;
+      for (let j = i; j >= 0 && count < 9; j--) {
+        if (dif[j] != null) { sum += dif[j]; count++; }
+      }
+      deaArr.push(count > 0 ? sum / count : 0);
+    }
+    macdArr.push(2 * (dif[i] - deaArr[i]));
+  }
+
+  return { dif, dea: deaArr, macd: macdArr };
+}
+
+// 根据 K 线数据计算 KDJ
+function calcKDJ(klineData, n = 9) {
+  const kArr = [], dArr = [], jArr = [];
+  for (let i = 0; i < klineData.length; i++) {
+    if (i < n - 1) {
+      kArr.push(null); dArr.push(null); jArr.push(null);
+      continue;
+    }
+    let high = -Infinity, low = Infinity;
+    for (let j = i - n + 1; j <= i; j++) {
+      const h = parseFloat(klineData[j].high) || 0;
+      const l = parseFloat(klineData[j].low) || 0;
+      if (h > high) high = h;
+      if (l < low) low = l;
+    }
+    const rsv = low === high ? 50 : ((parseFloat(klineData[i].close) || 0) - low) / (high - low) * 100;
+    const prevK = kArr.length > 0 && kArr[kArr.length - 1] != null ? kArr[kArr.length - 1] : 50;
+    const prevD = dArr.length > 0 && dArr[dArr.length - 1] != null ? dArr[dArr.length - 1] : 50;
+    kArr.push(prevK * 2 / 3 + rsv / 3);
+    dArr.push(prevD * 2 / 3 + kArr[kArr.length - 1] / 3);
+    jArr.push(3 * kArr[kArr.length - 1] - 2 * dArr[dArr.length - 1]);
+  }
+  return { k: kArr, d: dArr, j: jArr };
+}
+
+// 生成大白话解释
+function explainIndicator(type, value, extra = {}) {
+  switch (type) {
+    case 'volume': {
+      // value = { todayVol, avgVol, volRatio }
+      const ratio = value.volRatio || 0;
+      if (ratio > 3) return '爆量，交投异常活跃，多空分歧巨大，注意方向选择';
+      if (ratio > 2) return '大幅放量，说明有大资金在动作，主力正在表态';
+      if (ratio > 1.5) return '温和放量，市场关注度上升，属于健康换手';
+      if (ratio > 1.0) return '量能正常，买卖双方力量均衡，走势延续概率大';
+      if (ratio > 0.5) return '缩量调整，市场观望情绪浓，等待方向明朗';
+      return '地量水平，几乎没有资金关注，短线难有行情';
+    }
+    case 'macd': {
+      const { dif, dea, macd } = value;
+      if (dif == null) return '数据不足，需要更多交易日才能计算';
+      let desc = '';
+      if (dif > dea && macd > 0) desc = 'DIFF在DEA上方且MACD红柱，属于多头趋势，持股为宜';
+      else if (dif > dea && macd < 0) desc = 'DIFF刚上穿DEA，MACD绿柱缩短，金叉初期，反弹信号';
+      else if (dif < dea && macd < 0) desc = 'DIFF在DEA下方且MACD绿柱，属于空头趋势，谨慎操作';
+      else if (dif < dea && macd > 0) desc = 'DIFF刚下穿DEA，MACD红柱缩短，死叉初期，调整信号';
+      else desc = 'MACD零轴附近纠缠，没有明确方向，多看少动';
+      if (dif > 0) desc += '。DIFF在零轴上方，中期趋势偏多';
+      else if (dif < 0) desc += '。DIFF在零轴下方，中期趋势偏空';
+      return desc;
+    }
+    case 'kdj': {
+      const { k, d, j } = value;
+      if (k == null) return '数据不足';
+      let desc = '';
+      if (j > 100) desc = `J值${j.toFixed(1)}，严重超买（>100），随时可能回调，不宜追高`;
+      else if (j > 80 && k > 80) desc = `J值${j.toFixed(1)}，K值${k.toFixed(1)}，处于超买区（>80），短期涨幅已大`;
+      else if (j < 0) desc = `J值${j.toFixed(1)}，严重超卖（<0），随时可能反弹，不宜杀跌`;
+      else if (j < 20 && k < 20) desc = `J值${j.toFixed(1)}，K值${k.toFixed(1)}，处于超卖区（<20），短期跌幅已大`;
+      else if (j > 50 && k > d) desc = `J值${j.toFixed(1)}，K上穿D，金叉区域，上涨动能增强`;
+      else if (j < 50 && k < d) desc = `J值${j.toFixed(1)}，K下穿D，死叉区域，下跌动能增强`;
+      else desc = `J值${j.toFixed(1)}，中位震荡，方向不明朗`;
+      return desc;
+    }
+    case 'volRatio': {
+      const vr = value;
+      if (vr > 3) return '量比极高，说明今天成交极度活跃，可能有重大消息刺激，注意跟风风险';
+      if (vr > 2) return '量比偏大，成交活跃度显著高于平时，有资金在主动作为';
+      if (vr > 1.2) return '量比温和偏大，今天交投比平时活跃，属于正常增量';
+      if (vr > 0.8) return '量比正常，今天成交量和平常差不多，没什么异常';
+      if (vr > 0.5) return '量比偏小，今天参与的人比平时少，市场兴趣下降';
+      return '量比极小，几乎没人交易，属于僵尸股状态';
+    }
+    case 'fundFlow': {
+      // value = { mainNet, bigNet, smallNet }
+      const { mainNet } = value;
+      if (mainNet > 5000) return '主力大举买入，机构/游资在主动吸筹，属于强力看多信号';
+      if (mainNet > 1000) return '主力温和买入，有大资金在慢慢建仓，走势偏暖';
+      if (mainNet > -1000) return '资金进出基本平衡，主力没有明显动作，横盘概率大';
+      if (mainNet > -5000) return '主力温和卖出，有大资金在逐步撤退，注意跟风风险';
+      return '主力大举卖出，机构/游资在出货，属于危险信号，建议减仓';
+    }
+    case 'buySellForce': {
+      // value = { buyRatio, sellRatio }
+      const { buyRatio } = value;
+      if (buyRatio > 1.5) return '买方力量明显占优，买盘是卖盘的1.5倍以上，上涨动力足';
+      if (buyRatio > 1.1) return '买方略强，买盘稍微多于卖盘，偏多格局';
+      if (buyRatio > 0.9) return '买卖力量均衡，多空双方在博弈，等待方向选择';
+      if (buyRatio > 0.7) return '卖方略强，卖盘多于买盘，有抛压但不算严重';
+      return '卖方明显占优，卖压较重，股价容易被压低';
+    }
+    default:
+      return '';
+  }
+}
+
+// 获取日K线数据（东方财富）
+async function fetchKlineData(stockCode, days = 60) {
+  try {
+    let marketId = '1';
+    if (stockCode.startsWith('0') || stockCode.startsWith('3') ||
+        stockCode.startsWith('1') || stockCode.startsWith('8') || stockCode.startsWith('9')) {
+      marketId = '0';
+    }
+    const url = `http://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${marketId}.${stockCode}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&end=20500101&lmt=${days}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'http://quote.eastmoney.com' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const json = await response.json();
+
+    if (json.data && json.data.klines) {
+      return json.data.klines.map(line => {
+        const parts = line.split(',');
+        return {
+          date: parts[0],
+          open: parts[1],
+          close: parts[2],
+          high: parts[3],
+          low: parts[4],
+          volume: parts[5],
+          amount: parts[6],
+          amplitude: parts[7],
+          changePercent: parts[8],
+          change: parts[9],
+          turnoverRate: parts[10],
+        };
+      });
+    }
+    return null;
+  } catch (err) {
+    console.error(`获取K线数据失败 ${stockCode}:`, err.message);
+    return null;
+  }
+}
+
+// 获取资金流向（东方财富）
+async function fetchFundFlow(stockCode) {
+  try {
+    let marketId = '1';
+    if (stockCode.startsWith('0') || stockCode.startsWith('3') ||
+        stockCode.startsWith('1') || stockCode.startsWith('8') || stockCode.startsWith('9')) {
+      marketId = '0';
+    }
+    const url = `http://push2.eastmoney.com/api/qt/stock/fflow/kline/get?secid=${marketId}.${stockCode}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63&klt=1&lmt=1`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'http://quote.eastmoney.com' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const json = await response.json();
+
+    if (json.data && json.data.klines && json.data.klines.length > 0) {
+      const parts = json.data.klines[0].split(',');
+      return {
+        mainNet: parseFloat(parts[1]) || 0,    // 主力净流入（万元）
+        bigNet: parseFloat(parts[5]) || 0,     // 超大单净流入
+        midNet: parseFloat(parts[7]) || 0,     // 大单净流入
+        smallNet: parseFloat(parts[3]) || 0,   // 小单净流入
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error(`获取资金流向失败 ${stockCode}:`, err.message);
+    return null;
+  }
+}
+
+// POST /api/stocks/indicator - 获取技术指标
+router.post('/indicator', async (req, res) => {
+  try {
+    const { stockCode } = req.body;
+    if (!stockCode) return res.json({ success: false, error: '缺少股票代码' });
+
+    // 并行获取：实时报价 + K线数据 + 资金流向
+    const [priceData, klineData, fundFlow] = await Promise.all([
+      fetchEastMoneyPrice(stockCode),
+      fetchKlineData(stockCode, 60),
+      fetchFundFlow(stockCode),
+    ]);
+
+    if (!priceData || !priceData.currentPrice) {
+      return res.json({ success: false, error: '获取实时行情失败' });
+    }
+
+    const indicators = {};
+
+    // 1. 成交量（从实时数据获取）
+    const volume = priceData.volume || 0;
+    indicators.volume = {
+      value: volume,
+      unit: '手',
+      show: volume > 0 ? `${(volume / 10000).toFixed(1)}万手` : '无数据',
+    };
+
+    // 2. 量比
+    const volRatio = priceData.volumeRatio || 0;
+    indicators.volRatio = {
+      value: volRatio,
+      show: volRatio > 0 ? volRatio.toFixed(2) : '--',
+      explain: explainIndicator('volRatio', volRatio),
+    };
+
+    // 3. 成交量解释
+    indicators.volume.explain = explainIndicator('volume', {
+      volRatio,
+      todayVol: volume,
+      avgVol: volume / (volRatio || 1),
+    });
+
+    // 4. MACD
+    if (klineData && klineData.length >= 30) {
+      const macdData = calcMACD(klineData);
+      const lastIdx = macdData.dif.length - 1;
+      const dif = macdData.dif[lastIdx], dea = macdData.dea[lastIdx], macd = macdData.macd[lastIdx];
+      indicators.macd = {
+        dif: dif != null ? dif.toFixed(4) : '--',
+        dea: dea != null ? dea.toFixed(4) : '--',
+        macd: macd != null ? macd.toFixed(4) : '--',
+        signal: dif != null && dea != null ? (dif > dea ? '金叉' : '死叉') : '--',
+        trend: dif != null ? (dif > 0 ? '多头' : '空头') : '--',
+        explain: explainIndicator('macd', { dif, dea, macd }),
+      };
+    }
+
+    // 5. KDJ
+    if (klineData && klineData.length >= 20) {
+      const kdjData = calcKDJ(klineData, 9);
+      const lastIdx = kdjData.k.length - 1;
+      const k = kdjData.k[lastIdx], d = kdjData.d[lastIdx], j = kdjData.j[lastIdx];
+      indicators.kdj = {
+        k: k != null ? k.toFixed(2) : '--',
+        d: d != null ? d.toFixed(2) : '--',
+        j: j != null ? j.toFixed(2) : '--',
+        signal: k != null && d != null ? (k > d ? '金叉' : j != null && j > 100 ? '超买' : j != null && j < 0 ? '超卖' : '死叉') : '--',
+        explain: explainIndicator('kdj', { k, d, j }),
+      };
+    }
+
+    // 6. 资金流向（万元）
+    if (fundFlow) {
+      const mainNetWan = fundFlow.mainNet;
+      indicators.fundFlow = {
+        mainNet: mainNetWan,
+        bigNet: fundFlow.bigNet,
+        midNet: fundFlow.midNet,
+        smallNet: fundFlow.smallNet,
+        show: mainNetWan > 0 ? `+${(mainNetWan / 10000).toFixed(2)}亿` : `${(mainNetWan / 10000).toFixed(2)}亿`,
+        explain: explainIndicator('fundFlow', { mainNet: mainNetWan }),
+      };
+    }
+
+    // 7. 买卖力道（盘口五档累积）
+    if (priceData.buyVolumes && priceData.buyVolumes.length > 0) {
+      const totalBuy = priceData.buyVolumes.reduce((a, b) => a + b, 0);
+      const totalSell = priceData.sellVolumes.reduce((a, b) => a + b, 0);
+      const buyRatio = totalSell > 0 ? totalBuy / totalSell : 1;
+      indicators.buySellForce = {
+        buyRatio,
+        show: buyRatio > 0 ? `买${(buyRatio * 100).toFixed(0)}% vs 卖100%` : '无数据',
+        explain: explainIndicator('buySellForce', { buyRatio, sellRatio: 1 }),
+        totalBuy,
+        totalSell,
+      };
+    }
+
+    res.json({
+      success: true,
+      stockCode,
+      stockName: priceData.stockName || '',
+      currentPrice: priceData.currentPrice,
+      indicators,
+    });
+  } catch (error) {
+    console.error('获取技术指标失败:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

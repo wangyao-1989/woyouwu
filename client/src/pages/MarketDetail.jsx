@@ -1,21 +1,40 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 
-function renderMarkdown(text) {
-  if (!text) return '';
-  let html = text;
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold text-gray-900 mt-4 mb-2">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-gray-900 mt-5 mb-3">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-gray-900 mt-5 mb-3">$1</h1>');
-  html = html.replace(/^- (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/^\d+\.\s(.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>');
-  html = html.replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed mb-2">');
-  html = html.replace(/\n/g, '<br/>');
-  html = '<p class="text-gray-700 leading-relaxed mb-2">' + html + '</p>';
-  return html;
-}
+const markdownComponents = {
+  h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-200" {...props} />,
+  h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-gray-900 mt-5 mb-3 pb-1.5 border-b border-gray-100" {...props} />,
+  h3: ({ node, ...props }) => <h3 className="text-base font-bold text-gray-900 mt-4 mb-2 flex items-center gap-2"><span className="w-1.5 h-4 bg-indigo-500 rounded-full inline-block shrink-0"></span><span {...props} /></h3>,
+  h4: ({ node, ...props }) => <h4 className="text-sm font-semibold text-gray-800 mt-3 mb-1.5" {...props} />,
+  p: ({ node, ...props }) => <p className="text-gray-700 leading-relaxed mb-3" {...props} />,
+  ul: ({ node, ...props }) => <ul className="my-2 space-y-1.5 list-none" {...props} />,
+  ol: ({ node, ...props }) => <ol className="my-2 space-y-1.5 list-decimal list-inside text-gray-700" {...props} />,
+  li: ({ node, ...props }) => <li className="text-gray-700 leading-relaxed pl-1" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+  em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />,
+  code: ({ node, inline, className, children, ...props }) => {
+    if (inline) return <code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-xs font-mono border border-amber-200" {...props}>{children}</code>;
+    const match = /language-(\w+)/.exec(className || '');
+    return (
+      <div className="my-3 rounded-xl overflow-hidden border border-slate-700">
+        {match && <div className="bg-slate-800 text-slate-400 text-xs px-4 py-1.5 font-mono">{match[1]}</div>}
+        <pre className="bg-slate-900 text-green-400 p-4 overflow-x-auto text-xs leading-relaxed"><code className={className} {...props}>{children}</code></pre>
+      </div>
+    );
+  },
+  pre: ({ node, ...props }) => <pre className="bg-slate-900 text-green-400 rounded-xl p-4 my-3 overflow-x-auto text-xs leading-relaxed" {...props} />,
+  blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-400 bg-blue-50/60 rounded-r-lg pl-4 py-2 my-3 text-gray-600 italic" {...props} />,
+  a: ({ node, ...props }) => <a className="text-indigo-600 underline hover:text-indigo-800" target="_blank" rel="noopener noreferrer" {...props} />,
+  hr: ({ node, ...props }) => <hr className="my-5 border-gray-200" {...props} />,
+  table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border border-gray-200 shadow-sm"><table className="w-full" {...props} /></div>,
+  thead: ({ node, ...props }) => <thead className="bg-slate-50" {...props} />,
+  th: ({ node, ...props }) => <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 border-b border-gray-200" {...props} />,
+  td: ({ node, ...props }) => <td className="px-4 py-2.5 text-sm text-gray-700 border-b border-gray-100" {...props} />,
+  tr: ({ node, ...props }) => <tr className="border-b border-gray-100 last:border-b-0 hover:bg-blue-50/30 transition" {...props} />,
+};
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -264,10 +283,11 @@ export default function MarketDetail() {
                   <p className="text-gray-500 text-sm">AI 正在分析中，请稍候...</p>
                 </div>
               ) : (
-                <div
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(analysis.result) }}
-                />
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {analysis.result}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           )}

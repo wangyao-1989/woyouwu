@@ -20,12 +20,23 @@ function AdminSettings() {
   const [messageType, setMessageType] = useState('');
   const fileInputRef = useRef(null);
   
+  const [selectedMBTIType, setSelectedMBTIType] = useState('INTJ');
+  const [mbtiSex, setMbtiSex] = useState('male'); // 'male' | 'female'
   const [selectedMBTIFile, setSelectedMBTIFile] = useState(null);
   const [mbtiPreview, setMbtiPreview] = useState(null);
-  const [currentMBTIAvatar, setCurrentMBTIAvatar] = useState(null);
   const [uploadingMBTI, setUploadingMBTI] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedType, setUploadedType] = useState('');
   const mbtiFileInputRef = useRef(null);
+  const mbtiExtCache = useRef({}); // 缓存每个 type-sex 的有效扩展名
+
+  const getMbtiUrl = (type, sex) => {
+     const key = `${type}-${sex}`;
+     const ext = mbtiExtCache.current[key] || 'png';
+     return `/uploads/mbti-avatars/${type.toLowerCase()}-${sex}.${ext}`;
+   };
+
+  const MBTI_TYPES = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'];
 
   const [externalApis, setExternalApis] = useState({
     aiChat: true,
@@ -72,17 +83,6 @@ function AdminSettings() {
       }
     };
     
-    const checkMBTIAvatar = async () => {
-      try {
-        const response = await axios.head('/api/admin/mbti-avatar');
-        if (response.status === 200) {
-          setCurrentMBTIAvatar(`/uploads/mbti-avatars.jpg?t=${Date.now()}`);
-        }
-      } catch (error) {
-        setCurrentMBTIAvatar(null);
-      }
-    };
-
     const loadSettings = async () => {
       try {
         const res = await axios.get('/api/admin/settings');
@@ -108,7 +108,6 @@ function AdminSettings() {
     };
     
     checkLogo();
-    checkMBTIAvatar();
     loadSettings();
     loadStats();
   }, []);
@@ -255,14 +254,16 @@ function AdminSettings() {
 
     const formData = new FormData();
     formData.append('avatar', selectedMBTIFile);
+    formData.append('mbti', selectedMBTIType);
+    formData.append('sex', mbtiSex);
 
     try {
-      const res = await axios.post('/api/admin/upload-mbti-avatar', formData);
+      const res = await axios.post('/api/admin/upload-mbti-avatar-single', formData);
 
       setMessage(res.data.message || 'MBTI头像上传成功！');
       setMessageType('success');
       setUploadSuccess(true);
-      setCurrentMBTIAvatar(`/uploads/mbti-avatars.jpg?t=${Date.now()}`);
+      setUploadedType(selectedMBTIType);
       setSelectedMBTIFile(null);
       setMBTIPreview(null);
       if (mbtiFileInputRef.current) {
@@ -373,22 +374,109 @@ function AdminSettings() {
         </div>
 
         <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">MBTI测试头像</h2>
-          <p className="text-gray-600 mb-4">上传4×4网格的MBTI头像图片（16种类型）</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">MBTI 性格头像</h2>
+          <p className="text-gray-600 mb-4">选择 MBTI 类型，上传对应头像（200×200，自动裁剪）</p>
           
-          <div className="mb-6">
-            <p className="text-sm font-medium text-gray-700 mb-2">当前头像：</p>
-            <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
-              {currentMBTIAvatar ? (
-                <img src={currentMBTIAvatar} alt="当前MBTI头像" className="w-full h-full object-contain" />
-              ) : (
-                <span className="text-[#B8A899] text-sm">暂无头像</span>
-              )}
+          {/* 类型选择器 */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">选择类型：</p>
+            <div className="grid grid-cols-8 gap-1.5 mb-4">
+              {MBTI_TYPES.map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setSelectedMBTIType(type); setUploadSuccess(false); setUploadedType(''); }}
+                  className={`py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selectedMBTIType === type
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="mb-6">
-            <p className="text-sm font-medium text-gray-700 mb-2">选择新头像：</p>
+          {/* 性别选择 */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">头像性别：</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMbtiSex('male')}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  mbtiSex === 'male'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                👨 男生
+              </button>
+              <button
+                onClick={() => setMbtiSex('female')}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  mbtiSex === 'female'
+                    ? 'bg-pink-500 text-white shadow-sm'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                👩 女生
+              </button>
+            </div>
+          </div>
+
+          {/* 当前头像预览 */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              {selectedMBTIType} 当前头像：
+            </p>
+            <div className="flex gap-3">
+              <div className="flex flex-col items-center gap-1">
+                <div className={`w-20 h-20 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden border-2 ${mbtiSex === 'male' ? 'border-blue-400' : 'border-gray-100'}`}>
+                  <img 
+                    src={getMbtiUrl(selectedMBTIType, 'male')}
+                    alt={`${selectedMBTIType}男`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const key = `${selectedMBTIType}-male`;
+                      if (mbtiExtCache.current[key] !== 'gif') {
+                        mbtiExtCache.current[key] = 'gif';
+                        e.currentTarget.src = `/uploads/mbti-avatars/${selectedMBTIType.toLowerCase()}-male.gif`;
+                      } else {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <span className="text-gray-400 text-[10px] hidden">无</span>
+                </div>
+                <span className="text-[10px] text-gray-400">男</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className={`w-20 h-20 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden border-2 ${mbtiSex === 'female' ? 'border-pink-400' : 'border-gray-100'}`}>
+                  <img 
+                    src={getMbtiUrl(selectedMBTIType, 'female')}
+                    alt={`${selectedMBTIType}女`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const key = `${selectedMBTIType}-female`;
+                      if (mbtiExtCache.current[key] !== 'gif') {
+                        mbtiExtCache.current[key] = 'gif';
+                        e.currentTarget.src = `/uploads/mbti-avatars/${selectedMBTIType.toLowerCase()}-female.gif`;
+                      } else {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <span className="text-gray-400 text-[10px] hidden">无</span>
+                </div>
+                <span className="text-[10px] text-gray-400">女</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 上传区域 */}
+          <div className="mb-4">
             <div className="flex items-center gap-4">
               <input
                 type="file"
@@ -410,10 +498,10 @@ function AdminSettings() {
           </div>
 
           {mbtiPreview && (
-            <div className="mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-2">预览：</p>
-              <div className="w-32 h-32 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
-                <img src={mbtiPreview} alt="预览" className="w-full h-full object-contain" />
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-1">新图片预览：</p>
+              <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100">
+                <img src={mbtiPreview} alt="预览" className="w-full h-full object-cover" />
               </div>
             </div>
           )}
@@ -423,31 +511,37 @@ function AdminSettings() {
             disabled={!selectedMBTIFile || uploadingMBTI}
             className="rounded-btn px-6 py-3 bg-warm-900 text-white font-medium hover:bg-warm-700 transition-colors shadow-sketch disabled:opacity-50 disabled:cursor-not-allowed wobble"
           >
-            {uploadingMBTI ? '上传中...' : '上传MBTI头像'}
+            {uploadingMBTI ? '上传中...' : `上传 ${selectedMBTIType} ${mbtiSex === 'male' ? '男' : '女'} 头像`}
           </button>
 
-          {uploadSuccess && (
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">裁剪后的16个头像预览：</h3>
-              <div className="grid grid-cols-4 gap-4">
-                {['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'].map((type) => (
-                  <div key={type} className="flex flex-col items-center">
-                    <div className="w-24 h-24 bg-[#F0E8DD] rounded-xl flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={`/api/admin/mbti-avatar/${type}?t=${Date.now()}`} 
-                        alt={type} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
+          {/* 全部预览 */}
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <p className="text-sm font-medium text-gray-700 mb-3">全部 16 种类型（{mbtiSex === 'male' ? '男' : '女'}）：</p>
+            <div className="grid grid-cols-8 gap-2">
+              {MBTI_TYPES.map((type) => (
+                <div key={type} className="flex flex-col items-center gap-1">
+                  <div className={`w-12 h-12 bg-[#F0E8DD] rounded-lg flex items-center justify-center overflow-hidden border-2 ${uploadedType === type ? 'border-green-500' : 'border-transparent'} ${selectedMBTIType === type ? 'ring-2 ring-gray-400' : ''}`}>
+                    <img 
+                      src={getMbtiUrl(type, mbtiSex)}
+                      alt={`${type}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const key = `${type}-${mbtiSex}`;
+                        if (mbtiExtCache.current[key] !== 'gif') {
+                          mbtiExtCache.current[key] = 'gif';
+                          e.currentTarget.src = `/uploads/mbti-avatars/${type.toLowerCase()}-${mbtiSex}.gif`;
+                        } else {
                           e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                    <span className="mt-2 text-sm font-medium text-gray-700">{type}</span>
+                          e.currentTarget.parentElement.classList.add('bg-gray-100');
+                        }
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
+                  <span className="text-[10px] text-gray-400">{type}</span>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="bg-white rounded-card border-2 border-gray-200 shadow-card p-6 mb-6">
@@ -584,7 +678,7 @@ function AdminSettings() {
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
                   <h3 className="font-medium text-gray-800">MBTI头像生成</h3>
-                  <p className="text-sm text-gray-600">上传4×4网格图片，sharp本地裁剪为16个头像</p>
+                  <p className="text-sm text-gray-600">AI逐个生成16种MBTI头像</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input

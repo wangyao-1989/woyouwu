@@ -69,6 +69,59 @@ router.get('/mbti-avatar-debug', auth, admin, async (req, res) => {
   }
 });
 
+// 简化版：直接上传单张 MBTI 头像到对应类型
+router.post('/upload-mbti-avatar-single', auth, admin, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请选择要上传的图片' });
+    }
+
+    const mbtiType = (req.body.mbti || '').toUpperCase();
+    if (!/^[IE][NS][TF][JP]$/.test(mbtiType)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: '无效的 MBTI 类型，请提供如 INTJ、ENFP 等' });
+    }
+
+    const sex = (req.body.sex === 'male' || req.body.sex === 'female') ? req.body.sex : '';
+    const baseName = sex ? `${mbtiType.toLowerCase()}-${sex}` : mbtiType.toLowerCase();
+    
+    const mbtiAvatarsDir = path.join(__dirname, '../uploads/mbti-avatars');
+    if (!fs.existsSync(mbtiAvatarsDir)) {
+      fs.mkdirSync(mbtiAvatarsDir, { recursive: true });
+    }
+
+    const ext = req.file.mimetype === 'image/gif' ? 'gif' : 'png';
+    const targetPath = path.join(mbtiAvatarsDir, `${baseName}.${ext}`);
+
+    // 清理旧格式文件（无性别后缀和有性别后缀的旧格式）
+    const oldVariants = [
+      `${mbtiType.toLowerCase()}.png`, `${mbtiType.toLowerCase()}.gif`,
+      `${mbtiType.toLowerCase()}-male.png`, `${mbtiType.toLowerCase()}-male.gif`,
+      `${mbtiType.toLowerCase()}-female.png`, `${mbtiType.toLowerCase()}-female.gif`,
+    ];
+    oldVariants.forEach(v => {
+      const p = path.join(mbtiAvatarsDir, v);
+      if (p !== targetPath && fs.existsSync(p)) fs.unlinkSync(p);
+    });
+
+    if (ext === 'gif') {
+      fs.copyFileSync(req.file.path, targetPath);
+    } else {
+      await sharp(req.file.path)
+        .resize(200, 200, { fit: 'contain', background: { r: 240, g: 232, b: 221, alpha: 1 } })
+        .png()
+        .toFile(targetPath);
+    }
+
+    fs.unlinkSync(req.file.path);
+
+    res.json({ message: `${mbtiType}${sex === 'male' ? '(男)' : sex === 'female' ? '(女)' : ''} 头像上传成功！`, url: `/uploads/mbti-avatars/${baseName}.${ext}` });
+  } catch (error) {
+    console.error('Single MBTI avatar upload error:', error);
+    res.status(500).json({ message: '上传失败: ' + error.message });
+  }
+});
+
 router.post('/upload-mbti-avatar', auth, admin, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {

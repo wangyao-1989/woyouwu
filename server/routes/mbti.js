@@ -40,10 +40,10 @@ function shuffleArray(arr) {
 
 router.get('/questions', async (req, res) => {
   try {
-    const mode = req.query.mode || 'express';
+    const mode = req.query.mode || 'quick';
 
     let query = {};
-    if (mode === 'express') {
+    if (mode === 'quick') {
       query.version = { $in: ['express', 'both'] };
     } else {
       query.version = { $in: ['professional', 'both'] };
@@ -61,7 +61,7 @@ router.get('/questions', async (req, res) => {
     }
 
     const dims = ['EI', 'SN', 'TF', 'JP'];
-    const perDim = mode === 'express' ? 5 : 15;
+    const perDim = mode === 'quick' ? 5 : 15;
 
     const grouped = {};
     dims.forEach(d => { grouped[d] = []; });
@@ -116,7 +116,7 @@ router.get('/questions/count', async (req, res) => {
 
 router.post('/generate-avatar', async (req, res) => {
   try {
-    const { mbti, zodiac } = req.body;
+    const { mbti, zodiac, sex } = req.body;
 
     const isEnabled = await Settings.isApiEnabled('mbtiAvatar');
     if (!isEnabled) {
@@ -128,6 +128,12 @@ router.post('/generate-avatar', async (req, res) => {
     }
 
     let prompt = AVATAR_PROMPTS[mbti];
+
+    if (sex === 'male') {
+      prompt = prompt.replace(/^Anime portrait of/, 'Anime portrait of a male');
+    } else if (sex === 'female') {
+      prompt = prompt.replace(/^Anime portrait of/, 'Anime portrait of a female');
+    }
 
     if (zodiac) {
       const zodiacMap = {

@@ -1,24 +1,43 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 
 // ==================== 工具函数 ====================
 
-function renderMarkdown(text) {
-  if (!text) return '';
-  let html = text;
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold text-gray-900 mt-4 mb-2">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-gray-900 mt-5 mb-3">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-gray-900 mt-5 mb-3">$1</h1>');
-  html = html.replace(/^- (.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/^\d+\.\s(.+)$/gm, '<li class="ml-4 text-gray-700">$1</li>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>');
-  html = html.replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed mb-2">');
-  html = html.replace(/\n/g, '<br/>');
-  html = '<p class="text-gray-700 leading-relaxed mb-2">' + html + '</p>';
-  return html;
-}
+const markdownComponents = {
+  h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-200" {...props} />,
+  h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-gray-900 mt-5 mb-3 pb-1.5 border-b border-gray-100" {...props} />,
+  h3: ({ node, ...props }) => <h3 className="text-base font-bold text-gray-900 mt-4 mb-2 flex items-center gap-2"><span className="w-1.5 h-4 bg-indigo-500 rounded-full inline-block shrink-0"></span><span {...props} /></h3>,
+  h4: ({ node, ...props }) => <h4 className="text-sm font-semibold text-gray-800 mt-3 mb-1.5" {...props} />,
+  p: ({ node, ...props }) => <p className="text-gray-700 leading-relaxed mb-3" {...props} />,
+  ul: ({ node, ...props }) => <ul className="my-2 space-y-1.5 list-none" {...props} />,
+  ol: ({ node, ...props }) => <ol className="my-2 space-y-1.5 list-decimal list-inside text-gray-700" {...props} />,
+  li: ({ node, ...props }) => <li className="text-gray-700 leading-relaxed pl-1" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+  em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />,
+  code: ({ node, inline, className, children, ...props }) => {
+    if (inline) return <code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-xs font-mono border border-amber-200" {...props}>{children}</code>;
+    const match = /language-(\w+)/.exec(className || '');
+    return (
+      <div className="my-3 rounded-xl overflow-hidden border border-slate-700">
+        {match && <div className="bg-slate-800 text-slate-400 text-xs px-4 py-1.5 font-mono">{match[1]}</div>}
+        <pre className="bg-slate-900 text-green-400 p-4 overflow-x-auto text-xs leading-relaxed"><code className={className} {...props}>{children}</code></pre>
+      </div>
+    );
+  },
+  pre: ({ node, ...props }) => <pre className="bg-slate-900 text-green-400 rounded-xl p-4 my-3 overflow-x-auto text-xs leading-relaxed" {...props} />,
+  blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-400 bg-blue-50/60 rounded-r-lg pl-4 py-2 my-3 text-gray-600 italic" {...props} />,
+  a: ({ node, ...props }) => <a className="text-indigo-600 underline hover:text-indigo-800" target="_blank" rel="noopener noreferrer" {...props} />,
+  hr: ({ node, ...props }) => <hr className="my-5 border-gray-200" {...props} />,
+  table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border border-gray-200 shadow-sm"><table className="w-full" {...props} /></div>,
+  thead: ({ node, ...props }) => <thead className="bg-slate-50" {...props} />,
+  th: ({ node, ...props }) => <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 border-b border-gray-200" {...props} />,
+  td: ({ node, ...props }) => <td className="px-4 py-2.5 text-sm text-gray-700 border-b border-gray-100" {...props} />,
+  tr: ({ node, ...props }) => <tr className="border-b border-gray-100 last:border-b-0 hover:bg-blue-50/30 transition" {...props} />,
+};
 
 // ==================== 子Tab 1: 持仓信息 ====================
 
@@ -116,268 +135,165 @@ function HoldingInfo({ holding, onDelete, onRefreshPrice, onAnalyze, onEdit }) {
   );
 }
 
-// ==================== 子Tab 2: 盯盘助手 ====================
+// ==================== 子Tab 2: 盯盘助手（技术指标） ====================
 
 function StockMonitorHelper({ holding }) {
   const currentPrice = holding.currentPrice ? parseFloat(holding.currentPrice) : parseFloat(holding.costPrice) || 0;
   const stockData = holding._stockData || {};
   const changePercent = stockData.changePercent ?? holding.changePercent ?? 0;
-  const changeAmount = stockData.changeAmount ?? 0;
-  const yesterdayClose = stockData.yesterdayClose ?? currentPrice;
-  const todayOpen = stockData.todayOpen ?? currentPrice;
-  const highPrice = stockData.highPrice ?? currentPrice;
-  const lowPrice = stockData.lowPrice ?? currentPrice;
-  const amplitude = stockData.amplitude ?? 0;
   const turnoverRate = stockData.turnoverRate ?? 0;
   const volumeRatio = stockData.volumeRatio ?? 0;
+  const stockCode = holding.stockCode || '';
 
-  // 模拟均线数据
-  const ma5 = stockData.ma5 ?? currentPrice * (1 + (Math.random() - 0.5) * 0.1);
-  const ma20 = stockData.ma20 ?? currentPrice * (1 + (Math.random() - 0.5) * 0.15);
-  const ma250 = stockData.ma250 ?? currentPrice * (1 + (Math.random() - 0.5) * 0.3);
-  const distFrom250 = ma250 > 0 ? ((currentPrice - ma250) / ma250) * 100 : 0;
+  const [indicators, setIndicators] = useState(null);
+  const [loadingIndicators, setLoadingIndicators] = useState(false);
 
-  // 模拟盘口数据
-  const buyOrders = Array.from({ length: 5 }, (_, i) => ({
-    price: currentPrice * (1 - (i + 1) * 0.001),
-    volume: Math.floor(Math.random() * 5000 + 500),
-  }));
-  const sellOrders = Array.from({ length: 5 }, (_, i) => ({
-    price: currentPrice * (1 + (i + 1) * 0.001),
-    volume: Math.floor(Math.random() * 5000 + 500),
-  }));
+  // 获取技术指标
+  useEffect(() => {
+    if (!stockCode) return;
+    let cancelled = false;
+    setLoadingIndicators(true);
+    axios.post('/api/stocks/indicator', { stockCode })
+      .then(res => {
+        if (!cancelled && res.data.success) setIndicators(res.data.indicators);
+      })
+      .catch(err => console.error('获取技术指标失败:', err))
+      .finally(() => { if (!cancelled) setLoadingIndicators(false); });
+    return () => { cancelled = true; };
+  }, [stockCode]);
 
-  // 模拟资金流向
-  const mainInflow = stockData.mainInflow ?? Math.random() * 2000 - 1000;
-  const bigOrderDirection = stockData.bigOrderDirection ?? (mainInflow > 0 ? '偏多' : '偏空');
+  if (loadingIndicators && !indicators) {
+    return <div className="py-12 text-center text-gray-400">加载技术指标中...</div>;
+  }
 
-  // 模拟融资数据
-  const marginBalance = stockData.marginBalance ?? Math.floor(Math.random() * 100000 + 50000);
-  const marginChange = stockData.marginChange ?? Math.random() * 2000 - 1000;
-  const marginDays = stockData.marginDays ?? Math.floor(Math.random() * 5 + 1);
-
-  // 技术信号计算
-  const technicalSignals = useMemo(() => {
-    const signals = [];
-
-    // 价格相对均线位置
-    if (ma5 > 0) {
-      const dist5 = ((currentPrice - ma5) / ma5) * 100;
-      if (dist5 > 3) signals.push({ dimension: '5日均线', signal: '短期强势', strength: '强', desc: `价格高于5日线${dist5.toFixed(1)}%` });
-      else if (dist5 < -3) signals.push({ dimension: '5日均线', signal: '短期弱势', strength: '弱', desc: `价格低于5日线${Math.abs(dist5).toFixed(1)}%` });
-      else signals.push({ dimension: '5日均线', signal: '短期震荡', strength: '中性', desc: `价格紧贴5日线` });
-    }
-
-    if (ma20 > 0) {
-      const dist20 = ((currentPrice - ma20) / ma20) * 100;
-      if (dist20 > 5) signals.push({ dimension: '20日均线', signal: '中期强势', strength: '强', desc: `价格高于20日线${dist20.toFixed(1)}%` });
-      else if (dist20 < -5) signals.push({ dimension: '20日均线', signal: '中期弱势', strength: '弱', desc: `价格低于20日线${Math.abs(dist20).toFixed(1)}%` });
-      else if (dist20 > 0) signals.push({ dimension: '20日均线', signal: '中期偏强', strength: '中立', desc: `价格略高于20日线` });
-      else signals.push({ dimension: '20日均线', signal: '中期偏弱', strength: '中立', desc: `价格略低于20日线` });
-    }
-
-    // 年线风险
-    if (ma250 > 0) {
-      if (distFrom250 > 20) signals.push({ dimension: '年线偏离', signal: '高位风险', strength: '风险', desc: `距年线${distFrom250.toFixed(1)}%，偏离过大` });
-      else if (distFrom250 < -20) signals.push({ dimension: '年线偏离', signal: '深度超跌', strength: '风险', desc: `距年线${Math.abs(distFrom250).toFixed(1)}%，超跌严重` });
-      else if (distFrom250 > 0) signals.push({ dimension: '年线偏离', signal: '年线上方', strength: '强', desc: `高于年线${distFrom250.toFixed(1)}%` });
-      else signals.push({ dimension: '年线偏离', signal: '年线下方', strength: '弱', desc: `低于年线${Math.abs(distFrom250).toFixed(1)}%` });
-    }
-
-    // 振幅
-    if (amplitude > 5) signals.push({ dimension: '振幅', signal: '波动剧烈', strength: '风险', desc: `振幅${amplitude.toFixed(2)}%` });
-    else signals.push({ dimension: '振幅', signal: '波动正常', strength: '中性', desc: `振幅${amplitude.toFixed(2)}%` });
-
-    // 量比
-    if (volumeRatio > 2) signals.push({ dimension: '量比', signal: '放量明显', strength: '强', desc: `量比${volumeRatio.toFixed(2)}` });
-    else if (volumeRatio > 1.2) signals.push({ dimension: '量比', signal: '温和放量', strength: '中立', desc: `量比${volumeRatio.toFixed(2)}` });
-    else if (volumeRatio > 0.8) signals.push({ dimension: '量比', signal: '成交量平稳', strength: '中性', desc: `量比${volumeRatio.toFixed(2)}` });
-    else signals.push({ dimension: '量比', signal: '缩量', strength: '弱', desc: `量比${volumeRatio.toFixed(2)}` });
-
-    return signals;
-  }, [currentPrice, ma5, ma20, ma250, distFrom250, amplitude, volumeRatio]);
-
-  // 最强信号
-  const strongestSignal = useMemo(() => {
-    const strong = technicalSignals.filter(s => s.strength === '强');
-    if (strong.length > 0) return strong[0];
-    const risky = technicalSignals.filter(s => s.strength === '风险');
-    if (risky.length > 0) return risky[0];
-    return technicalSignals[0] || null;
-  }, [technicalSignals]);
+  // 指标卡片组件
+  const IndicatorCard = ({ title, icon, value, unit, signal, signalColor, explain }) => (
+    <div className="bg-white rounded-xl border shadow-sm p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-gray-900">{icon} {title}</h3>
+        {signal && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            signalColor === 'green' ? 'bg-green-100 text-green-700' :
+            signalColor === 'red' ? 'bg-red-100 text-red-700' :
+            signalColor === 'amber' ? 'bg-amber-100 text-amber-700' :
+            'bg-blue-100 text-blue-700'
+          }`}>{signal}</span>
+        )}
+      </div>
+      <div className="flex items-baseline gap-1 mb-1">
+        <span className="text-2xl font-mono font-bold text-gray-900">{value}</span>
+        {unit && <span className="text-xs text-gray-400">{unit}</span>}
+      </div>
+      {explain && (
+        <p className="text-xs text-gray-500 leading-relaxed bg-slate-50 rounded-lg p-2.5 mt-2">
+          {explain}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      {/* 股价全景 - 6列 */}
-      <div className="bg-white rounded-xl border shadow-sm p-4">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-          股价全景
-        </h3>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">现价</p>
-            <p className={`text-sm font-mono font-bold ${changePercent >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              ¥{currentPrice.toFixed(4)}
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">涨跌幅</p>
-            <p className={`text-sm font-mono font-bold ${changePercent >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">5日线</p>
-            <p className="text-sm font-mono font-bold text-gray-900">¥{ma5.toFixed(4)}</p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">20日线</p>
-            <p className="text-sm font-mono font-bold text-gray-900">¥{ma20.toFixed(4)}</p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">年线</p>
-            <p className="text-sm font-mono font-bold text-gray-900">¥{ma250.toFixed(4)}</p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">距年线</p>
-            <p className={`text-sm font-mono font-bold ${distFrom250 >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {distFrom250 >= 0 ? '+' : ''}{distFrom250.toFixed(2)}%
-            </p>
-          </div>
+      {/* 价格概览 - 3列 */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-slate-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1">现价</p>
+          <p className={`text-sm font-mono font-bold ${changePercent >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+            ¥{currentPrice.toFixed(4)}
+          </p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1">涨跌幅</p>
+          <p className={`text-sm font-mono font-bold ${changePercent >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+          </p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1">换手率</p>
+          <p className={`text-sm font-mono font-bold ${turnoverRate >= 5 ? 'text-red-600' : turnoverRate >= 3 ? 'text-amber-600' : 'text-gray-900'}`}>
+            {turnoverRate.toFixed(2)}%
+          </p>
         </div>
       </div>
 
-      {/* 资金监测 + 融资情绪 双列 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* 资金监测 */}
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            资金监测
-          </h3>
-          {/* 盘口挂单 */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <p className="text-xs text-gray-500 mb-2 font-medium">买盘</p>
-              <div className="space-y-1">
-                {buyOrders.map((order, i) => (
-                  <div key={i} className="flex justify-between text-xs">
-                    <span className="text-gray-500 font-mono">买{i + 1}</span>
-                    <span className="text-red-600 font-mono">{order.price.toFixed(2)}</span>
-                    <span className="text-gray-400 font-mono">{order.volume}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-2 font-medium">卖盘</p>
-              <div className="space-y-1">
-                {sellOrders.map((order, i) => (
-                  <div key={i} className="flex justify-between text-xs">
-                    <span className="text-gray-500 font-mono">卖{i + 1}</span>
-                    <span className="text-green-600 font-mono">{order.price.toFixed(2)}</span>
-                    <span className="text-gray-400 font-mono">{order.volume}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="border-t pt-3 flex justify-between">
-            <div>
-              <p className="text-xs text-gray-500">主力净流入</p>
-              <p className={`text-sm font-mono font-bold ${mainInflow >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {mainInflow >= 0 ? '+' : ''}{(mainInflow / 10000).toFixed(2)}万
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">大单方向</p>
-              <p className={`text-sm font-mono font-bold ${bigOrderDirection === '偏多' ? 'text-red-600' : 'text-green-600'}`}>
-                {bigOrderDirection}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* 指标卡片网格 */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {/* 成交量 */}
+        <IndicatorCard
+          title="成交量"
+          icon="📊"
+          value={indicators?.volume?.show || '加载中...'}
+          signal={indicators?.volRatio?.value > 2 ? '放量' : indicators?.volRatio?.value > 1.2 ? '温和' : '正常'}
+          signalColor={indicators?.volRatio?.value > 2 ? 'red' : indicators?.volRatio?.value > 1.2 ? 'amber' : 'green'}
+          explain={indicators?.volume?.explain}
+        />
 
-        {/* 融资情绪 */}
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            融资情绪
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">融资余额</p>
-              <p className="text-xl font-mono font-bold text-gray-900">{(marginBalance / 10000).toFixed(2)}<span className="text-sm font-normal text-gray-500">万</span></p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">环比变化</p>
-              <p className={`text-lg font-mono font-bold ${marginChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {marginChange >= 0 ? '+' : ''}{(marginChange / 10000).toFixed(2)}万
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">连续天数</p>
-              <p className={`text-lg font-mono font-bold ${marginChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {marginChange >= 0 ? '增加' : '减少'} <span className="text-gray-900">{marginDays}</span> 天
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* 量比 */}
+        <IndicatorCard
+          title="量比"
+          icon="⚖️"
+          value={indicators?.volRatio?.show || '--'}
+          unit={indicators?.volRatio?.value > 0 ? `(=今日成交÷5日均量)` : ''}
+          signal={indicators?.volRatio?.value > 2 ? '活跃' : indicators?.volRatio?.value < 0.5 ? '冷清' : ''}
+          signalColor={indicators?.volRatio?.value > 2 ? 'red' : 'blue'}
+          explain={indicators?.volRatio?.explain}
+        />
+
+        {/* MACD */}
+        <IndicatorCard
+          title="MACD"
+          icon="📈"
+          value={indicators?.macd?.dif || '--'}
+          signal={indicators?.macd?.signal || ''}
+          signalColor={indicators?.macd?.signal === '金叉' ? 'red' : 'green'}
+          explain={indicators?.macd ? `DIFF ${indicators.macd.dif} / DEA ${indicators.macd.dea} / MACD ${indicators.macd.macd}。${indicators.macd.explain || ''}` : '加载中...'}
+        />
+
+        {/* KDJ */}
+        <IndicatorCard
+          title="KDJ"
+          icon="〽️"
+          value={indicators?.kdj?.j || '--'}
+          unit="K/D/J"
+          signal={indicators?.kdj?.signal || ''}
+          signalColor={
+            indicators?.kdj?.signal === '金叉' ? 'red' :
+            indicators?.kdj?.signal === '超买' ? 'amber' :
+            'green'
+          }
+          explain={indicators?.kdj ? `K ${indicators.kdj.k} / D ${indicators.kdj.d} / J ${indicators.kdj.j}。${indicators.kdj.explain || ''}` : '加载中...'}
+        />
+
+        {/* 资金流向 */}
+        <IndicatorCard
+          title="资金博弈"
+          icon="💰"
+          value={indicators?.fundFlow?.show || '--'}
+          signal={indicators?.fundFlow?.mainNet > 0 ? '主力流入' : indicators?.fundFlow?.mainNet < 0 ? '主力流出' : ''}
+          signalColor={indicators?.fundFlow?.mainNet > 0 ? 'red' : 'green'}
+          explain={indicators?.fundFlow?.explain}
+        />
+
+        {/* 买卖力道 */}
+        <IndicatorCard
+          title="买卖力道"
+          icon="⚔️"
+          value={indicators?.buySellForce?.show || '--'}
+          signal={indicators?.buySellForce?.buyRatio > 1.1 ? '买强' : indicators?.buySellForce?.buyRatio < 0.9 ? '卖强' : '均衡'}
+          signalColor={indicators?.buySellForce?.buyRatio > 1.1 ? 'red' : indicators?.buySellForce?.buyRatio < 0.9 ? 'green' : 'blue'}
+          explain={indicators?.buySellForce?.explain}
+        />
       </div>
 
-      {/* 技术信号 */}
-      <div className="bg-white rounded-xl border shadow-sm p-4">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          技术信号
-        </h3>
-
-        {/* 最强信号 */}
-        {strongestSignal && (
-          <div className={`rounded-lg p-3 mb-3 ${
-            strongestSignal.strength === '强' ? 'bg-red-50 border border-red-200' :
-            strongestSignal.strength === '风险' ? 'bg-amber-50 border border-amber-200' :
-            'bg-gray-50 border border-gray-200'
-          }`}>
-            <p className="text-xs text-gray-500 mb-1">最强信号维度</p>
-            <p className={`text-sm font-bold ${
-              strongestSignal.strength === '强' ? 'text-red-700' :
-              strongestSignal.strength === '风险' ? 'text-amber-700' :
-              'text-gray-700'
-            }`}>
-              {strongestSignal.dimension} · {strongestSignal.signal}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">{strongestSignal.desc}</p>
-          </div>
-        )}
-
-        {/* 信号列表 */}
-        <div className="grid gap-2 md:grid-cols-2">
-          {technicalSignals.map((signal, idx) => (
-            <div key={idx} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-              <div>
-                <span className="text-xs font-medium text-gray-700">{signal.dimension}</span>
-                <span className="text-xs text-gray-400 ml-2">{signal.desc}</span>
-              </div>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                signal.strength === '强' ? 'bg-red-100 text-red-700' :
-                signal.strength === '弱' ? 'bg-green-100 text-green-700' :
-                signal.strength === '风险' ? 'bg-amber-100 text-amber-700' :
-                'bg-gray-100 text-gray-600'
-              }`}>
-                {signal.signal}
-              </span>
-            </div>
-          ))}
+      {/* 指标说明 */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+        <p className="text-xs text-blue-800 font-medium mb-1">💡 指标速懂</p>
+        <div className="space-y-1 text-xs text-blue-700">
+          <p><strong>成交量+量比</strong>：看人气和资金活跃度。放量=大资金在动作，缩量=没人玩。</p>
+          <p><strong>MACD</strong>：看中期趋势。金叉=上涨信号，死叉=下跌信号，零轴上方=多头趋势。</p>
+          <p><strong>KDJ</strong>：看短期超买超卖。J值&gt;100风险高，J值&lt;0机会大。</p>
+          <p><strong>资金博弈</strong>：看主力动向。主力净流入=机构在买，主力净流出=机构在跑。</p>
+          <p><strong>买卖力道</strong>：看盘口多空力量。买盘&gt;卖盘=有人撑着，卖盘&gt;买盘=抛压重。</p>
         </div>
       </div>
     </div>
@@ -1137,10 +1053,11 @@ export default function StockDetail() {
                 <p className="text-gray-500">AI 正在分析中，请稍候...</p>
               </div>
             ) : (
-              <div
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(analysisModal.result) }}
-              />
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {analysisModal.result}
+                </ReactMarkdown>
+              </div>
             )}
           </div>
         </div>
