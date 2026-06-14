@@ -26,6 +26,7 @@ const SettingsSchema = new mongoose.Schema({
     newsGeneration: { type: Boolean, default: true },
     resumeParse: { type: Boolean, default: true },
     mbtiAvatar: { type: Boolean, default: true },
+    textToImage: { type: Boolean, default: true },
   },
   // 外部API配置（每个板块独立）
   externalApiConfig: {
@@ -43,6 +44,11 @@ const SettingsSchema = new mongoose.Schema({
       apiKey: { type: String, default: '' },
       endpoint: { type: String, default: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions' },
       model: { type: String, default: 'doubao-seed-2-0-pro-260215' },
+    },
+    textToImage: {
+      apiKey: { type: String, default: '' },
+      endpoint: { type: String, default: 'https://tokenhub.tencentmaas.com/v1/api/image/submit' },
+      model: { type: String, default: 'hy-image-v3.0' },
     },
   },
   updatedAt: {

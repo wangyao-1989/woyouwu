@@ -233,7 +233,7 @@ export default function ImageCropper() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] py-6 px-4">
+    <div className="min-h-screen bg-[#F5F0E8] pt-20 pb-6 px-4">
       <div className="max-w-6xl mx-auto">
         <button
           onClick={() => navigate('/')}

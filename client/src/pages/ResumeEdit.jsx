@@ -274,7 +274,7 @@ function ResumeEdit() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] pb-8">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] pb-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
           <div>

@@ -164,7 +164,7 @@ function CreateItem() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <h1 className="heading-xl mb-6">
           {isEdit ? '编辑物品' : '发布闲置物品'}

@@ -16,29 +16,11 @@ const shareOptions = [
 function Home() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
-  const [videos, setVideos] = useState([]);
-  const [videosLoaded, setVideosLoaded] = useState(false);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [itemsError, setItemsError] = useState(null);
   const [showShareDropdown, setShowShareDropdown] = useState(false);
-  const videoIntervalRef = useRef(null);
   const shareDropdownRef = useRef(null);
-
-  useEffect(() => {
-    axios.get('/api/projects', { params: { hasVideo: 'true', limit: 20 } })
-      .then(res => {
-        if (res.data.projects && res.data.projects.length > 0) {
-          // 首页轮播只用直链/本地视频，排除云点播视频（videoFileId 的走点击播放，避免消耗CDN流量）
-          setVideos(res.data.projects.filter(p => p.video && p.video.trim() && !p.videoFileId));
-        }
-        setVideosLoaded(true);
-      })
-      .catch(() => {
-        setVideosLoaded(true);
-      });
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -65,14 +47,6 @@ function Home() {
         setItemsLoading(false);
       });
   }, []);
-
-  useEffect(() => {
-    if (videos.length <= 1) return;
-    videoIntervalRef.current = setInterval(() => {
-      setCurrentVideoIndex(prev => (prev + 1) % videos.length);
-    }, 8000);
-    return () => clearInterval(videoIntervalRef.current);
-  }, [videos]);
 
   const getTypeStyle = (type) => {
     switch (type) {
@@ -110,7 +84,7 @@ function Home() {
   const filters = ['all', 'creation', 'idea', 'stuff'];
 
   return (
-    <div className="min-h-screen fade-in" style={{ backgroundColor: '#F7F5F2' }}>
+    <div className="min-h-screen pt-20 fade-in" style={{ backgroundColor: '#F7F5F2' }}>
       <LiquidText />
       <div className="relative z-10">
       {/* Hero Section */}
@@ -159,86 +133,6 @@ function Home() {
           </svg>
         </div>
       </section>
-
-      {/* Video / Featured Section */}
-      {videosLoaded && videos.length > 0 && (
-        <section className="px-4 pb-8" style={{ paddingTop: '40px', paddingBottom: '140px' }}>
-          <div className="max-w-6xl mx-auto">
-            <h2 className="heading-xl mb-4">今日发现</h2>
-            <p className="section-desc mb-12">随机打开一个属于陌生人的故事</p>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="aspect-square bg-[#E8E3D9] rounded-[40px] overflow-hidden relative">
-                {videos.map((v, i) => (
-                  <video
-                    key={v._id}
-                    src={v.video}
-                    muted
-                    loop
-                    playsInline
-                    autoPlay
-                    preload="none"
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                  />
-                ))}
-                {videos.length > 1 && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-                    {videos.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setCurrentVideoIndex(i);
-                          if (videoIntervalRef.current) {
-                            clearInterval(videoIntervalRef.current);
-                            videoIntervalRef.current = setInterval(() => {
-                              setCurrentVideoIndex(prev => (prev + 1) % videos.length);
-                            }, 8000);
-                          }
-                        }}
-                        className={`w-2 h-2 rounded-full transition-all ${i === currentVideoIndex ? 'bg-white w-5' : 'bg-white/50 hover:bg-white/80'}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                {videos[currentVideoIndex] && (
-                  <>
-                    <Link to={`/projects/${videos[currentVideoIndex]._id}`}>
-                      <h3 className="text-3xl lg:text-4xl font-semibold text-[#222] mb-4 hover:text-[#555] transition-colors">
-                        {videos[currentVideoIndex].title || '项目作品'}
-                      </h3>
-                    </Link>
-                    {videos[currentVideoIndex].owner && (
-                      <p className="text-lg text-[#777] mb-6">
-                        {videos[currentVideoIndex].owner.nickname || videos[currentVideoIndex].owner.username}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-6 text-sm text-[#999]">
-                      {videos[currentVideoIndex].videoSource === '转载' ? (
-                        <>
-                          <span className="tag-capsule bg-[#FFF8E1] text-[#F57F17]">转载</span>
-                          {videos[currentVideoIndex].videoSourceLink && (
-                            <a
-                              href={videos[currentVideoIndex].videoSourceLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-[#555] truncate max-w-[200px]"
-                            >
-                              来源链接
-                            </a>
-                          )}
-                        </>
-                      ) : (
-                        <span className="tag-capsule bg-[#E8F5E9] text-[#2E7D32]">原创</span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* 资讯好望角 */}
       <NewsCorner />

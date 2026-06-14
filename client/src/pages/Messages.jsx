@@ -118,7 +118,7 @@ function Messages() {
   const unreadCount = messages.filter(m => !m.isRead).length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 fade-in">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 fade-in">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 heading-md ">消息通知</h1>
         {unreadCount > 0 && (

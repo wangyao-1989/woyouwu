@@ -157,7 +157,7 @@ function ProjectDetail() {
   const authorInfo = project.owner;
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <button onClick={() => navigate(-1)} className="mb-6 text-[#8B7355] hover:text-[#4A3728] flex items-center transition-colors">
           <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

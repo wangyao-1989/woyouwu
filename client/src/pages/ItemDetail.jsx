@@ -184,7 +184,7 @@ function ItemDetail() {
   const tagStyle = getCategoryColor(item.type);
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <Link to="/items" className="inline-flex items-center text-sm text-[#8B7355] hover:text-[#4A3728] mb-6 transition">
           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

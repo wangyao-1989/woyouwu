@@ -52,7 +52,7 @@ function ResumePreview() {
   const avatarSrc = resume.avatar || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.nickname || 'user'}`;
 
   return (
-    <div className="min-h-screen bg-[#FBF8F4]">
+    <div className="min-h-screen pt-20 bg-[#FBF8F4]">
       <div className="relative bg-gradient-to-br from-[#3A2A1E] via-[#4A3728] to-[#6B5A4E] text-white overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: 'radial-gradient(circle at 20% 50%, #fff 1px, transparent 1px), radial-gradient(circle at 80% 20%, #fff 1px, transparent 1px)',

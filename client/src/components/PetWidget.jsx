@@ -162,6 +162,15 @@ const PET_TOOLS = [
     route: '/stock-monitor',
   },
   {
+    id: 'text-to-image',
+    icon: '🎨',
+    label: '文生图',
+    desc: '一句话生成对应图片',
+    color: '#f59e0b',
+    bgColor: '#fffbeb',
+    route: '/text-to-image',
+  },
+  {
     id: 'more',
     icon: '🔮',
     label: '更多小工具',

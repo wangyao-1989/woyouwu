@@ -209,7 +209,7 @@ function CreateProject() {
   }
 
   return (
-    <div className="min-h-screen fade-in" style={{ backgroundColor: '#F7F5F2' }}>
+    <div className="min-h-screen pt-20 fade-in" style={{ backgroundColor: '#F7F5F2' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <h1 className="heading-xl mb-8">
           {isEdit ? '编辑项目' : '发布项目作品'}

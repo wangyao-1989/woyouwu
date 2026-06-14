@@ -165,7 +165,7 @@ export default function FinanceTracker() {
   const recentBills = sortedBills.slice(0, 20);
 
   return (
-    <div className="min-h-screen bg-[#f7f5f3] pb-20">
+    <div className="min-h-screen pt-20 bg-[#f7f5f3] pb-20">
       {/* 顶部导航 */}
       <div className="bg-white/80 backdrop-blur border-b border-slate-100 sticky top-0 z-50">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">

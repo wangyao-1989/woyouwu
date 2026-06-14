@@ -359,13 +359,32 @@ router.post('/upload-logo', auth, admin, upload.single('logo'), async (req, res)
   }
 });
 
+const EXTERNAL_API_DEFAULTS = {
+  aiChat: { apiKey: '', endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'doubao-seed-2-0-pro-260215' },
+  newsGeneration: { apiKey: '', endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'doubao-seed-2-0-pro-260215' },
+  resumeParse: { apiKey: '', endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'doubao-seed-2-0-pro-260215' },
+  textToImage: { apiKey: '', endpoint: 'https://tokenhub.tencentmaas.com/v1/api/image/submit', model: 'hy-image-v3.0' },
+};
+
 // 获取全局设置
 router.get('/settings', auth, admin, async (req, res) => {
   try {
     const settingsDoc = await Settings.getGlobalSettings();
     const settings = settingsDoc.toObject();
+
+    // 合并缺失的 API 配置默认值
+    if (!settings.externalApiConfig) {
+      settings.externalApiConfig = { ...EXTERNAL_API_DEFAULTS };
+    } else {
+      for (const [key, defaults] of Object.entries(EXTERNAL_API_DEFAULTS)) {
+        if (!settings.externalApiConfig[key]) {
+          settings.externalApiConfig[key] = { ...defaults };
+        }
+      }
+    }
+
     const envKey = process.env.DEEPSEEK_API_KEY || '';
-    if (settings.externalApiConfig && envKey) {
+    if (envKey) {
       for (const key of ['aiChat', 'newsGeneration', 'resumeParse']) {
         if (settings.externalApiConfig[key] && !settings.externalApiConfig[key].apiKey) {
           settings.externalApiConfig[key].apiKey = envKey;

@@ -403,7 +403,7 @@ function MBTITest() {
   const combinedAnalysis = result ? getCombinedAnalysis(result.type, selectedZodiac || savedZodiac) : null;
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen pt-20 bg-[#fafafa]">
       {/* 顶部导航 */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100/50">
         <div className="max-w-xl mx-auto px-5 h-12 flex items-center">

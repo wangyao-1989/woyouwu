@@ -136,7 +136,7 @@ function InspirationDetail() {
   const isOwner = user && (inspiration.author?._id === user.id || inspiration.author === user.id || inspiration.author?._id === user._id);
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] pb-8 fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] pb-8 fade-in">
       <div className="max-w-4xl mx-auto px-4">
         <button onClick={() => navigate(-1)} className="mb-6 text-[#8B7355] hover:text-[#4A3728] flex items-center text-sm">
           <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -83,7 +83,7 @@ function UserResume() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in">
       <div
         className="relative py-16"
         style={{

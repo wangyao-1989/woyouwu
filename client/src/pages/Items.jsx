@@ -49,7 +49,7 @@ function Items() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         {/* Header */}
         <div className="mb-8">

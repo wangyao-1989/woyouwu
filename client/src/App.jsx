@@ -37,6 +37,7 @@ import StockMonitor from './pages/StockMonitor';
 import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import StockDetail from './pages/StockDetail';
+import TextToImage from './pages/TextToImage';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -126,6 +127,7 @@ function App() {
             <Route path="/doc-converter" element={<DocumentConverter />} />
             <Route path="/resume-builder" element={<ResumeBuilder />} />
             <Route path="/stock-monitor" element={<ProtectedRoute><StockMonitor /></ProtectedRoute>} />
+            <Route path="/text-to-image" element={<TextToImage />} />
             <Route path="/market-list" element={<ProtectedRoute><MarketList /></ProtectedRoute>} />
             <Route path="/market-detail/:id" element={<ProtectedRoute><MarketDetail /></ProtectedRoute>} />
             <Route path="/stock-detail/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />

@@ -28,6 +28,7 @@ const resumeRoutes = require('./routes/resume');
 const convertRoutes = require('./routes/convert');
 const stockRoutes = require('./routes/stock');
 const marketRoutes = require('./routes/markets');
+const textToImageRoutes = require('./routes/textToImage');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -79,6 +80,7 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/convert', convertRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/markets', marketRoutes);
+app.use('/api/text-to-image', textToImageRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));

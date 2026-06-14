@@ -43,11 +43,13 @@ function AdminSettings() {
     newsGeneration: true,
     resumeParse: true,
     mbtiAvatar: true,
+    textToImage: true,
   });
   const [externalApiConfig, setExternalApiConfig] = useState({
     aiChat: { apiKey: '', endpoint: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
     newsGeneration: { apiKey: '', endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'doubao-seed-2-0-pro-260215' },
     resumeParse: { apiKey: '', endpoint: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
+    textToImage: { apiKey: '', endpoint: 'https://tokenhub.tencentmaas.com/v1/api/image/submit', model: 'hy-image-v3.0' },
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
 
@@ -91,11 +93,13 @@ function AdminSettings() {
           newsGeneration: true,
           resumeParse: true,
           mbtiAvatar: true,
+          textToImage: true,
         });
         setExternalApiConfig(res.data.settings.externalApiConfig || {
           aiChat: { apiKey: '', endpoint: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
           newsGeneration: { apiKey: '', endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'doubao-seed-2-0-pro-260215' },
           resumeParse: { apiKey: '', endpoint: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
+          textToImage: { apiKey: '', endpoint: 'https://tokenhub.tencentmaas.com/v1/api/image/submit', model: 'hy-image-v3.0' },
         });
 
         initialApisRef.current = { ...res.data.settings.externalApis };
@@ -301,7 +305,7 @@ function AdminSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] ">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] ">
       <div className="max-w-4xl mx-auto px-4 pb-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 heading-md ">系统设置</h1>
@@ -669,6 +673,47 @@ function AdminSettings() {
                     type="checkbox"
                     checked={externalApis.resumeParse}
                     onChange={() => handleApiToggle('resumeParse')}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-warm-900"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-800">文生图</h3>
+                  <p className="text-sm text-gray-600">AI文生图功能，根据文字描述生成图片</p>
+                  {externalApiConfig.textToImage && (
+                    <div className="mt-3 space-y-2">
+                      <input
+                        type="text"
+                        value={externalApiConfig.textToImage.apiKey || ''}
+                        onChange={(e) => setExternalApiConfig(prev => ({ ...prev, textToImage: { ...prev.textToImage, apiKey: e.target.value } }))}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs font-mono"
+                        placeholder="API Key"
+                      />
+                      <input
+                        type="text"
+                        value={externalApiConfig.textToImage.endpoint}
+                        onChange={(e) => setExternalApiConfig(prev => ({ ...prev, textToImage: { ...prev.textToImage, endpoint: e.target.value } }))}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs font-mono"
+                        placeholder="API Endpoint"
+                      />
+                      <input
+                        type="text"
+                        value={externalApiConfig.textToImage.model}
+                        onChange={(e) => setExternalApiConfig(prev => ({ ...prev, textToImage: { ...prev.textToImage, model: e.target.value } }))}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs font-mono"
+                        placeholder="模型名称（如 dall-e-3）"
+                      />
+                    </div>
+                  )}
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer ml-4">
+                  <input
+                    type="checkbox"
+                    checked={externalApis.textToImage}
+                    onChange={() => handleApiToggle('textToImage')}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-warm-900"></div>

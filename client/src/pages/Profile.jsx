@@ -433,7 +433,7 @@ function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] fade-in ">
+    <div className="min-h-screen pt-20 bg-[#F5F0E8] fade-in ">
       <div className="relative h-48 sm:h-64 bg-gradient-to-r from-warm-900 to-[#8B7355]">
         {profileUser.background && (
           <img

@@ -95,7 +95,7 @@ function CreateResource() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 fade-in">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
         {isEdit ? '编辑资源' : '发布资源'}
       </h1>

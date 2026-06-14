@@ -81,8 +81,8 @@ function LiquidText() {
 
     function createParticles() {
       particlesRef.current = [];
-      const w = canvas.width;
-      const h = canvas.height;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
 
       if (w === 0 || h === 0) return;
 
@@ -90,10 +90,8 @@ function LiquidText() {
       offCanvas.width = w;
       offCanvas.height = h;
       const offCtx = offCanvas.getContext('2d');
-      offCtx.scale(dpr, dpr);
 
       const textElements = document.querySelectorAll('.liquid-text');
-      const debugItems = [];
       offCtx.fillStyle = '#1e2432';
       offCtx.textBaseline = 'top';
       offCtx.textAlign = 'left';
@@ -107,13 +105,8 @@ function LiquidText() {
         if (!text) return;
 
         offCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-
         offCtx.fillText(text, rect.left, rect.top);
-
-        if (debug) debugItems.push(rect);
       });
-
-      debugRef.current.items = debugItems;
 
       const imgData = offCtx.getImageData(0, 0, w, h).data;
 
@@ -123,7 +116,7 @@ function LiquidText() {
           const alpha = imgData[idx + 3];
           if (alpha > 40) {
             const color = `rgba(30, 36, 50, ${alpha / 255})`;
-            particlesRef.current.push(new Particle(x / dpr, y / dpr, color));
+            particlesRef.current.push(new Particle(x, y, color));
           }
         }
       }
@@ -204,11 +197,9 @@ function LiquidText() {
       animate();
     }
 
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(startAnimation).catch(startAnimation);
-    } else {
-      setTimeout(startAnimation, 100);
-    }
+    requestAnimationFrame(() => {
+      setTimeout(startAnimation, 50);
+    });
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
