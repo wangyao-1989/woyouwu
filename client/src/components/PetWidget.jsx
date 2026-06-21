@@ -171,6 +171,15 @@ const PET_TOOLS = [
     route: '/text-to-image',
   },
   {
+    id: 'scraper',
+    icon: '�',
+    label: '果果研究助手',
+    desc: 'AI驱动多源搜索+综合分析报告',
+    color: '#d97706',
+    bgColor: '#fffbeb',
+    route: '/scraper',
+  },
+  {
     id: 'more',
     icon: '🔮',
     label: '更多小工具',
@@ -690,6 +699,10 @@ function PetWidget() {
 
     const handleMouseMove = (e) => {
       if (!isDraggingRef.current) return;
+      // 移动超过 5px 才算拖拽，避免点击时的微小抖动吞掉弹窗
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
       dragMovedRef.current = true;
       posRef.current = {
         x: Math.max(10, Math.min(window.innerWidth - 160, e.clientX + dragOffsetRef.current.x)),
@@ -732,6 +745,10 @@ function PetWidget() {
     const handleTouchMove = (e) => {
       if (!isDraggingRef.current || e.touches.length !== 1) return;
       e.preventDefault();
+      // 移动超过 5px 才算拖拽，避免点击时的微小抖动吞掉弹窗
+      const dx = e.touches[0].clientX - dragStartRef.current.x;
+      const dy = e.touches[0].clientY - dragStartRef.current.y;
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
       dragMovedRef.current = true;
       posRef.current = {
         x: Math.max(10, Math.min(window.innerWidth - 160, e.touches[0].clientX + dragOffsetRef.current.x)),

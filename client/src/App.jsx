@@ -16,6 +16,7 @@ import Users from './pages/Users';
 import Messages from './pages/Messages';
 import AdminSettings from './pages/AdminSettings';
 import AdminUsers from './pages/AdminUsers';
+import AdminReferences from './pages/AdminReferences';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import CreateProject from './pages/CreateProject';
@@ -38,6 +39,7 @@ import MarketList from './pages/MarketList';
 import MarketDetail from './pages/MarketDetail';
 import StockDetail from './pages/StockDetail';
 import TextToImage from './pages/TextToImage';
+import ScraperTool from './pages/ScraperTool';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -131,11 +133,15 @@ function App() {
             <Route path="/market-list" element={<ProtectedRoute><MarketList /></ProtectedRoute>} />
             <Route path="/market-detail/:id" element={<ProtectedRoute><MarketDetail /></ProtectedRoute>} />
             <Route path="/stock-detail/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
+<Route path="/scraper" element={<ScraperTool />} />
             <Route path="/admin/settings" element={
               <AdminRoute><AdminSettings /></AdminRoute>
             } />
             <Route path="/admin/users" element={
               <AdminRoute><AdminUsers /></AdminRoute>
+            } />
+            <Route path="/admin/references" element={
+              <AdminRoute><AdminReferences /></AdminRoute>
             } />
             <Route path="/projects" element={<ErrorBoundary key="projects"><Projects /></ErrorBoundary>} />
             <Route path="/projects/create" element={

@@ -7,6 +7,7 @@ const { admin } = require('../middleware/admin');
 const upload = require('../middleware/upload');
 const Settings = require('../models/Settings');
 const ApiUsage = require('../models/ApiUsage');
+const ReferenceClip = require('../models/ReferenceClip');
 
 const router = express.Router();
 
@@ -461,6 +462,175 @@ router.get('/api-usage/stats', auth, admin, async (req, res) => {
   } catch (error) {
     console.error('获取API使用统计失败:', error);
     res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// ==================== 参考内容库 ====================
+
+// 获取参考内容列表（支持搜索和分页）
+router.get('/references', auth, admin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = '', type = '' } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = {};
+    if (search) {
+      // 使用 MongoDB 全文搜索
+      query.$text = { $search: search };
+    }
+    if (type && ['webpage', 'code', 'design', 'other'].includes(type)) {
+      query.type = type;
+    }
+
+    const [items, total] = await Promise.all([
+      ReferenceClip.find(query, search ? { score: { $meta: 'textScore' } } : {})
+        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate('createdBy', 'username nickname avatar')
+        .lean(),
+      ReferenceClip.countDocuments(query)
+    ]);
+
+    res.json({
+      items,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    // 如果全文搜索索引不存在，回退到正则搜索
+    if (error.message && error.message.includes('text index')) {
+      try {
+        const { page = 1, limit = 20, search = '', type = '' } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        let query = {};
+        if (search) {
+          const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+          query.$or = [
+            { title: regex },
+            { content: regex },
+            { note: regex },
+            { tags: regex },
+            { sourceUrl: regex }
+          ];
+        }
+        if (type && ['webpage', 'code', 'design', 'other'].includes(type)) {
+          query.type = type;
+        }
+
+        const [items, total] = await Promise.all([
+          ReferenceClip.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate('createdBy', 'username nickname avatar')
+            .lean(),
+          ReferenceClip.countDocuments(query)
+        ]);
+
+        return res.json({
+          items,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit))
+        });
+      } catch (fallbackError) {
+        console.error('参考内容搜索失败:', fallbackError);
+        return res.status(500).json({ message: '搜索失败' });
+      }
+    }
+    console.error('获取参考内容列表失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取单个参考内容
+router.get('/references/:id', auth, admin, async (req, res) => {
+  try {
+    const item = await ReferenceClip.findById(req.params.id)
+      .populate('createdBy', 'username nickname avatar')
+      .lean();
+
+    if (!item) {
+      return res.status(404).json({ message: '参考内容不存在' });
+    }
+
+    res.json({ item });
+  } catch (error) {
+    console.error('获取参考内容失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 创建参考内容
+router.post('/references', auth, admin, async (req, res) => {
+  try {
+    const { title, content, sourceUrl, note, tags, type } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: '标题不能为空' });
+    }
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: '内容不能为空' });
+    }
+
+    const clip = await ReferenceClip.create({
+      title: title.trim(),
+      content: content.trim(),
+      sourceUrl: (sourceUrl || '').trim(),
+      note: (note || '').trim(),
+      tags: (tags || []).map(t => t.trim()).filter(Boolean),
+      type: type || 'webpage',
+      createdBy: req.user._id
+    });
+
+    res.status(201).json({ message: '参考内容已保存', item: clip });
+  } catch (error) {
+    console.error('创建参考内容失败:', error);
+    res.status(500).json({ message: '保存失败' });
+  }
+});
+
+// 更新参考内容
+router.put('/references/:id', auth, admin, async (req, res) => {
+  try {
+    const { title, content, sourceUrl, note, tags, type } = req.body;
+
+    const clip = await ReferenceClip.findById(req.params.id);
+    if (!clip) {
+      return res.status(404).json({ message: '参考内容不存在' });
+    }
+
+    if (title !== undefined) clip.title = title.trim();
+    if (content !== undefined) clip.content = content.trim();
+    if (sourceUrl !== undefined) clip.sourceUrl = (sourceUrl || '').trim();
+    if (note !== undefined) clip.note = (note || '').trim();
+    if (tags !== undefined) clip.tags = (tags || []).map(t => t.trim()).filter(Boolean);
+    if (type !== undefined) clip.type = type;
+
+    await clip.save();
+
+    res.json({ message: '参考内容已更新', item: clip });
+  } catch (error) {
+    console.error('更新参考内容失败:', error);
+    res.status(500).json({ message: '更新失败' });
+  }
+});
+
+// 删除参考内容
+router.delete('/references/:id', auth, admin, async (req, res) => {
+  try {
+    const clip = await ReferenceClip.findByIdAndDelete(req.params.id);
+    if (!clip) {
+      return res.status(404).json({ message: '参考内容不存在' });
+    }
+
+    res.json({ message: '参考内容已删除' });
+  } catch (error) {
+    console.error('删除参考内容失败:', error);
+    res.status(500).json({ message: '删除失败' });
   }
 });
 

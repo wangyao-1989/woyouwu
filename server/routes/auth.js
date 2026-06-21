@@ -80,7 +80,11 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Register error:', error.message);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ message: messages.join('；') });
+    }
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
 });
@@ -122,7 +126,11 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', error.message);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ message: messages.join('；') });
+    }
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
 });

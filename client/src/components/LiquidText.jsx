@@ -1,5 +1,4 @@
 import { useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 
 const PARTICLE_SIZE = 1.2;
 const SAMPLE_STEP = 1;
@@ -54,36 +53,37 @@ function LiquidText() {
   const particlesRef = useRef([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const animRef = useRef(null);
-  const debugRef = useRef({ enabled: false, items: [] });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
     if (!ctx) return;
 
-    const debug = new URLSearchParams(window.location.search).get('debug') === '1';
-    debugRef.current.enabled = debug;
-
     const dpr = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    ctx.scale(dpr, dpr);
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
+    function resizeCanvas() {
+      const rect = parent.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeCanvas();
 
     ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0, 0, width, height);
-
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
     function createParticles() {
       particlesRef.current = [];
-      const w = window.innerWidth;
-      const h = window.innerHeight;
 
+      const canvasRect = canvas.getBoundingClientRect();
+      const w = canvasRect.width;
+      const h = canvasRect.height;
       if (w === 0 || h === 0) return;
 
       const offCanvas = document.createElement('canvas');
@@ -105,7 +105,7 @@ function LiquidText() {
         if (!text) return;
 
         offCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-        offCtx.fillText(text, rect.left, rect.top);
+        offCtx.fillText(text, rect.left - canvasRect.left, rect.top - canvasRect.top);
       });
 
       const imgData = offCtx.getImageData(0, 0, w, h).data;
@@ -122,20 +122,7 @@ function LiquidText() {
       }
     }
 
-    let prevScrollY = window.scrollY;
-
     function animate() {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - prevScrollY;
-      if (scrollDelta !== 0) {
-        const particles = particlesRef.current;
-        for (let i = 0; i < particles.length; i++) {
-          particles[i].originY -= scrollDelta;
-          particles[i].y -= scrollDelta;
-        }
-        prevScrollY = currentScrollY;
-      }
-
       ctx.fillStyle = BG_COLOR;
       ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
@@ -145,41 +132,18 @@ function LiquidText() {
         particles[i].update(mouse);
         particles[i].draw(ctx);
       }
-
-      if (debugRef.current.enabled) {
-        debugRef.current.items.forEach(rect => {
-          ctx.strokeStyle = 'rgba(255,50,50,0.9)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(rect.left, rect.top, rect.width, rect.height);
-
-          ctx.font = '11px monospace';
-          ctx.fillStyle = 'rgba(255,50,50,0.9)';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(
-            `${rect.width.toFixed(0)}x${rect.height.toFixed(0)} top=${rect.top.toFixed(0)}`,
-            rect.left + 2,
-            rect.top - 2
-          );
-        });
-      }
-
       animRef.current = requestAnimationFrame(animate);
     }
 
     function handleResize() {
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      prevScrollY = window.scrollY;
+      resizeCanvas();
       createParticles();
     }
 
     function handleMouseMove(e) {
-      mouseRef.current.x = e.clientX;
-      mouseRef.current.y = e.clientY;
+      const canvasRect = canvas.getBoundingClientRect();
+      mouseRef.current.x = e.clientX - canvasRect.left;
+      mouseRef.current.y = e.clientY - canvasRect.top;
     }
 
     function handleMouseOut() {
@@ -192,30 +156,32 @@ function LiquidText() {
     window.addEventListener('resize', handleResize);
 
     function startAnimation() {
-      prevScrollY = window.scrollY;
       createParticles();
       animate();
     }
 
-    requestAnimationFrame(() => {
-      setTimeout(startAnimation, 50);
-    });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(startAnimation).catch(startAnimation);
+    } else {
+      startAnimation();
+    }
+    const fastTimer = setTimeout(startAnimation, 300);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseout', handleMouseOut);
       window.removeEventListener('resize', handleResize);
       if (animRef.current) cancelAnimationFrame(animRef.current);
+      clearTimeout(fastTimer);
     };
   }, []);
 
-  return createPortal(
+  return (
     <canvas
       ref={canvasRef}
       className="liquid-text-canvas"
       aria-hidden="true"
-    />,
-    document.body
+    />
   );
 }
 

@@ -62,9 +62,7 @@ function VideoPlayer({
 
     const initPlayer = async () => {
       try {
-        // 动态导入 xgplayer
-        const PlayerModule = await import('xgplayer');
-        const Player = PlayerModule.default;
+        const XgPlayer = (await import('xgplayer')).default;
 
         // 确保之前播放器已销毁
         if (playerRef.current) {
@@ -72,7 +70,7 @@ function VideoPlayer({
           playerRef.current = null;
         }
 
-        const player = new Player({
+        const player = new XgPlayer({
           id: containerRef.current.id || 'xgplayer-container',
           el: containerRef.current,
           url: resolvedUrl,

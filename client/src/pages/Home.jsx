@@ -85,10 +85,10 @@ function Home() {
 
   return (
     <div className="min-h-screen pt-20 fade-in" style={{ backgroundColor: '#F7F5F2' }}>
-      <LiquidText />
       <div className="relative z-10">
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col items-center justify-center text-center px-4 pt-16 relative overflow-hidden">
+        <LiquidText />
         <div className="relative z-10 max-w-3xl mx-auto">
           <h1 className="text-3xl lg:text-6xl font-semibold text-[#222] leading-relaxed mb-0">
             <span className="liquid-text">淀于心者为种，破于世者为木</span>

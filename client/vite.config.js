@@ -15,6 +15,13 @@ export default defineConfig({
   build: {
     target: ['es2021', 'chrome80'],
     cssTarget: ['chrome80'],
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          xgplayer: ['xgplayer'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

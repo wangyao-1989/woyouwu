@@ -67,53 +67,68 @@ function Users() {
               <Link
                 key={user._id}
                 to={`/profile/${user._id}`}
-                className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition group"
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow group"
               >
-                <div className="h-24 bg-gradient-to-r from-primary-500 to-secondary-500 relative">
+                {/* 顶部渐变色条 + 头像悬浮 */}
+                <div className="relative h-20 bg-gradient-to-r from-[#C47A5A] to-[#D4A853] rounded-t-2xl">
                   {user.background && (
                     <img
                       src={user.background}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-t-2xl"
                     />
                   )}
-                </div>
-                <div className="p-4 pt-0 -mt-10 relative">
-                  <img
-                    src={user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.nickname}`}
-                    alt={user.nickname}
-                    className="w-20 h-20 rounded-full border-4 border-white shadow-lg bg-gray-200 group-hover:scale-105 transition"
-                  />
-                  <div className="mt-3">
-                    <h3 className="font-semibold text-gray-800 truncate">{user.nickname}</h3>
-                    <p className="text-sm text-gray-500">@{user.username}</p>
-                    {user.bio && (
-                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">{user.bio}</p>
-                    )}
-                    {user.location && (
-                      <p className="text-xs text-gray-400 mt-2 flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {user.location}
-                      </p>
-                    )}
-                    {user.skills && user.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {user.skills.slice(0, 3).map((skill, index) => (
-                          <span key={index} className="px-2 py-0.5 bg-primary-50 text-primary-600 text-xs rounded-full">
-                            {skill}
-                          </span>
-                        ))}
-                        {user.skills.length > 3 && (
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
-                            +{user.skills.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2">
+                    <img
+                      src={user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.nickname}`}
+                      alt={user.nickname}
+                      className="w-20 h-20 rounded-full border-4 border-white shadow-md bg-gray-200 object-cover group-hover:scale-105 transition-transform"
+                    />
                   </div>
+                </div>
+
+                {/* 名字 + 用户名 */}
+                <div className="text-center px-4 mt-12">
+                  <h3 className="font-semibold text-gray-800 text-base truncate">{user.nickname}</h3>
+                  <p className="text-sm text-gray-400">@{user.username}</p>
+                </div>
+
+                {/* 简介 */}
+                {user.bio && (
+                  <p className="text-center text-sm text-gray-500 line-clamp-2 px-4 mt-2">{user.bio}</p>
+                )}
+
+                {/* 地区 */}
+                {user.location && (
+                  <div className="flex justify-center mt-2">
+                    <span className="text-xs text-gray-400 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {user.location}
+                    </span>
+                  </div>
+                )}
+
+                {/* 技能标签 */}
+                <div className="px-4 pb-5 mt-3">
+                  {user.skills && user.skills.length > 0 ? (
+                    <div className="flex flex-wrap justify-center gap-1">
+                      {user.skills.slice(0, 3).map((skill, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-[#F7F5F2] text-[#8B7355] text-xs rounded-full">
+                          {skill}
+                        </span>
+                      ))}
+                      {user.skills.length > 3 && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-xs rounded-full">
+                          +{user.skills.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-5" />
+                  )}
                 </div>
               </Link>
             ))}

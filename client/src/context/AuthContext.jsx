@@ -24,7 +24,13 @@ export const AuthProvider = ({ children }) => {
         if (error.response?.status === 401) {
           const message = error.response.data?.message;
           if (message === '用户不存在' || message === '认证失败，请重新登录') {
-            handleAutoLogout();
+            const currentToken = localStorage.getItem('token');
+            const requestToken = error.config?.headers?.Authorization?.replace('Bearer ', '');
+            // Only auto-logout if the failing request used the SAME token as the current session.
+            // This prevents stale requests from a previous session clearing the new login.
+            if (currentToken && requestToken && requestToken === currentToken) {
+              handleAutoLogout();
+            }
           }
         }
         return Promise.reject(error);
@@ -53,18 +59,26 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     const res = await axios.post('/api/auth/login', { username, password });
-    const { token } = res.data;
+    const { token, user: userData } = res.data;
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    await fetchUser();
+    if (userData) {
+      setUser(userData);
+    } else {
+      await fetchUser();
+    }
   };
 
   const register = async (data) => {
     const res = await axios.post('/api/auth/register', data);
-    const { token } = res.data;
+    const { token, user: userData } = res.data;
     localStorage.setItem('token', token);
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    await fetchUser();
+    if (userData) {
+      setUser(userData);
+    } else {
+      await fetchUser();
+    }
   };
 
   const logout = () => {

@@ -243,6 +243,13 @@ function Navbar() {
                           >
                             用户管理
                           </Link>
+                          <Link
+                            to="/admin/references"
+                            onClick={() => setShowDropdown(false)}
+                            className="block px-4 py-2.5 text-sm text-[#555] hover:text-[#222] hover:bg-[#F7F5F2] transition-colors"
+                          >
+                            参考内容库
+                          </Link>
                         </>
                       )}
                       <div className="border-t border-[#F0EDE8] mt-2 pt-2">
