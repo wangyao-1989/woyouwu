@@ -96,6 +96,9 @@ function Home() {
           <p className="text-xl text-[#777] max-w-xl mx-auto mt-10 leading-relaxed">
             你的随手分享，或许正在照亮他人的夜空
           </p>
+          <p className="text-base text-[#8B7355] mb-2 max-w-md mx-auto leading-relaxed">
+            一个记录物品故事、开启闲置交换的暖心社区
+          </p>
           <p className="text-base text-[#999] mb-10 max-w-md mx-auto">
             因物而见，因悟而明！
           </p>
@@ -141,7 +144,28 @@ function Home() {
       <section className="px-4" style={{ paddingTop: '40px', paddingBottom: '140px' }}>
         <div className="max-w-6xl mx-auto">
           <h2 className="heading-xl mb-4">继续探索</h2>
-          <p className="section-desc mb-12">发现更多来自社区的好物、创作与灵感</p>
+          <p className="section-desc mb-8">发现更多来自社区的好物、创作与灵感</p>
+
+          {/* 快捷分类栏 */}
+          <div className="flex flex-wrap items-center gap-3 mb-10">
+            {[
+              { label: '数码电子', icon: 'smartphone', to: '/items?category=数码电子' },
+              { label: '家居生活', icon: 'home', to: '/items?category=家居生活' },
+              { label: '图书文具', icon: 'book', to: '/items?category=图书文具' },
+              { label: '服饰配饰', icon: 'shirt', to: '/items?category=服饰配饰' },
+              { label: '运动户外', icon: 'activity', to: '/items?category=运动户外' },
+              { label: '全部好物', icon: 'cube', to: '/items' },
+            ].map(cat => (
+              <Link
+                key={cat.label}
+                to={cat.to}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#E8E0D5] rounded-xl text-sm text-[#555] hover:text-[#222] hover:border-[#c75151] hover:shadow-sm transition-all group"
+              >
+                <Icon name={cat.icon} className="w-4 h-4 text-[#999] group-hover:text-[#c75151] transition-colors" />
+                <span>{cat.label}</span>
+              </Link>
+            ))}
+          </div>
 
           {/* Filter + View Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
@@ -259,16 +283,16 @@ function Home() {
                           />
                           <span className="text-sm text-[#999]">{item.owner?.nickname || item.owner?.username}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-[#ccc]">
-                          <span className="flex items-center gap-1">
-                            <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-[#c75151]">
+                            <svg aria-hidden="true" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                             {item.likes?.length || 0}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          <span className="flex items-center gap-1 text-[#6b8a9a]">
+                            <svg aria-hidden="true" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                             {item.comments?.length || 0}
                           </span>
@@ -327,16 +351,16 @@ function Home() {
                           />
                           <span className="text-sm text-[#999]">{item.owner?.nickname || item.owner?.username}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-[#ccc]">
-                          <span className="flex items-center gap-1">
-                            <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-[#c75151]">
+                            <svg aria-hidden="true" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                             {item.likes?.length || 0}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          <span className="flex items-center gap-1 text-[#6b8a9a]">
+                            <svg aria-hidden="true" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                             {item.comments?.length || 0}
                           </span>

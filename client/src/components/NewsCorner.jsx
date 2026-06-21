@@ -340,71 +340,100 @@ function NewsCorner() {
         {preferenceBar}
 
         {hasNews ? (
-          <div className="bg-white rounded-2xl card-ring overflow-hidden">
-            {news.slice(0, 10).map((item, index) => {
+          <div>
+            {/* 头条置顶卡 */}
+            {news.slice(0, 1).map((item, index) => {
               const colorStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.life;
               const isExpanded = expandedDetail === (item._id || index);
-
               return (
-                <div
-                  key={item._id || index}
-                  className={`transition-all duration-300 ${index > 0 ? 'border-t border-gray-100' : ''}`}
-                >
-                  <button
+                <div key={item._id || index} className="mb-4">
+                  <div
+                    className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => setExpandedDetail(isExpanded ? null : (item._id || index))}
-                    className="w-full text-left px-5 py-3.5 hover:bg-gray-50/60 transition-colors group"
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="text-sm text-gray-300 font-mono min-w-[1.25rem] pt-0.5">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-full flex-shrink-0 mt-0.5 ${colorStyle.bg} ${colorStyle.text}`}>
-                        {CATEGORY_LABELS[item.category] || '综合'}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className={`text-sm leading-relaxed transition-colors ${isExpanded ? 'text-primary-600 font-medium' : 'text-gray-800 group-hover:text-primary-500'}`}>
-                          {item.summary || item.title}
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-medium rounded-full ${colorStyle.bg} ${colorStyle.text} border ${colorStyle.border}`}>
+                          🔥 今日推荐
                         </span>
-                      </span>
-                      <span className="text-xs text-gray-300 flex-shrink-0 mt-0.5 whitespace-nowrap">
-                        AI生成 · {formatTime(item.publishDate)}
-                      </span>
-                      <svg
-                        className={`w-4 h-4 flex-shrink-0 mt-1 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-primary-500' : 'text-gray-300 group-hover:text-gray-400'}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                        <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${colorStyle.bg} ${colorStyle.text}`}>
+                          {CATEGORY_LABELS[item.category] || '综合'}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-gray-900 mb-2 leading-snug">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 mb-3">
+                        {item.summary}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">AI生成 · {formatTime(item.publishDate)}</span>
+                        <svg
+                          className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-primary-500' : 'text-gray-300'}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
-                  </button>
-
-                  {isExpanded && item.detail && (
-                    <div className="px-5 pb-5">
-                      <div className="ml-11 bg-gradient-to-br from-gray-50 to-primary-50/30 rounded-xl p-5 border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-base font-bold text-gray-900">{item.title}</h4>
-                          <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">AI生成 · {formatTime(item.publishDate)}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                          {item.detail}
-                        </p>
+                    {isExpanded && item.detail && (
+                      <div className="px-5 pb-5 border-t border-gray-100 pt-4">
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{item.detail}</p>
                         {item.relatedKeywords && item.relatedKeywords.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-4 pt-3 border-t border-gray-200/60">
+                          <div className="flex flex-wrap gap-1.5 mt-3">
                             {item.relatedKeywords.map((kw, ki) => (
-                              <span key={ki} className="text-[11px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                                #{kw}
-                              </span>
+                              <span key={ki} className="text-[11px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">#{kw}</span>
                             ))}
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}
+
+            {/* 其余资讯卡片网格 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {news.slice(1, 9).map((item, index) => {
+                const idx = index + 1;
+                const colorStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.life;
+                const isExpanded = expandedDetail === (item._id || idx);
+                return (
+                  <div
+                    key={item._id || idx}
+                    className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
+                    onClick={() => setExpandedDetail(isExpanded ? null : (item._id || idx))}
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${colorStyle.bg} ${colorStyle.text}`}>
+                          {CATEGORY_LABELS[item.category] || '综合'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{formatTime(item.publishDate)}</span>
+                      </div>
+                      <p className={`text-sm leading-relaxed mb-2 transition-colors ${isExpanded ? 'text-primary-600 font-medium' : 'text-gray-700'}`}>
+                        {item.summary || item.title}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400">AI生成</span>
+                        <svg
+                          className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-primary-500' : 'text-gray-300'}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                    {isExpanded && item.detail && (
+                      <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                        <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{item.detail}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className="bg-gradient-to-br from-primary-50/30 via-amber-50/20 to-teal-50/30 rounded-2xl border border-gray-100 p-8 text-center">

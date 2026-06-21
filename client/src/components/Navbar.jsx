@@ -28,10 +28,20 @@ function Navbar() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState('');
   const [logoFailed, setLogoFailed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPublishDropdown, setShowPublishDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const searchCategories = [
+    { value: '', label: '全部' },
+    { value: '数码电子', label: '数码电子' },
+    { value: '家居生活', label: '家居生活' },
+    { value: '图书文具', label: '图书文具' },
+    { value: '服饰配饰', label: '服饰配饰' },
+    { value: '运动户外', label: '运动户外' },
+  ];
   const dropdownRef = useRef(null);
   const publishDropdownRef = useRef(null);
 
@@ -73,9 +83,13 @@ function Navbar() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/items?search=${encodeURIComponent(searchQuery)}`);
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    if (searchCategory) params.set('category', searchCategory);
+    if (params.toString()) {
+      navigate(`/items?${params.toString()}`);
       setSearchQuery('');
+      setSearchCategory('');
     }
   };
 
@@ -88,7 +102,7 @@ function Navbar() {
   return (
     <nav className="glass fixed top-0 left-0 right-0 z-50 border-b border-[#EBE7E0]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center min-h-16 py-1.5">
           {/* Logo */}
           <div className="flex items-center gap-3">
             {location.pathname !== '/' && (
@@ -120,12 +134,12 @@ function Navbar() {
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-5 flex-wrap">
             {navLinks.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`text-sm transition-colors duration-200 ${
+                className={`text-sm whitespace-nowrap transition-colors duration-200 ${
                   isActive(link.to)
                     ? 'text-[#222] font-medium'
                     : 'text-[#777] hover:text-[#222]'
@@ -137,20 +151,36 @@ function Navbar() {
           </div>
 
           {/* Right Side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 lg:gap-4">
             {/* Search */}
-            <form onSubmit={handleSearch} className="hidden md:block">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="search"
-                  autoComplete="off"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索..."
-                  className="w-48 pl-9 pr-4 py-1.5 bg-white/60 border border-[#EBE7E0] rounded-full text-sm text-[#222] placeholder-[#bbb] focus:outline-none focus:ring-2 focus:ring-[#222]/10 focus:border-[#ccc] focus:bg-white transition-all"
-                />
-                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#bbb]" />
+            <form onSubmit={handleSearch} className="hidden md:flex lg:hidden xl:flex items-center">
+              <div className="flex items-center">
+                <div className="relative">
+                  <select
+                    value={searchCategory}
+                    onChange={(e) => setSearchCategory(e.target.value)}
+                    className="appearance-none bg-white/60 border border-[#EBE7E0] rounded-l-full text-xs text-[#777] py-1.5 pl-3 pr-7 focus:outline-none focus:ring-2 focus:ring-[#222]/10 focus:border-[#ccc] focus:bg-white transition-all cursor-pointer"
+                  >
+                    {searchCategories.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#bbb] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                <div className="relative ml-1">
+                  <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#bbb]" />
+                  <input
+                    type="text"
+                    name="search"
+                    autoComplete="off"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜索物品、故事..."
+                    className="w-36 lg:w-44 xl:w-52 pl-9 pr-4 py-1.5 bg-white/60 border border-[#EBE7E0] rounded-r-full text-sm text-[#222] placeholder-[#bbb] focus:outline-none focus:ring-2 focus:ring-[#222]/10 focus:border-[#ccc] focus:bg-white transition-all"
+                  />
+                </div>
               </div>
             </form>
 
@@ -312,17 +342,28 @@ function Navbar() {
               ))}
               {/* Mobile search */}
               <form onSubmit={(e) => { handleSearch(e); setMobileMenuOpen(false); }} className="md:hidden mt-2">
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="search-mobile"
-                    autoComplete="off"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#EBE7E0] rounded-full text-sm text-[#222] placeholder-[#bbb] focus:outline-none focus:ring-2 focus:ring-[#222]/10 focus:border-[#ccc] transition-all"
-                  />
-                  <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#bbb]" />
+                <div className="flex items-center gap-2">
+                  <select
+                    value={searchCategory}
+                    onChange={(e) => setSearchCategory(e.target.value)}
+                    className="appearance-none bg-white border border-[#EBE7E0] rounded-full text-xs text-[#777] py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-[#222]/10 cursor-pointer flex-shrink-0"
+                  >
+                    {searchCategories.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                  </select>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      name="search-mobile"
+                      autoComplete="off"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="搜索物品、故事..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#EBE7E0] rounded-full text-sm text-[#222] placeholder-[#bbb] focus:outline-none focus:ring-2 focus:ring-[#222]/10 focus:border-[#ccc] transition-all"
+                    />
+                    <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#bbb]" />
+                  </div>
                 </div>
               </form>
               {user && (

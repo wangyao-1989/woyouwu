@@ -352,8 +352,27 @@ function CreateItem() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              备注/描述 <span className="text-xs text-[#B8A899] font-normal">（选填，可填写物品成色细节、有效期、特殊说明等）</span>
+              物品故事 <span className="text-xs text-[#B8A899] font-normal">（可选，点击模板快速填写）</span>
             </label>
+
+            {/* 故事模板 */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[
+                { label: '🕰️ 时光故事', text: '我这件物品买于____，它陪伴我度过了____时光，现在希望它能去____。' },
+                { label: '🎁 礼物记忆', text: '这件物品是____送给我的，当时____。因为____，决定让它找到新的主人。' },
+                { label: '📸 旅途见证', text: '它陪我去过____，见证了____，希望下一位主人也能带着它继续远行。' },
+                { label: '✨ 简单说说', text: '关于这件物品，我想说：____' },
+              ].map(tpl => (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, description: tpl.text })}
+                  className="px-3 py-1.5 bg-[#FDF8F5] border border-[#E8D5C8] rounded-full text-xs text-[#8B7355] hover:bg-[#F8EDE4] hover:border-[#c75151] hover:text-[#4A3728] transition-all"
+                >
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
             <textarea
               name="description"
               value={formData.description}
