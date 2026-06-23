@@ -64,7 +64,7 @@ router.post('/register', async (req, res) => {
     code.usedAt = new Date();
     await code.save();
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user._id, username: user.username, nickname: user.nickname }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       message: '注册成功',
@@ -107,7 +107,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: '用户名或密码错误' });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user._id, username: user.username, nickname: user.nickname }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       message: '登录成功',

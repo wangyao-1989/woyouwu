@@ -277,7 +277,10 @@ function Profile() {
     try {
       const res = await axios.post(`/api/users/${profileId}/follow`);
       setIsFollowing(res.data.isFollowing);
-      fetchProfile();
+      setStats(prev => ({
+        ...prev,
+        followers: prev.followers + (res.data.isFollowing ? 1 : -1),
+      }));
     } catch (error) {
       alert('操作失败');
     }

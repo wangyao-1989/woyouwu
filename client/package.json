@@ -26,6 +26,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.21.1",
     "remark-gfm": "^4.0.1",
+    "socket.io-client": "^4.7.5",
     "tesseract.js": "^5.1.1",
     "three": "^0.184.0",
     "vod-js-sdk-v6": "^1.8.0",

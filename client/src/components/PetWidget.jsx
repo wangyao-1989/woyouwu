@@ -1104,6 +1104,13 @@ function PetWidget() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
+              <button
+                  onClick={() => { setIsChatOpen(false); navigate('/mini-games'); }}
+                  className="text-white hover:opacity-80 transition p-1 rounded-full hover:bg-white/10 text-sm font-medium"
+                  title="娱乐岛"
+                >
+                  🎮
+                </button>
               <button onClick={() => setIsChatOpen(false)} className="text-white hover:opacity-80 transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1125,15 +1132,25 @@ function PetWidget() {
                       )}
                     </div>
                     <div className="max-w-[95%] bg-white rounded-2xl rounded-bl-md border border-orange-200 p-3">
-                      <p className="text-xs text-gray-500 mb-2 font-medium">🔧 我的小工具包</p>
-                      <button
-                        onClick={() => { setIsChatOpen(false); setIsToolModalOpen(true); }}
-                        className="w-full rounded-xl px-4 py-3 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-center hover:shadow-md transition-all duration-200 group"
-                      >
-                        <img src={toolboxGifUrl} alt="工具箱" className="w-12 h-12 mx-auto mb-1 rounded-lg object-cover group-hover:scale-110 transition-transform" />
-                        <span className="text-sm font-medium text-orange-600 block">打开工具箱</span>
-                        <span className="text-xs text-gray-400">{PET_TOOLS.filter(t => !t.disabled).length} 个实用工具</span>
-                      </button>
+                      <p className="text-xs text-gray-500 mb-2 font-medium">🧩 我的娱乐</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setIsChatOpen(false); setIsToolModalOpen(true); }}
+                          className="flex-1 rounded-xl px-3 py-3 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-center hover:shadow-md transition-all duration-200 group"
+                        >
+                          <img src={toolboxGifUrl} alt="工具箱" className="w-10 h-10 mx-auto mb-1 rounded-lg object-cover group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-medium text-orange-600 block">工具箱</span>
+                          <span className="text-xs text-gray-400">{PET_TOOLS.filter(t => !t.disabled).length} 工具</span>
+                        </button>
+                        <button
+                          onClick={() => { setIsChatOpen(false); navigate('/mini-games'); }}
+                          className="flex-1 rounded-xl px-3 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 text-center hover:shadow-md transition-all duration-200 group"
+                        >
+                          <span className="text-3xl block mb-1">🎮</span>
+                          <span className="text-sm font-medium text-green-600 block">娱乐岛</span>
+                          <span className="text-xs text-gray-400">贪吃蛇·俄罗斯方块</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

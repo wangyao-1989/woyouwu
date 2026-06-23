@@ -31,6 +31,7 @@ const marketRoutes = require('./routes/markets');
 const textToImageRoutes = require('./routes/textToImage');
 const scraperRoutes = require('./routes/scraper');
 const errorHandler = require('./middleware/error');
+const { setupGameServer } = require('./gameServer');
 
 const app = express();
 
@@ -97,6 +98,12 @@ const server = app.listen(PORT, () => {
     process.send('ready');
   }
 });
+
+const { Server } = require('socket.io');
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+});
+setupGameServer(io);
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');

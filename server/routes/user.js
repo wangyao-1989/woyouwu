@@ -5,7 +5,7 @@ const Item = require('../models/Item');
 const Project = require('../models/Project');
 const Article = require('../models/Article');
 const Inspiration = require('../models/Inspiration');
-const { auth } = require('../middleware/auth');
+const { auth, optionalAuth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
@@ -16,7 +16,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
-router.get('/list', async (req, res) => {
+router.get('/list', optionalAuth, async (req, res) => {
   try {
     const { search, limit = 20, page = 1 } = req.query;
     const query = {};
@@ -41,7 +41,25 @@ router.get('/list', async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const todayCount = await User.countDocuments({ createdAt: { $gte: today } });
 
-    res.json({ users, total, page: parseInt(page), limit: parseInt(limit), todayCount });
+    // 如果已登录，添加关注状态
+    let currentUser = null;
+    if (req.user) {
+      currentUser = await User.findById(req.user._id).select('following');
+    }
+
+    const enrichedUsers = users.map(u => {
+      const obj = u.toObject();
+      if (currentUser) {
+        obj.isFollowing = currentUser.following.some(f => f.toString() === u._id.toString());
+        obj.isFollowedBy = u.following?.some(f => f.toString() === currentUser._id.toString()) || false;
+      } else {
+        obj.isFollowing = false;
+        obj.isFollowedBy = false;
+      }
+      return obj;
+    });
+
+    res.json({ users: enrichedUsers, total, page: parseInt(page), limit: parseInt(limit), todayCount });
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }
@@ -117,6 +135,31 @@ router.put('/me/resume/visibility', auth, async (req, res) => {
     ).select('-password -email -phone');
 
     res.json({ message: '可见性已更新', isPublic: user.isPublic });
+  } catch (error) {
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// ====== 关注列表（必须在 /:id 之前） ======
+router.get('/following', auth, async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user._id).select('following');
+    const followingIds = currentUser.following || [];
+    const users = await User.find({ _id: { $in: followingIds } })
+      .select('username nickname avatar following');
+
+    const result = users.map(u => {
+      const obj = u.toObject();
+      obj.isFollowing = true;
+      obj.isFollowedBy = (u.following || []).some(f => f.toString() === currentUser._id.toString());
+      delete obj.following;
+      return obj;
+    });
+
+    // 互关的排前面
+    result.sort((a, b) => (b.isFollowedBy ? 1 : 0) - (a.isFollowedBy ? 1 : 0));
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }

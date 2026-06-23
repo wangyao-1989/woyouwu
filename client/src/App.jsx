@@ -40,6 +40,7 @@ import MarketDetail from './pages/MarketDetail';
 import StockDetail from './pages/StockDetail';
 import TextToImage from './pages/TextToImage';
 import ScraperTool from './pages/ScraperTool';
+import MiniGames from './pages/MiniGames';
 import { useAuth } from './context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -123,17 +124,18 @@ function App() {
               <ProtectedRoute><Messages /></ProtectedRoute>
             } />
             <Route path="/user/:userId/resume" element={<UserResume />} />
-            <Route path="/mbti-test" element={<MBTITest />} />
-            <Route path="/finance-tracker" element={<FinanceTracker />} />
-            <Route path="/image-cropper" element={<ImageCropper />} />
-            <Route path="/doc-converter" element={<DocumentConverter />} />
-            <Route path="/resume-builder" element={<ResumeBuilder />} />
+            <Route path="/mbti-test" element={<ProtectedRoute><MBTITest /></ProtectedRoute>} />
+            <Route path="/finance-tracker" element={<ProtectedRoute><FinanceTracker /></ProtectedRoute>} />
+            <Route path="/image-cropper" element={<ProtectedRoute><ImageCropper /></ProtectedRoute>} />
+            <Route path="/doc-converter" element={<ProtectedRoute><DocumentConverter /></ProtectedRoute>} />
+            <Route path="/resume-builder" element={<ProtectedRoute><ResumeBuilder /></ProtectedRoute>} />
             <Route path="/stock-monitor" element={<ProtectedRoute><StockMonitor /></ProtectedRoute>} />
-            <Route path="/text-to-image" element={<TextToImage />} />
+            <Route path="/text-to-image" element={<ProtectedRoute><TextToImage /></ProtectedRoute>} />
             <Route path="/market-list" element={<ProtectedRoute><MarketList /></ProtectedRoute>} />
             <Route path="/market-detail/:id" element={<ProtectedRoute><MarketDetail /></ProtectedRoute>} />
             <Route path="/stock-detail/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
-<Route path="/scraper" element={<ScraperTool />} />
+<Route path="/scraper" element={<ProtectedRoute><ScraperTool /></ProtectedRoute>} />
+            <Route path="/mini-games/*" element={<MiniGames />} />
             <Route path="/admin/settings" element={
               <AdminRoute><AdminSettings /></AdminRoute>
             } />
