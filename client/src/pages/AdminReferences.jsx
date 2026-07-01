@@ -16,6 +16,14 @@ const TYPE_COLORS = {
   other: 'bg-gray-100 text-gray-700'
 };
 
+const ACCEPTED_FILE_TYPES = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.mp4', '.webm', '.ogg',
+  '.pdf', '.html', '.htm', '.txt', '.md', '.csv', '.json',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.zip'
+].join(',');
+
 function AdminReferences() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
@@ -37,6 +45,9 @@ function AdminReferences() {
     content: '',
     note: ''
   });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState([]);
   const [saving, setSaving] = useState(false);
 
   // 展开查看详情
@@ -74,6 +85,9 @@ function AdminReferences() {
   const openCreate = () => {
     setEditingId(null);
     setForm({ title: '', type: 'webpage', sourceUrl: '', tags: '', content: '', note: '' });
+    setSelectedFiles([]);
+    setExistingAttachments([]);
+    setRemovedAttachmentIds([]);
     setShowModal(true);
   };
 
@@ -85,9 +99,12 @@ function AdminReferences() {
       type: item.type,
       sourceUrl: item.sourceUrl || '',
       tags: (item.tags || []).join(', '),
-      content: item.content,
+      content: item.content || '',
       note: item.note || ''
     });
+    setSelectedFiles([]);
+    setExistingAttachments(item.attachments || []);
+    setRemovedAttachmentIds([]);
     setShowModal(true);
   };
 
@@ -97,22 +114,23 @@ function AdminReferences() {
       setMsg({ text: '标题不能为空', type: 'error' });
       return;
     }
-    if (!form.content.trim()) {
-      setMsg({ text: '内容不能为空', type: 'error' });
+    const keptAttachments = existingAttachments.filter(item => !removedAttachmentIds.includes(item._id));
+    if (!form.content.trim() && selectedFiles.length === 0 && keptAttachments.length === 0) {
+      setMsg({ text: '请填写内容或上传文件', type: 'error' });
       return;
     }
 
     setSaving(true);
     try {
-      const payload = {
-        title: form.title.trim(),
-        type: form.type,
-        sourceUrl: form.sourceUrl.trim(),
-        tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-        content: form.content,
-        note: form.note.trim()
-      };
-
+      const payload = new FormData();
+      payload.append('title', form.title.trim());
+      payload.append('type', form.type);
+      payload.append('sourceUrl', form.sourceUrl.trim());
+      payload.append('tags', JSON.stringify(form.tags.split(',').map(t => t.trim()).filter(Boolean)));
+      payload.append('content', form.content);
+      payload.append('note', form.note.trim());
+      payload.append('removedAttachmentIds', JSON.stringify(removedAttachmentIds));
+      selectedFiles.forEach(file => payload.append('files', file));
       if (editingId) {
         const res = await axios.put(`/api/admin/references/${editingId}`, payload);
         setMsg({ text: res.data.message, type: 'success' });
@@ -141,9 +159,51 @@ function AdminReferences() {
     }
   };
 
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length + existingAttachments.length - removedAttachmentIds.length > 5) {
+      setMsg({ text: '每条参考内容最多上传 5 个文件', type: 'error' });
+      event.target.value = '';
+      return;
+    }
+    setSelectedFiles(files);
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(files => files.filter((_, i) => i !== index));
+  };
+
+  const toggleRemoveAttachment = (id) => {
+    setRemovedAttachmentIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id]);
+  };
+
+  const formatFileSize = (size = 0) => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  const downloadAttachment = async (itemId, attachment) => {
+    try {
+      const res = await axios.get(`/api/admin/references/${itemId}/attachments/${attachment._id}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.originalName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setMsg({ text: '下载失败: ' + (err.response?.data?.message || err.message), type: 'error' });
+    }
+  };
+
   // 截取内容预览
   const previewContent = (content, maxLen = 200) => {
-    const text = content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const text = (content || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
   };
 
@@ -231,7 +291,7 @@ function AdminReferences() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 line-clamp-2 mb-2">
-                          {previewContent(item.content)}
+                          {previewContent(item.content) || (item.attachments?.length ? '已上传附件，可展开查看' : '')}
                         </p>
                         <div className="flex items-center gap-3 text-xs text-gray-400">
                           {item.tags && item.tags.length > 0 && (
@@ -239,6 +299,11 @@ function AdminReferences() {
                               {item.tags.map((tag, i) => (
                                 <span key={i} className="bg-gray-100 px-1.5 py-0.5 rounded">#{tag}</span>
                               ))}
+                            </span>
+                          )}
+                          {item.attachments && item.attachments.length > 0 && (
+                            <span className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded">
+                              附件 {item.attachments.length}
                             </span>
                           )}
                           {item.sourceUrl && (
@@ -280,24 +345,49 @@ function AdminReferences() {
                     <div className="border-t border-gray-100 p-4 bg-gray-50">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-sm text-gray-500 font-medium">完整内容：</span>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(item.content);
-                            setMsg({ text: '已复制到剪贴板', type: 'success' });
-                          }}
-                          className="text-xs px-3 py-1 rounded-btn bg-[#F0E8DD] text-gray-600 hover:bg-gray-200 transition-colors"
-                        >
-                          复制内容
-                        </button>
+                        {item.content && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.content);
+                              setMsg({ text: '已复制到剪贴板', type: 'success' });
+                            }}
+                            className="text-xs px-3 py-1 rounded-btn bg-[#F0E8DD] text-gray-600 hover:bg-gray-200 transition-colors"
+                          >
+                            复制内容
+                          </button>
+                        )}
                       </div>
                       {item.note && (
                         <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-gray-700">
                           备注：{item.note}
                         </div>
                       )}
-                      <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-sans leading-relaxed max-h-[500px] overflow-y-auto bg-white p-4 rounded-lg border border-gray-200">
-                        {item.content}
-                      </pre>
+                      {item.attachments && item.attachments.length > 0 && (
+                        <div className="mb-3 bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="text-sm text-gray-500 font-medium mb-2">附件：</div>
+                          <div className="space-y-2">
+                            {item.attachments.map((attachment) => (
+                              <div key={attachment._id} className="flex items-center justify-between gap-3 text-sm">
+                                <span className="truncate text-gray-700">
+                                  {attachment.originalName}
+                                  <span className="ml-2 text-xs text-gray-400">{formatFileSize(attachment.size)}</span>
+                                </span>
+                                <button
+                                  onClick={() => downloadAttachment(item._id, attachment)}
+                                  className="text-xs px-3 py-1 rounded-btn bg-[#F0E8DD] text-gray-600 hover:bg-gray-200 transition-colors shrink-0"
+                                >
+                                  下载
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {item.content && (
+                        <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words font-sans leading-relaxed max-h-[500px] overflow-y-auto bg-white p-4 rounded-lg border border-gray-200">
+                          {item.content}
+                        </pre>
+                      )}
                     </div>
                   )}
                 </div>
@@ -403,7 +493,7 @@ function AdminReferences() {
               {/* 内容 */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  参考内容 * <span className="text-gray-400 font-normal">（直接粘贴网页源码、CSS、设计描述等）</span>
+                  参考内容 <span className="text-gray-400 font-normal">（可直接粘贴网页源码、CSS、设计描述等）</span>
                 </label>
                 <textarea
                   value={form.content}
@@ -412,6 +502,75 @@ function AdminReferences() {
                   rows={12}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-warm-900 focus:border-warm-900 outline-none text-sm font-mono resize-y"
                 />
+              </div>
+
+              {/* 附件 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  上传文件 <span className="text-gray-400 font-normal">（内容和文件至少填写一项，最多 5 个，每个 ≤50MB）</span>
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_FILE_TYPES}
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-warm-900 focus:border-warm-900 outline-none text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  支持图片、视频、PDF、HTML、TXT/MD/CSV/JSON、Office 文档和 ZIP 文件。
+                </p>
+
+                {existingAttachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-xs font-medium text-gray-500">已上传附件</div>
+                    {existingAttachments.map((attachment) => {
+                      const removed = removedAttachmentIds.includes(attachment._id);
+                      return (
+                        <div
+                          key={attachment._id}
+                          className={`flex items-center justify-between gap-3 text-sm p-2 rounded border ${
+                            removed ? 'bg-red-50 border-red-100 text-gray-400 line-through' : 'bg-gray-50 border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          <span className="truncate">
+                            {attachment.originalName}
+                            <span className="ml-2 text-xs text-gray-400">{formatFileSize(attachment.size)}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleRemoveAttachment(attachment._id)}
+                            className={`text-xs px-2 py-1 rounded-btn shrink-0 ${
+                              removed ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-500 hover:bg-red-100'
+                            }`}
+                          >
+                            {removed ? '撤销' : '移除'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {selectedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-xs font-medium text-gray-500">已选择文件（点击保存后上传）</div>
+                    {selectedFiles.map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-3 text-sm p-2 rounded border border-gray-200 bg-gray-50">
+                        <span className="truncate text-gray-700">
+                          {file.name}
+                          <span className="ml-2 text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedFile(index)}
+                          className="text-xs px-2 py-1 rounded-btn bg-red-50 text-red-500 hover:bg-red-100 shrink-0"
+                        >
+                          移除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 备注 */}
@@ -439,7 +598,7 @@ function AdminReferences() {
                   disabled={saving}
                   className="rounded-btn px-5 py-2.5 bg-warm-900 text-white font-medium hover:bg-warm-700 transition-colors shadow-sketch disabled:opacity-50 text-sm"
                 >
-                  {saving ? '保存中...' : '保存'}
+                  {saving ? '保存中...' : selectedFiles.length > 0 ? '保存并上传' : '保存'}
                 </button>
               </div>
             </div>

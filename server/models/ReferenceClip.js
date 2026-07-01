@@ -11,8 +11,28 @@ const referenceClipSchema = new mongoose.Schema({
   // 参考内容正文（支持大量文本、HTML、CSS、JS等）
   content: {
     type: String,
-    required: true
+    default: ''
   },
+  // 附件文件（保存在服务端私有目录，通过管理员接口下载）
+  attachments: [{
+    originalName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    storedName: {
+      type: String,
+      required: true
+    },
+    mimeType: {
+      type: String,
+      default: ''
+    },
+    size: {
+      type: Number,
+      default: 0
+    }
+  }],
   // 来源网址
   sourceUrl: {
     type: String,

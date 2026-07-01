@@ -58,7 +58,7 @@ function LiquidText() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    const ctx = canvas.getContext('2d', { alpha: true, willReadFrequently: true });
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -75,8 +75,7 @@ function LiquidText() {
     }
     resizeCanvas();
 
-    ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
     function createParticles() {
       particlesRef.current = [];
@@ -123,8 +122,7 @@ function LiquidText() {
     }
 
     function animate() {
-      ctx.fillStyle = BG_COLOR;
-      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+      ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
       const particles = particlesRef.current;
       const mouse = mouseRef.current;

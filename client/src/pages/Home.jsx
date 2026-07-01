@@ -4,6 +4,7 @@ import axios from 'axios';
 import NewsCorner from '../components/NewsCorner';
 import LiquidText from '../components/LiquidText';
 import Icon from '../components/Icon';
+import FluidCursor from '../components/FluidCursor';
 
 const shareOptions = [
   { label: '闲置交换', icon: 'cube', to: '/items/create' },
@@ -84,8 +85,10 @@ function Home() {
   const filters = ['all', 'creation', 'idea', 'stuff'];
 
   return (
-    <div className="min-h-screen pt-20 fade-in" style={{ backgroundColor: '#F7F5F2' }}>
-      <div className="relative z-10">
+    <div className="min-h-screen pt-20" style={{ backgroundColor: '#F7F5F2' }}>
+      {/* WebGL 流体光效 - 全页 */}
+      <FluidCursor showText={false} />
+      <div className="relative z-10 fade-in">
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col items-center justify-center text-center px-4 pt-16 relative overflow-hidden">
         <LiquidText />

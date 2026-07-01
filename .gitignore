@@ -20,6 +20,7 @@ client_backup/
 server_backup/
 .ssh/
 server/uploads/
+server/private-uploads/
 client/dist-new/
 *.patch
 nginx-ssl.conf
