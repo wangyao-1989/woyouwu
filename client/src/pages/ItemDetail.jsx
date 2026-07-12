@@ -19,6 +19,20 @@ function ItemDetail() {
   });
   const [submitting, setSubmitting] = useState(false);
   const borrowFormRef = useRef(null);
+  const [userLocation, setUserLocation] = useState(null);
+
+  // 获取用户地理位置
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => { /* 用户拒绝定位，不显示距离 */ },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
+  }, []);
 
   const openBorrowForm = () => {
     setShowBorrowForm(true);
@@ -27,9 +41,14 @@ function ItemDetail() {
     }, 100);
   };
 
-  const fetchItem = async () => {
+  const fetchItem = async (loc) => {
     try {
-      const { data } = await axios.get(`/api/items/${id}`);
+      const params = {};
+      if (loc && loc.lat && loc.lng) {
+        params.userLat = loc.lat;
+        params.userLng = loc.lng;
+      }
+      const { data } = await axios.get(`/api/items/${id}`, { params });
       setItem(data);
     } catch (err) {
       console.error('获取物品详情失败');
@@ -38,7 +57,14 @@ function ItemDetail() {
     }
   };
 
-  useEffect(() => { fetchItem(); }, [id]);
+  useEffect(() => { fetchItem(null); }, [id]);
+
+  // 当获取到用户位置后，重新请求带距离的数据
+  useEffect(() => {
+    if (userLocation && item && item.coordinates) {
+      fetchItem(userLocation);
+    }
+  }, [userLocation]);
 
   const handleBorrow = async () => {
     if (!item) return;
@@ -72,7 +98,12 @@ function ItemDetail() {
   };
 
   const refreshItem = async () => {
-    const { data } = await axios.get(`/api/items/${id}`);
+    const params = {};
+    if (userLocation && userLocation.lat && userLocation.lng) {
+      params.userLat = userLocation.lat;
+      params.userLng = userLocation.lng;
+    }
+    const { data } = await axios.get(`/api/items/${id}`, { params });
     setItem(data);
   };
 
@@ -165,7 +196,11 @@ function ItemDetail() {
       available: '可借用',
       requested: '借用中',
       borrowed: '已借出',
-      frozen: '已冻结'
+      frozen: '已冻结',
+      '可借用': '可借用',
+      '已借出': '已借出',
+      '维修中': '维修中',
+      '收回发布': '已收回'
     };
     return map[status] || status;
   };
@@ -246,6 +281,14 @@ function ItemDetail() {
                 <div>
                   <span className="text-xs text-[#B8A899]">位置</span>
                   <p className="text-sm text-[#4A3728] font-medium">{item.location}</p>
+                  {item.distance != null && item.coordinates && (
+                    <p className="text-xs text-[#8B7355] mt-1">
+                      📍 距您约 <span className="font-semibold text-[#4A3728]">{item.distance} km</span>
+                    </p>
+                  )}
+                  {!item.coordinates && (
+                    <p className="text-xs text-[#B8A899] mt-1">此物品未标记地图位置</p>
+                  )}
                 </div>
               )}
               {item.link && (

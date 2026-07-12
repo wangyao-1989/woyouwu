@@ -209,20 +209,52 @@ export default function DocumentConverter() {
     e.target.value = '';
   };
 
+  const canvasResize = (file, targetWidth, targetHeight) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve({ blob, mimeType });
+          } else {
+            reject(new Error('Canvas toBlob failed'));
+          }
+        }, mimeType, 0.95);
+      };
+      img.onerror = (err) => {
+        URL.revokeObjectURL(objectUrl);
+        reject(err);
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const doImg2pdf = async () => {
     if (img2pdfFiles.length === 0) { setError('请先添加图片'); return; }
     setLoading(true);
-    setProgressMsg('正在生成 PDF...');
+    setProgressMsg('正在分析图片尺寸...');
     setError('');
     try {
       const { PDFDocument } = await import('pdf-lib');
       const doc = await PDFDocument.create();
+
+      // 第一遍：分析所有图片尺寸，确定统一页面大小
+      const imageInfo = [];
       for (let i = 0; i < img2pdfFiles.length; i++) {
-        setProgress(Math.round(((i + 1) / img2pdfFiles.length) * 100));
-        setProgressMsg(`处理 ${i + 1}/${img2pdfFiles.length}...`);
+        setProgress(Math.round(((i + 1) / img2pdfFiles.length) * 20));
+        setProgressMsg(`分析图片 ${i + 1}/${img2pdfFiles.length}...`);
         const file = img2pdfFiles[i];
         const buf = await file.arrayBuffer();
-        // Determine image type
         let img;
         if (file.type === 'image/png') {
           img = await doc.embedPng(buf);
@@ -231,9 +263,43 @@ export default function DocumentConverter() {
         } else {
           img = await doc.embedPng(buf);
         }
-        const page = doc.addPage([img.width, img.height]);
-        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        imageInfo.push({ file, img, width: img.width, height: img.height });
       }
+
+      // 统一页面尺寸：取所有图片中的最大宽和高
+      const maxWidth = Math.max(...imageInfo.map((i) => i.width));
+      const maxHeight = Math.max(...imageInfo.map((i) => i.height));
+
+      // 第二遍：对需要放大的图片用 Canvas 高质量重绘后再嵌入
+      for (let i = 0; i < imageInfo.length; i++) {
+        setProgress(Math.round(20 + ((i + 1) / imageInfo.length) * 80));
+        const { file, img, width, height } = imageInfo[i];
+
+        const scale = Math.min(maxWidth / width, maxHeight / height);
+        const drawW = width * scale;
+        const drawH = height * scale;
+
+        let embedImg = img;
+        if (scale > 1) {
+          setProgressMsg(`高质量放大图片 ${i + 1}/${imageInfo.length}...`);
+          const { blob: resizedBlob, mimeType } = await canvasResize(file, drawW, drawH);
+          const resizedBuf = await resizedBlob.arrayBuffer();
+          if (mimeType === 'image/png') {
+            embedImg = await doc.embedPng(resizedBuf);
+          } else {
+            embedImg = await doc.embedJpg(resizedBuf);
+          }
+        } else {
+          setProgressMsg(`生成页面 ${i + 1}/${imageInfo.length}...`);
+        }
+
+        const x = (maxWidth - drawW) / 2;
+        const y = (maxHeight - drawH) / 2;
+
+        const page = doc.addPage([maxWidth, maxHeight]);
+        page.drawImage(embedImg, { x, y, width: drawW, height: drawH });
+      }
+
       const pdfBytes = await doc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       showResult(URL.createObjectURL(blob), 'download', 'images.pdf');
@@ -415,7 +481,7 @@ export default function DocumentConverter() {
           {activeTool === 'img2pdf' && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-700">图片转 PDF</h2>
-              <p className="text-sm text-gray-500">选择多张图片，每张作为一页合成 PDF。所有处理在浏览器本地完成。</p>
+              <p className="text-sm text-gray-500">选择多张图片，自动统一页面尺寸（取最大宽高），图片等比缩放居中。所有处理在浏览器本地完成。</p>
               <input type="file" accept="image/*" multiple onChange={handleImg2pdfAdd}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"
               />

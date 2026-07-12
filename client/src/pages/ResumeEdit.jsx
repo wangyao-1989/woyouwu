@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +10,28 @@ function ResumeEdit() {
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
+  const [polishLoading, setPolishLoading] = useState(false);
   const [aiInput, setAiInput] = useState('');
+  const [targetIndustry, setTargetIndustry] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const isDirty = useRef(false);
+
+  // 任意 AI 操作进行中
+  const isAiProcessing = aiLoading || fileLoading || polishLoading;
+
+  // 离开页面保护
+  useEffect(() => {
+    const handler = (e) => {
+      if (isDirty.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
 
   const [formData, setFormData] = useState({
     realName: '',
@@ -58,6 +78,7 @@ function ResumeEdit() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    isDirty.current = true;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -159,11 +180,17 @@ function ResumeEdit() {
 
   const handleAiGenerate = async () => {
     if (!aiInput.trim() || aiInput.trim().length < 10) return;
+    if (isAiProcessing) return;
     setAiLoading(true);
+    setErrorMsg('');
     try {
-      const res = await axios.post('/api/ai/generate-resume', { description: aiInput });
+      const res = await axios.post('/api/ai/generate-resume', {
+        description: aiInput,
+        targetIndustry: targetIndustry.trim()
+      });
       const aiData = res.data.resume;
 
+      isDirty.current = true;
       setFormData(prev => ({
         ...prev,
         realName: aiData.realName || prev.realName,
@@ -184,7 +211,7 @@ function ResumeEdit() {
       setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
       console.error('AI generate error:', err);
-      alert(err.response?.data?.message || 'AI 生成失败，请稍后重试');
+      setErrorMsg(err.response?.data?.message || 'AI 生成失败，请稍后重试');
     } finally {
       setAiLoading(false);
     }
@@ -194,25 +221,38 @@ function ResumeEdit() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (isAiProcessing) {
+      e.target.value = '';
+      return;
+    }
+
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('仅支持 PDF、JPG、PNG、WebP 格式');
+      setErrorMsg('仅支持 PDF、JPG、PNG、WebP 格式');
+      e.target.value = '';
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('文件大小不能超过 10MB');
+      setErrorMsg('文件大小不能超过 10MB');
+      e.target.value = '';
       return;
     }
 
     setFileLoading(true);
+    setErrorMsg('');
+    setUploadedFileName(file.name);
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('file', file);
+      const fdToSend = new FormData();
+      fdToSend.append('file', file);
+      if (targetIndustry.trim()) {
+        fdToSend.append('targetIndustry', targetIndustry.trim());
+      }
 
       const res = await axios.post('/api/ai/parse-resume-file', fdToSend);
       const aiData = res.data.resume;
 
+      isDirty.current = true;
       setFormData(prev => ({
         ...prev,
         realName: aiData.realName || prev.realName,
@@ -229,20 +269,75 @@ function ResumeEdit() {
         location: aiData.location || prev.location
       }));
 
-      setSuccessMsg('简历文件识别成功！内容已自动填充，请检查并调整后保存');
+      setSuccessMsg(`「${file.name}」识别成功！内容已自动填充，请检查并调整后保存`);
       setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
       console.error('File upload error:', err);
-      alert(err.response?.data?.message || '文件解析失败，请重试');
+      setErrorMsg(err.response?.data?.message || '文件解析失败，请重试');
+      setUploadedFileName('');
     } finally {
       setFileLoading(false);
       e.target.value = '';
     }
   };
 
+  // 针对目标行业重新润色已有简历
+  const handlePolish = async () => {
+    if (!targetIndustry.trim() || targetIndustry.trim().length < 2) {
+      setErrorMsg('请先输入目标行业（至少2个字）');
+      return;
+    }
+    if (!formData.realName) {
+      setErrorMsg('请先生成或填写简历内容');
+      return;
+    }
+    if (isAiProcessing) return;
+
+    setPolishLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await axios.post('/api/ai/polish-resume', {
+        resume: formData,
+        targetIndustry: targetIndustry.trim()
+      });
+      const aiData = res.data.resume;
+
+      isDirty.current = true;
+      setFormData(prev => ({
+        ...prev,
+        bio: aiData.bio || prev.bio,
+        skills: aiData.skills?.length ? aiData.skills : prev.skills,
+        interests: aiData.interests?.length ? aiData.interests : prev.interests,
+        experience: aiData.experience?.length
+          ? aiData.experience.map(e => ({
+              organization: e.organization || e.company || prev.experience?.[0]?.organization || '',
+              position: e.position || e.title || '',
+              period: e.period || '',
+              description: e.description || ''
+            }))
+          : prev.experience,
+        education: aiData.education?.length ? aiData.education : prev.education,
+        socialLinks: {
+          github: aiData.socialLinks?.github || prev.socialLinks.github,
+          wechat: aiData.socialLinks?.wechat || prev.socialLinks.wechat
+        },
+        contactEmail: aiData.contactEmail || prev.contactEmail,
+        location: aiData.location || prev.location
+      }));
+
+      setSuccessMsg(`已针对「${targetIndustry.trim()}」重新润色简历，请检查并调整后保存`);
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err) {
+      console.error('Polish error:', err);
+      setErrorMsg(err.response?.data?.message || '润色失败，请稍后重试');
+    } finally {
+      setPolishLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.realName.trim()) {
-      alert('请填写真实姓名');
+      setErrorMsg('请填写真实姓名');
       return;
     }
     setSaving(true);
@@ -256,10 +351,11 @@ function ResumeEdit() {
         socialLinks: JSON.stringify(formData.socialLinks)
       };
       await axios.put('/api/users/me/resume', payload);
+      isDirty.current = false;
       setSuccessMsg('简历保存成功！');
-      setTimeout(() => navigate('/profile/preview'), 800);
+      setTimeout(() => navigate('/profile/preview'), 2500);
     } catch (err) {
-      alert(err.response?.data?.message || '保存失败');
+      setErrorMsg(err.response?.data?.message || '保存失败');
     } finally {
       setSaving(false);
     }
@@ -300,7 +396,16 @@ function ResumeEdit() {
 
         {successMsg && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-            <span>✓</span> {successMsg}
+            <span>&#10003;</span> {successMsg}
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>&#10007;</span> {errorMsg}
+            </div>
+            <button onClick={() => setErrorMsg('')} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
           </div>
         )}
 
@@ -312,6 +417,48 @@ function ResumeEdit() {
                 <h2 className="text-lg font-semibold text-[#4A3728]">AI 智能生成</h2>
                 <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-0.5 rounded-full">Beta</span>
               </div>
+
+              {/* 目标行业定向 — 共用设置，同时影响 AI 文本生成和文件上传 */}
+              <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+                <label className="block text-sm font-medium text-[#4A3728] mb-1.5">
+                  目标行业/企业 <span className="text-xs text-[#B8A899]">（选填）</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={targetIndustry}
+                    onChange={(e) => setTargetIndustry(e.target.value)}
+                    placeholder="例如：电商企业、车企、金融行业、互联网科技公司..."
+                    className="flex-1 px-4 py-2.5 border border-[#D8CFC0] rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400/30 focus:border-purple-400 text-sm bg-white"
+                    disabled={isAiProcessing}
+                  />
+                  <button
+                    onClick={handlePolish}
+                    disabled={polishLoading || !targetIndustry.trim() || !formData.realName}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm whitespace-nowrap"
+                    title={formData.realName ? '针对目标行业重新润色已有简历' : '请先生成或填写简历'}
+                  >
+                    {polishLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        润色中...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        针对性润色
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-[#8B7355] mt-1.5">
+                  填写后，「一键生成」「文件上传」「针对性润色」都会针对该行业定向优化。已有简历可直接点「针对性润色」按钮调整。
+                </p>
+              </div>
+
+              {/* AI 文本生成 */}
               <p className="text-sm text-[#B8A899] mb-3">
                 用一段话描述你自己，AI 将自动生成简历内容并填充到下方表单。
               </p>
@@ -328,7 +475,7 @@ function ResumeEdit() {
                 </span>
                 <button
                   onClick={handleAiGenerate}
-                  disabled={aiLoading || aiInput.trim().length < 10}
+                  disabled={aiLoading || isAiProcessing || aiInput.trim().length < 10}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                 >
                   {aiLoading ? (
@@ -347,7 +494,11 @@ function ResumeEdit() {
                 </button>
               </div>
 
+              {/* 文件上传 */}
               <div className="mt-4 pt-4 border-t border-dashed border-[#E8E0D5]">
+                <p className="text-sm text-[#B8A899] mb-3">
+                  或者直接上传现有简历文件，AI 将自动识别并填充到下方表单。
+                </p>
                 <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-[#D8CFC0] rounded-xl cursor-pointer hover:border-[#4A3728] hover:bg-[#FBF8F4] transition group">
                   {fileLoading ? (
                     <div className="flex items-center gap-2 text-sm text-[#8B7355]">
@@ -368,6 +519,16 @@ function ResumeEdit() {
                         <p className="text-xs text-[#B8A899] mt-0.5">
                           支持 PDF、JPG、PNG、WebP，最大 10MB
                         </p>
+                        {targetIndustry.trim() && (
+                          <p className="text-xs text-purple-500 mt-1">
+                            将针对「{targetIndustry.trim()}」定向润色
+                          </p>
+                        )}
+                        {uploadedFileName && !fileLoading && (
+                          <p className="text-xs text-green-600 mt-1">
+                            已识别：{uploadedFileName}
+                          </p>
+                        )}
                       </div>
                     </>
                   )}
@@ -375,7 +536,7 @@ function ResumeEdit() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={handleFileUpload}
-                    disabled={fileLoading}
+                    disabled={fileLoading || isAiProcessing}
                     className="hidden"
                   />
                 </label>
@@ -552,8 +713,8 @@ function ResumeEdit() {
                       <textarea
                         value={exp.description}
                         onChange={(e) => handleExpChange(i, 'description', e.target.value)}
-                        rows={2}
-                        className="w-full px-2.5 py-2 border border-[#E8E0D5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A3728]/20 text-sm resize-none"
+                        rows={4}
+                        className="w-full px-2.5 py-2 border border-[#E8E0D5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A3728]/20 text-sm resize-y"
                         placeholder="简要描述工作和成果"
                       />
                     </div>

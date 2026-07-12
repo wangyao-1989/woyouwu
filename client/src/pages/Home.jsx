@@ -384,7 +384,7 @@ function Home() {
         <p className="section-desc max-w-xl mx-auto">
           分享一件物品，以及它背后的故事。或许它会点亮另一个陌生人的世界。
         </p>
-        <Link to="/items/create" className="btn-accent inline-flex mt-10">
+        <Link to="/articles/create" className="btn-accent inline-flex mt-10">
           立即分享
         </Link>
       </section>

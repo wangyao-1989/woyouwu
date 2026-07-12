@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Icon from '../components/Icon';
+import MapPicker from '../components/MapPicker';
 
 const categories = [
   { value: '数码电子', label: '数码电子', icon: 'smartphone' },
@@ -21,6 +22,7 @@ const statusOptions = [
   { value: '可借用', label: '可借用' },
   { value: '已借出', label: '已借出' },
   { value: '维修中', label: '维修中' },
+  { value: '收回发布', label: '收回发布' },
 ];
 
 const conditionOptions = [
@@ -44,6 +46,7 @@ function CreateItem() {
     status: '可借用',
     description: '',
     location: '',
+    coordinates: null,
     images: []
   });
   const [previews, setPreviews] = useState([]);
@@ -61,15 +64,40 @@ function CreateItem() {
     try {
       const res = await axios.get(`/api/items/${id}`);
       const item = res.data;
+
+      // 自动平移可借用时段：如果起始日期已过期且物品未被借出，平移到今天
+      let startDate = '';
+      let endDate = '';
+      if (item.borrowStartDate && item.borrowEndDate) {
+        const oldStart = new Date(item.borrowStartDate);
+        const oldEnd = new Date(item.borrowEndDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const notBorrowed = item.status === '可借用' || item.status === 'available' || item.status === '维修中' || item.status === '收回发布';
+
+        if (oldStart < today && notBorrowed) {
+          const diff = oldEnd.getTime() - oldStart.getTime();
+          startDate = today.toISOString().split('T')[0];
+          endDate = new Date(today.getTime() + diff).toISOString().split('T')[0];
+        } else {
+          startDate = oldStart.toISOString().split('T')[0];
+          endDate = oldEnd.toISOString().split('T')[0];
+        }
+      } else {
+        startDate = item.borrowStartDate ? new Date(item.borrowStartDate).toISOString().split('T')[0] : '';
+        endDate = item.borrowEndDate ? new Date(item.borrowEndDate).toISOString().split('T')[0] : '';
+      }
+
       setFormData({
         name: item.name || '',
         category: item.category || '数码电子',
         condition: item.condition || '',
-        borrowStartDate: item.borrowStartDate ? new Date(item.borrowStartDate).toISOString().split('T')[0] : '',
-        borrowEndDate: item.borrowEndDate ? new Date(item.borrowEndDate).toISOString().split('T')[0] : '',
+        borrowStartDate: startDate,
+        borrowEndDate: endDate,
         status: item.status || '可借用',
         description: item.remark || '',
-        location: item.location || ''
+        location: item.location || '',
+        coordinates: item.coordinates || null
       });
       setExistingImages(item.images || []);
     } catch (error) {
@@ -142,6 +170,9 @@ function CreateItem() {
       formDataToSend.append('status', formData.status);
       formDataToSend.append('remark', formData.description);
       formDataToSend.append('location', formData.location);
+      if (formData.coordinates && formData.coordinates.lat && formData.coordinates.lng) {
+        formDataToSend.append('coordinates', JSON.stringify(formData.coordinates));
+      }
 
       if (formData.images.length > 0) {
         formData.images.forEach(file => {
@@ -345,8 +376,15 @@ function CreateItem() {
               name="location"
               value={formData.location}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all mb-3"
               placeholder="例如：3号楼501室或公司储物柜A"
+            />
+            <p className="text-xs text-[#B8A899] mb-2">填写位置后自动识别并在地图上标记，支持模糊地址智能匹配</p>
+            <MapPicker
+              value={formData.coordinates}
+              onChange={(coords) => setFormData({ ...formData, coordinates: coords })}
+              locationText={formData.location}
+              height="300px"
             />
           </div>
 

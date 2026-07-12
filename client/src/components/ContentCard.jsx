@@ -18,6 +18,7 @@ function normalize(item) {
     description: item.remark || item.description || '',
     category: item.category || '',
     location: item.location || '',
+    distance: item.distance || null,
     status: item.status || '',
     author: item.owner
       ? { nickname: item.owner.nickname || item.owner.username || '', avatar: item.owner.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${item.owner.nickname || item.owner.username || 'user'}` }
@@ -76,6 +77,11 @@ function ContentCard({ item: rawItem, viewMode = 'grid' }) {
           <p className="text-[13px] text-[#8B7355] line-clamp-2 mb-3">
             {item.description}
           </p>
+          {item.distance != null && (
+            <p className="text-[11px] text-[#6b8a9a] mb-2">
+              📍 距您约 {item.distance} km
+            </p>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <img
@@ -136,9 +142,15 @@ function ContentCard({ item: rawItem, viewMode = 'grid' }) {
         <h3 className="text-[15px] font-medium text-[#4A3728] leading-snug mb-1.5 group-hover:text-[#8B7355] transition line-clamp-2">
           {item.title}
         </h3>
-        <p className="text-[13px] text-[#8B7355] leading-relaxed mb-3 line-clamp-2">
+        <p className="text-[13px] text-[#8B7355] leading-relaxed mb-1 line-clamp-2">
           {item.description}
         </p>
+
+        {item.distance != null && (
+          <p className="text-[11px] text-[#6b8a9a] mb-2">
+            📍 距您约 {item.distance} km
+          </p>
+        )}
 
         <div className="mt-auto flex items-center justify-between">
           <div className="flex items-center gap-2">

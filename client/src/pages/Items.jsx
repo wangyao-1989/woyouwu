@@ -15,6 +15,20 @@ function Items() {
     search: searchParams.get('search') || '',
     sort: searchParams.get('sort') || '-createdAt'
   });
+  const [userLocation, setUserLocation] = useState(null);
+
+  // 获取用户地理位置
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => { /* 用户拒绝定位 */ },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -23,6 +37,10 @@ function Items() {
     if (filters.category) params.category = filters.category;
     if (filters.search) params.search = filters.search;
     if (filters.sort) params.sort = filters.sort;
+    if (userLocation && userLocation.lat && userLocation.lng) {
+      params.userLat = userLocation.lat;
+      params.userLng = userLocation.lng;
+    }
 
     axios.get('/api/items', { params })
       .then(res => {
@@ -34,7 +52,7 @@ function Items() {
         setItems([]);
         setLoading(false);
       });
-  }, [filters]);
+  }, [filters, userLocation]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => {
@@ -53,7 +71,18 @@ function Items() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="heading-xl mb-6">探索创作</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="heading-xl">物尽其用</h1>
+            <Link
+              to="/items/create"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4A3728] text-white rounded-btn text-sm font-medium hover:bg-[#3A2A1E] transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              发布物品
+            </Link>
+          </div>
           
           {/* Filter Controls */}
           <div className="bg-white rounded-card border border-[#E8E0D5] shadow-card p-5 mb-6">

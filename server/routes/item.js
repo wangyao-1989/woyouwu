@@ -9,13 +9,18 @@ const router = express.Router();
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { type, category, status, location, search, sort = '-createdAt' } = req.query;
+    const { type, category, status, location, search, sort = '-createdAt', userLat, userLng } = req.query;
     
     const query = {};
     
     if (type) query.type = type;
     if (category) query.category = category;
-    if (status) query.status = status;
+    if (status) {
+      query.status = status;
+    } else {
+      // 默认不显示"收回发布"的物品
+      query.status = { $ne: '收回发布' };
+    }
     if (location) query.location = { $regex: location, $options: 'i' };
     if (search) {
       query.$or = [
@@ -34,6 +39,27 @@ router.get('/', optionalAuth, async (req, res) => {
       .populate('borrower', 'username nickname')
       .sort(sortOption);
 
+    // 如果用户提供了经纬度，为每个物品计算距离
+    if (userLat && userLng) {
+      const lat1 = parseFloat(userLat);
+      const lng1 = parseFloat(userLng);
+      const R = 6371;
+
+      items.forEach(item => {
+        if (item.coordinates && item.coordinates.lat && item.coordinates.lng) {
+          const lat2 = item.coordinates.lat;
+          const lng2 = item.coordinates.lng;
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLng = (lng2 - lng1) * Math.PI / 180;
+          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          item._doc.distance = Math.round(R * c * 10) / 10;
+        }
+      });
+    }
+
     res.json(items);
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
@@ -51,7 +77,28 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: '物品不存在' });
     }
 
-    res.json(item);
+    const result = item.toObject();
+
+    // 如果用户提供了经纬度，计算距离
+    const { userLat, userLng } = req.query;
+    if (userLat && userLng && result.coordinates && result.coordinates.lat && result.coordinates.lng) {
+      const lat1 = parseFloat(userLat);
+      const lng1 = parseFloat(userLng);
+      const lat2 = result.coordinates.lat;
+      const lng2 = result.coordinates.lng;
+
+      // Haversine 公式计算两点间距离（km）
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      result.distance = Math.round(R * c * 10) / 10; // 保留1位小数
+    }
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: '服务器错误' });
   }
@@ -59,7 +106,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', auth, upload.array('images', 10), async (req, res) => {
   try {
-    const { type, name, category, status, remark, location, link, condition, borrowStartDate, borrowEndDate } = req.body;
+    const { type, name, category, status, remark, location, coordinates, link, condition, borrowStartDate, borrowEndDate } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: '物品名称不能为空' });
@@ -82,6 +129,7 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
       borrowEndDate: borrowEndDate || null,
       remark,
       location,
+      coordinates: coordinates ? (typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates) : undefined,
       link,
       owner: req.user._id,
       ownerName: req.user.nickname,
@@ -120,6 +168,13 @@ router.put('/:id', auth, upload.array('images', 10), async (req, res) => {
         updates[field] = req.body[field];
       }
     });
+
+    // 处理 coordinates（可能是 JSON 字符串）
+    if (req.body.coordinates !== undefined) {
+      updates.coordinates = typeof req.body.coordinates === 'string'
+        ? JSON.parse(req.body.coordinates)
+        : req.body.coordinates;
+    }
 
     if (req.files && req.files.length > 0) {
       updates.images = req.files.map(file => `/uploads/${file.filename}`);

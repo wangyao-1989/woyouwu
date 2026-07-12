@@ -101,7 +101,18 @@ function Resources() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 fade-in">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">资源分享</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="heading-xl">资源分享</h1>
+          <Link
+            to="/resources/create"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4A3728] text-white rounded-btn text-sm font-medium hover:bg-[#3A2A1E] transition"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            分享资源
+          </Link>
+        </div>
         
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

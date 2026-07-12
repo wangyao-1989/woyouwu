@@ -126,13 +126,17 @@ const itemSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['available', 'given', 'exchanged', 'borrowed', '可借用', '已借出', '维修中'],
+    enum: ['available', 'given', 'exchanged', 'borrowed', '可借用', '已借出', '维修中', '收回发布'],
     default: 'available'
   },
   location: {
     type: String,
     trim: true,
     maxlength: 200
+  },
+  coordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
   },
   borrower: {
     type: mongoose.Schema.Types.ObjectId,

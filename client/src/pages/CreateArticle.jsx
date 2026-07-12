@@ -417,7 +417,7 @@ function CreateArticle() {
               value={formData.content}
               onChange={handleChange}
               rows={16}
-              className="w-full px-4 py-3 border border-gray-300 rounded-btn text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all resize-y min-h-[300px]"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-[#4A3728] placeholder-[#B8A899] focus:outline-none focus:ring-2 focus:ring-[#4A3728]/10 focus:border-[#C8BAAA] transition-all resize-y min-h-[300px]"
               placeholder="在这里写下你的文章内容..."
             />
           </div>

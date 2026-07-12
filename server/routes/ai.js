@@ -205,46 +205,133 @@ const resumeUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-const RESUME_PARSE_PROMPT = `你是一个专业的简历解析助手。请根据以下简历文本，提取并生成结构化的简历数据。
+function buildResumePrompt(content, targetIndustry) {
+  // ——— buildResumePrompt：禁止编造，但必须专业润色 ———
+  const industryGuide = targetIndustry
+    ? '\n## 目标行业：' + targetIndustry + '\n\n' +
+      '你需要针对【' + targetIndustry + '】行业重新组织简历内容的呈现逻辑。\n\n' +
+      '**步骤：**\n' +
+      '1. 深读原文，提炼所有事实信息。\n' +
+      '2. 思考 ' + targetIndustry + ' 行业最看重什么能力。\n' +
+      '3. 把行业最看重的能力放到最显眼的位置（bio 优先提及，skills 排前面，description 句子结构的重心靠前）。\n\n' +
+      '**行业视角参考（用于判断突出什么，不是用于编造内容）：**\n' +
+      '- 电商：增长、转化、供应链、数据分析、用户运营\n' +
+      '- 车企：供应链管理、质量管理、项目交付、成本控制、流程标准化\n' +
+      '- 金融/保险：合规、风控、客户关系管理、业绩达成、渠道拓展\n' +
+      '- 医疗：合规、数据安全、患者体验、临床验证\n' +
+      '- 互联网：产品迭代、技术架构、用户增长、敏捷开发\n' +
+      '- 教育：课程设计、用户留存、内容运营、学习效果\n'
+    : '';
 
-简历内容：
-{{content}}
+  const industryHint = targetIndustry
+    ? '\n\n重要提示：目标行业为【' + targetIndustry + '】。把与该行业最相关的能力放在最前面。'
+    : '';
 
-请返回一个严格的 JSON 对象（不要包含 markdown 代码块标记，只返回纯 JSON），包含以下字段：
-
-{
-  "realName": "真实姓名",
-  "bio": "一句话简介，限60字，务必精炼有力。要求：提炼「职业/身份 + 核心亮点/成就 + 年限」三个要素。例如：「全栈工程师，8年Web开发经验，主导过千万DAU产品的架构设计」「产品经理，专注B端SaaS领域5年，从0到1打造过营收过亿的产品线」",
-  "skills": ["技能1", "技能2"...] 最多8个技能标签,
-  "interests": ["兴趣1", "兴趣2"...] 最多6个兴趣标签,
-  "experience": [
-    {
-      "period": "时间段，如 2020-2023 或 2022.06-2023.12",
-      "organization": "公司/机构/项目名称",
-      "position": "岗位/职位名称，如前端开发工程师、产品经理、UI设计师",
-      "description": "简要描述工作和成果，限80字"
-    }
-  ],
-  "education": [
-    {
-      "school": "学校名称",
-      "major": "专业名称",
-      "degree": "学历层次，如本科/硕士/博士/大专",
-      "period": "时间段，如2014-2018"
-    }
-  ],
-  "socialLinks": {
-    "github": "GitHub 用户名或链接",
-    "wechat": "微信号"
-  },
-  "contactEmail": "邮箱",
-  "location": "所在城市"
+  return '你是一位资深简历润色专家。你的任务是把一份口语化、平铺直叙的简历，改写为专业、有力、打动人心的简历。\n\n' +
+    '## 核心原则：分档处理\n\n' +
+    '处理每条经历描述时，先快速判断它属于哪一档，再按对应档位执行。\n\n' +
+    '### A档：原文已很专业（动词强、术语准、句式完整、逻辑清晰）\n' +
+    '→ 微调即可：更换1-2个动词让表达更新鲜，调整短语句序让节奏更好。**不可原样复制**——至少要有可感知的改动。\n\n' +
+    '### B档：原文中等（有一定专业度但措辞平淡、句式单一）\n' +
+    '→ 中调：升级弱动词、补充行业术语、丰富句式结构、补全逻辑链条（如"分析数据"补充"为决策提供支持"）。\n\n' +
+    '### C档：原文平淡简短（"负责X""协助Y""参与Z"类，一句话带过）\n' +
+    '→ 深度润色必须重写：用强动词替换、补全工作上下文、展开展业术语、用专业句式重新组织。**这类条目改动幅度要最大。**\n\n' +
+    '### 红线（违者不合格）\n' +
+    '- 禁止编造任何数字（百分比、金额、日期等），原文没有就绝不能出现\n' +
+    '- 禁止编造技能/公司/项目/职位名称\n' +
+    '- 禁止编造行业经验声明、奖项、证书\n' +
+    '- **禁止任何一条经历描述原样复制**——即使A档也必须做可感知的改动\n\n' +
+    '### 润色示例（对照学习）\n\n' +
+    '【C档示例】原文："负责车险等保险业务开拓与客户关系维护"\n' +
+    '  ❌ 错误：原样保留（零润色）\n' +
+    '  ✅ 正确："主导车险等保险产品线的市场拓展，建立并持续深化核心客户关系管理体系"\n' +
+    '  — "负责"→"主导"，"业务开拓"→"市场拓展"，"客户关系维护"→"核心客户关系管理体系"\n\n' +
+    '【C档示例】原文："协助数学课程教学与学生辅导"\n' +
+    '  ❌ 错误：原样保留（零润色）\n' +
+    '  ✅ 正确："承担数学课程教学任务，负责学生学业辅导与课后跟进，帮助学生提升数学成绩与学习兴趣"\n' +
+    '  — "协助"→"承担"，"教学"→"教学任务"，"学生辅导"→"学业辅导与课后跟进"\n\n' +
+    '【B档示例】原文："负责数据报表的制作和分析"\n' +
+    '  ❌ 错误："负责数据报表的制作和分析，提升运营效率60%"（"60%"是编造的）\n' +
+    '  ✅ 正确："负责运营数据报表的搭建与分析，为管理决策提供数据支持"\n' +
+    '  — "制作"→"搭建"，补充了分析的目的（合理推断，不属编造）\n\n' +
+    '【A档示例】原文："负责系统架构设计与核心模块开发，带领5人团队完成项目交付"\n' +
+    '  ❌ 错误：原样保留（即使是A档也不能复制）\n' +
+    '  ✅ 正确："主导系统架构设计与核心模块研发，带领5人技术团队高效完成项目交付与迭代升级"\n' +
+    '  — "负责"→"主导"，"开发"→"研发"，"完成"→"高效完成...与迭代升级"，保持原意但表达更丰富\n\n' +
+    '## 具体输出规范\n\n' +
+    '- **bio**：提炼「职业/身份 + ' + (targetIndustry || '行业') + '最相关的能力 + 年限」三要素。用专业有力的措辞，把最匹配的能力放在前面。限60字。\n' +
+    '- **skills**：从原文提取技能，按与' + (targetIndustry || '目标行业') + '的相关性从高到低排序。用行业术语表达（如"客户关系管理"替代"维护客户"）。最多8个。\n' +
+    '- **experience.description**：从原文工作内容出发，用专业句式重新组织，60-80字。\n' +
+    '  * **严禁以"负责""参与""协助"开头**——必须用强动词替换（主导/搭建/推动/优化/重构/深耕/赋能）\n' +
+    '  * 用专业术语（业务流程/产品线/管理体系/决策支持 等）\n' +
+    '  * 补充合理推断的上下文（如"分析数据"→"为决策提供数据支持"），但不编造具体成果数字\n' +
+    '- **interests**：只使用原文提到的兴趣，最多6个。\n\n' +
+    industryGuide + '\n' +
+    '## 原文输入\n```\n' + content + '\n```\n\n' +
+    '## 输出格式\n' +
+    '返回纯 JSON（不要 markdown 标记）：\n' +
+    '{\n' +
+    '  "realName": "姓名",\n' +
+    '  "bio": "一句话简介（60字内）",\n' +
+    '  "skills": ["技能1", "技能2"...],\n' +
+    '  "interests": ["兴趣1", "兴趣2"...],\n' +
+    '  "experience": [{\n' +
+    '    "period": "时间段",\n' +
+    '    "organization": "公司或项目名",\n' +
+    '    "position": "职位",\n' +
+    '    "description": "润色后专业描述（60-80字）"\n' +
+    '  }],\n' +
+    '  "education": [{\n' +
+    '    "school": "学校",\n' +
+    '    "major": "专业",\n' +
+    '    "degree": "学历",\n' +
+    '    "period": "时间段"\n' +
+    '  }],\n' +
+    '  "socialLinks": {"github": "", "wechat": ""},\n' +
+    '  "contactEmail": "邮箱",\n' +
+    '  "location": "城市"\n' +
+    '}';
 }
 
-请确保返回的是合法的 JSON，不要有任何说明文字。`;
+// ——— buildPolishPrompt：对已有简历做行业定向润色 ———
+function buildPolishPrompt(resumeText, targetIndustry) {
+  return '你是一位资深简历润色专家。\n\n' +
+    '## 你的任务\n\n' +
+    '下面是一份已经生成的简历。用户希望针对【' + targetIndustry + '】行业重新调整这份简历的表述。\n\n' +
+    '你需要做三件事（缺一不可，不做即为失职）：\n\n' +
+    '### 第一件：排序重组\n' +
+    '- **skills 重新排序**：把与 ' + targetIndustry + ' 行业最相关的技能排到最前面。当前顺序未必最优，你必须按 ' + targetIndustry + ' 的用人偏好重新排序。\n' +
+    '- **description 句子重组**：把每段经历中对 ' + targetIndustry + ' 最有价值的工作内容移到句子最前面。\n' +
+    '- **bio 重新定位**：从 ' + targetIndustry + ' 行业角度重写一句话简介，突出该行业最看重的能力。\n\n' +
+    '### 第二件：措辞润色\n' +
+    '- 把平淡的描述改写得更专业有力：用强动词（主导/搭建/推动/深耕），用专业术语（产品线/管理体系/决策支持），用完整句式（通过/从而/以）串联逻辑。\n' +
+    '- **不是复制原文**，而是用更专业、更打动人心的语言重新表述相同的事实。\n\n' +
+    '### 第三件：红线自检\n' +
+    '- 有没有编造数字？→ 有就删除\n' +
+    '- 有没有编造技能？→ 有就删除\n' +
+    '- 有没有编造行业声明？→ 有就删除\n\n' +
+    '### 润色示例（对照学习）\n' +
+    '原文描述："负责车险等保险业务开拓与客户关系维护"\n' +
+    '❌ 错误：原样保留不变（这是失职）\n' +
+    '✅ 正确："主导车险等保险产品线的市场拓展，建立并持续深化核心客户关系管理体系"\n\n' +
+    '## 当前简历\n\n' + resumeText + '\n\n' +
+    '## 输出\n\n' +
+    '请返回纯 JSON（不要 markdown）：\n' +
+    '{\n' +
+    '  "realName": "姓名",\n' +
+    '  "bio": "面向' + targetIndustry + '的一句话简介",\n' +
+    '  "skills": ["与' + targetIndustry + '相关的排前面"],\n' +
+    '  "interests": ["兴趣"],\n' +
+    '  "experience": [{"organization": "公司名", "position": "职位", "period": "时间段", "description": "润色后描述"}],\n' +
+    '  "education": [{"school": "学校", "major": "专业", "degree": "学历", "period": "时间段"}],\n' +
+    '  "socialLinks": {"github": "", "wechat": ""},\n' +
+    '  "contactEmail": "邮箱",\n' +
+    '  "location": "城市"\n' +
+    '}';
+}
 
-async function callDeepSeekParse(content, userId) {
-  const prompt = RESUME_PARSE_PROMPT.replace('{{content}}', content);
+async function callDeepSeekParse(content, userId, targetIndustry = '') {
+  const prompt = buildResumePrompt(content, targetIndustry);
 
   const { endpoint, model, apiKey } = await getApiConfig('resumeParse');
   const finalKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
@@ -258,11 +345,11 @@ async function callDeepSeekParse(content, userId) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: '你是一个专业的简历数据提取助手。你只返回严格的 JSON，不包含任何 markdown 标记或说明文字。' },
+        { role: 'system', content: '你是一位严谨的简历润色专家。你必须逐条改写每一段经历描述——即使原文很短也要用专业语言重写，严禁原样复制。只返回严格 JSON。' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.3,
-      max_tokens: 2000
+      temperature: 0.2,
+      max_tokens: 3000
     })
   });
 
@@ -301,6 +388,185 @@ async function callDeepSeekParse(content, userId) {
   return resumeData;
 }
 
+// 针对性润色：用目标行业视角重新表述已有简历
+async function callDeepSeekPolish(resumeText, targetIndustry, userId) {
+  const prompt = buildPolishPrompt(resumeText, targetIndustry);
+
+  const { endpoint, model, apiKey } = await getApiConfig('resumeParse');
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${finalKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: '你是一位严谨的简历润色专家。先分析每条经历的档位（A/B/C），再按档位执行对应力度的润色——A档微调、B档中调、C档深度重写。只返回严格 JSON。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.25,
+      max_tokens: 3000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('DeepSeek API returned ' + response.status);
+  }
+
+  const data = await response.json();
+  const rawContent = data.choices?.[0]?.message?.content || '';
+
+  const cleaned = rawContent
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+
+  const resumeData = JSON.parse(cleaned);
+
+  if (resumeData.experience && !Array.isArray(resumeData.experience)) resumeData.experience = [];
+  if (resumeData.education && !Array.isArray(resumeData.education)) resumeData.education = [];
+  if (resumeData.skills && !Array.isArray(resumeData.skills)) resumeData.skills = [];
+  if (resumeData.interests && !Array.isArray(resumeData.interests)) resumeData.interests = [];
+
+  const usage = data.usage || {};
+  await ApiUsage.recordUsage({
+    apiType: 'resumeParse',
+    userId,
+    promptTokens: usage.prompt_tokens || estimateTokens(prompt),
+    completionTokens: usage.completion_tokens || estimateTokens(rawContent),
+    totalTokens: usage.total_tokens,
+    status: 'success',
+    model,
+  });
+
+  return resumeData;
+}
+
+// 提取 PDF 文本：pdf-parse → pdfjs-dist → pdf2json → 原始字节流 四级备用
+async function extractPdfText(dataBuffer) {
+  // 第一级：pdf-parse
+  let lastError;
+  try {
+    const pdfData = await pdfParse(dataBuffer);
+    if (pdfData.text && pdfData.text.trim().length > 20) {
+      console.log('[PDF] pdf-parse 成功，提取', pdfData.text.length, '字符');
+      return pdfData.text;
+    }
+    lastError = new Error('pdf-parse 提取文本过短（' + (pdfData.text?.length || 0) + '字符）');
+  } catch (e) {
+    lastError = e;
+  }
+  console.warn('[PDF] pdf-parse 失败:', lastError.message, '→ 尝试 pdfjs-dist');
+
+  // 第二级：pdfjs-dist
+  try {
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const uint8 = Uint8Array.from(dataBuffer);
+    const loadingTask = pdfjsLib.getDocument({ data: uint8, disableFontFace: true, verbosity: 0 });
+    const pdfDoc = await loadingTask.promise;
+    const pages = [];
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items.map(item => item.str).join(' ');
+      if (text.trim()) pages.push(text.trim());
+    }
+    const result = pages.join('\n');
+    if (result.trim().length >= 20) {
+      console.log('[PDF] pdfjs-dist 成功，提取', result.length, '字符');
+      return result;
+    }
+    lastError = new Error('pdfjs-dist 提取文本过短（' + result.length + '字符）');
+  } catch (e) {
+    lastError = e;
+  }
+  console.warn('[PDF] pdfjs-dist 失败:', lastError.message, '→ 尝试 pdf2json');
+
+  // 第三级：pdf2json（完全不同的解析器）
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const PDFParser = require('pdf2json');
+      const pdfParser = new PDFParser();
+      pdfParser.on('pdfParser_dataReady', (pdfData) => {
+        try {
+          const texts = [];
+          for (const page of pdfData.formImage.Pages || []) {
+            for (const textObj of page.Texts || []) {
+              const text = decodeURIComponent(textObj.R?.map(t => t.T || '').join('') || '');
+              if (text.trim()) texts.push(text.trim());
+            }
+          }
+          const result = texts.join('\n');
+          if (result.trim().length >= 20) {
+            resolve(result);
+          } else {
+            reject(new Error('pdf2json 提取文本过短（' + result.length + '字符）'));
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+      pdfParser.on('pdfParser_dataError', (err) => {
+        reject(new Error('pdf2json 解析错误：' + (err.parserError?.message || err.message || '未知')));
+      });
+      pdfParser.parseBuffer(dataBuffer);
+    });
+    if (result && result.trim().length >= 20) {
+      console.log('[PDF] pdf2json 成功，提取', result.length, '字符');
+      return result;
+    }
+    lastError = new Error('pdf2json 返回空');
+  } catch (e) {
+    lastError = e;
+  }
+  console.warn('[PDF] pdf2json 失败:', lastError.message, '→ 尝试原始字节流提取');
+
+  // 第四级：直接扫描 PDF 原始字节流，提取 BT...ET 之间的文本
+  // 不依赖任何解析器，直接正则匹配 PDF 文本操作符
+  try {
+    const raw = dataBuffer.toString('latin1');
+    const texts = [];
+    // 匹配 BT ... ET 之间的文本块
+    const btBlocks = raw.match(/BT[\s\S]*?ET/g);
+    if (btBlocks) {
+      for (const block of btBlocks) {
+        // 提取 Tj、TJ、'、" 操作符中的文本
+        // (text) Tj — 简单文本
+        const tjMatches = block.match(/\(([^)]*)\)\s*Tj/g);
+        if (tjMatches) {
+          for (const m of tjMatches) {
+            const text = m.match(/\(([^)]*)\)/)?.[1] || '';
+            if (text.trim()) texts.push(text.trim());
+          }
+        }
+        // [(text) num (text)] TJ — 文本数组
+        const tjArrayMatch = block.match(/\[([^\]]*)\]\s*TJ/);
+        if (tjArrayMatch) {
+          const arrContent = tjArrayMatch[1];
+          const arrTexts = arrContent.match(/\(([^)]*)\)/g);
+          if (arrTexts) {
+            const combined = arrTexts.map(t => t.slice(1, -1)).join('');
+            if (combined.trim()) texts.push(combined.trim());
+          }
+        }
+      }
+    }
+    const result = texts.join('\n');
+    if (result.trim().length >= 20) {
+      console.log('[PDF] 原始字节流提取成功，提取', result.length, '字符');
+      return result;
+    }
+    throw new Error('原始字节流提取文本过短（' + result.length + '字符），PDF 可能为扫描图片');
+  } catch (e) {
+    console.error('[PDF] 所有四级解析均失败，最终错误:', e.message);
+    throw new Error('PDF 解析失败，请尝试将 PDF 转为 JPG/PNG 图片后重新上传。原因：' + (e.message || '未知'));
+  }
+}
+
 router.post('/parse-resume-file', auth, (req, res, next) => {
   resumeUpload.single('file')(req, res, (err) => {
     if (err) {
@@ -329,8 +595,7 @@ router.post('/parse-resume-file', auth, (req, res, next) => {
 
     if (mimeType === 'application/pdf') {
       const dataBuffer = fs.readFileSync(filePath);
-      const pdfData = await pdfParse(dataBuffer);
-      extractedText = pdfData.text;
+      extractedText = await extractPdfText(dataBuffer);
     } else {
       const imageBuffer = fs.readFileSync(filePath);
       const base64 = imageBuffer.toString('base64');
@@ -384,7 +649,8 @@ router.post('/parse-resume-file', auth, (req, res, next) => {
       return res.status(400).json({ message: '未能识别出足够的文本内容，请确保上传的是文字清晰的简历' });
     }
 
-    const resumeData = await callDeepSeekParse(extractedText, req.user._id);
+    const targetIndustry = req.body.targetIndustry || '';
+    const resumeData = await callDeepSeekParse(extractedText, req.user._id, targetIndustry);
     res.json({ resume: resumeData, rawText: extractedText });
   } catch (error) {
     if (req.file?.path && fs.existsSync(req.file.path)) {
@@ -421,15 +687,95 @@ router.post('/generate-resume', auth, async (req, res) => {
       return res.status(500).json({ message: 'AI 服务未配置 API Key' });
     }
 
-    const resumeData = await callDeepSeekParse(`用户对自己的一段描述（非正式简历格式），请从以下描述中提取简历信息：\n\n${description}`, req.user._id);
+    const targetIndustry = req.body.targetIndustry || '';
+    const resumeData = await callDeepSeekParse(`用户对自己的一段描述：\n\n${description}`, req.user._id, targetIndustry);
 
     res.json({ resume: resumeData });
   } catch (error) {
     console.error('AI generate resume error:', error);
-    if (error.message.includes('DeepSeek API')) {
+    if (error.message?.includes('DeepSeek API')) {
       return res.status(502).json({ message: 'AI 服务调用失败，请稍后重试' });
     }
+    if (error instanceof SyntaxError) {
+      return res.status(500).json({ message: 'AI 返回数据格式异常，请稍后重试' });
+    }
     res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 针对性润色：将已有简历按目标行业重新调整措辞
+router.post('/polish-resume', auth, async (req, res) => {
+  try {
+    const { resume, targetIndustry } = req.body;
+
+    if (!targetIndustry || targetIndustry.trim().length < 2) {
+      return res.status(400).json({ message: '请输入目标行业（至少2个字）' });
+    }
+
+    if (!resume || !resume.realName) {
+      return res.status(400).json({ message: '请先生成或填写简历内容' });
+    }
+
+    const isEnabled = await Settings.isApiEnabled('resumeParse');
+    if (!isEnabled) {
+      return res.status(503).json({ message: '简历功能已暂停使用，请联系管理员' });
+    }
+
+    const { apiKey: resumeKey } = await getApiConfig('resumeParse');
+    const resumeFinalKey = resumeKey || process.env.DEEPSEEK_API_KEY || '';
+    if (!resumeFinalKey) {
+      return res.status(500).json({ message: 'AI 服务未配置 API Key' });
+    }
+
+    // 将结构化简历转为文本，供 AI 理解
+    const resumeText = [
+      `姓名：${resume.realName || ''}`,
+      `简介：${resume.bio || ''}`,
+      `技能：${(resume.skills || []).join('、')}`,
+      `兴趣：${(resume.interests || []).join('、')}`,
+      `邮箱：${resume.contactEmail || ''}`,
+      `城市：${resume.location || ''}`,
+      `工作经历：`,
+      ...(resume.experience || []).map(e =>
+        `- ${e.period || ''} ${e.organization || e.company || ''} ${e.position || e.title || ''}：${e.description || ''}`
+      ),
+      `教育经历：`,
+      ...(resume.education || []).map(e =>
+        `- ${e.period || ''} ${e.school || ''} ${e.major || ''} ${e.degree || ''}`
+      ),
+      `社交链接：${resume.socialLinks?.github || ''} ${resume.socialLinks?.wechat || ''}`
+    ].join('\n');
+
+    const aiResult = await callDeepSeekPolish(resumeText, targetIndustry.trim(), req.user._id);
+
+    // 合并：固定字段用原始数据，只有 bio/skills/description 用 AI 输出
+    const merged = {
+      realName: resume.realName || aiResult.realName || '',
+      bio: aiResult.bio || resume.bio || '',
+      skills: aiResult.skills?.length ? aiResult.skills : (resume.skills || []),
+      interests: aiResult.interests?.length ? aiResult.interests : (resume.interests || []),
+      experience: (resume.experience || []).map((orig, i) => ({
+        organization: orig.organization || orig.company || '',
+        position: orig.position || orig.title || '',
+        period: orig.period || '',
+        description: aiResult.experience?.[i]?.description || orig.description || ''
+      })),
+      education: resume.education || [],
+      socialLinks: resume.socialLinks || { github: '', wechat: '' },
+      contactEmail: resume.contactEmail || '',
+      location: resume.location || ''
+    };
+
+    res.json({ resume: merged });
+  } catch (error) {
+    console.error('Polish resume error:', error);
+    if (error.message?.includes('DeepSeek API')) {
+      return res.status(502).json({ message: 'AI 服务调用失败，请稍后重试' });
+    }
+    if (error instanceof SyntaxError) {
+      return res.status(500).json({ message: 'AI 返回数据格式异常，请稍后重试' });
+    }
+    res.status(500).json({ message: '润色失败：' + (error.message || '未知错误') });
   }
 });
 
