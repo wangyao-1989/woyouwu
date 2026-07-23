@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>我有物 · 我有悟｜TRAE 创意大赛展示</title>
+  <title>我有物 · 我有悟｜TRAE 创意大赛初赛展示</title>
   <style>
     :root {
       --bg: #f7f2ea;
@@ -14,6 +14,8 @@
       --accent-soft: #f0d8d3;
       --line: #eadfd2;
       --green: #3f7d58;
+      --blue: #3c78a8;
+      --purple: #7a5a9e;
     }
 
     * {
@@ -98,293 +100,562 @@
       border-color: var(--line);
     }
 
-    .phone {
+    .mockup {
       position: relative;
-      padding: 18px;
-      border-radius: 38px;
-      background: linear-gradient(145deg, #302821, #1f1b18);
-      box-shadow: 0 28px 80px rgba(42, 36, 31, 0.24);
-    }
-
-    .screen {
-      min-height: 520px;
-      padding: 22px;
-      border-radius: 28px;
-      background: linear-gradient(180deg, #fffaf3, #f4eadf);
+      border-radius: 32px;
       overflow: hidden;
+      box-shadow: 0 24px 72px rgba(42, 36, 31, 0.15);
+      border: 3px solid #fff;
     }
 
-    .screen h2 {
-      margin: 16px 0 8px;
-      font-size: 26px;
-    }
-
-    .screen p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    .mini-nav {
+    .mockup-header {
       display: flex;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+      background: #1a1a1a;
       gap: 8px;
-      margin-bottom: 22px;
-      color: var(--muted);
+    }
+
+    .mockup-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5f56;
+    }
+
+    .mockup-dot:nth-child(2) {
+      background: #ffbd2e;
+    }
+
+    .mockup-dot:nth-child(3) {
+      background: #27ca40;
+    }
+
+    .mockup-content {
+      background: #f7f5f2;
+      padding: 24px;
+    }
+
+    .mockup-nav {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      border-bottom: 1px solid #ebe7e0;
+      margin-bottom: 16px;
+    }
+
+    .mockup-nav span {
       font-size: 13px;
+      color: #777;
     }
 
-    .content-card {
-      margin-top: 18px;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(255, 255, 255, 0.72);
-      box-shadow: 0 12px 32px rgba(42, 36, 31, 0.08);
-    }
-
-    .content-image {
-      height: 132px;
-      border-radius: 18px;
-      background:
-        linear-gradient(135deg, rgba(184, 79, 79, 0.28), rgba(63, 125, 88, 0.22)),
-        repeating-linear-gradient(45deg, rgba(255,255,255,0.32) 0 12px, transparent 12px 24px);
-    }
-
-    .tag-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-    }
-
-    .tag {
-      padding: 4px 10px;
+    .mockup-search {
+      background: #fff;
+      border: 1px solid #ebe7e0;
       border-radius: 999px;
-      background: var(--accent-soft);
-      color: #773636;
-      font-size: 12px;
-      font-weight: 700;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #999;
     }
 
-    section {
-      margin-top: 28px;
+    .mockup-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .mockup-card-img {
+      height: 120px;
+      background: linear-gradient(135deg, #e8f5e9, #e3f2fd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .mockup-card-text {
+      padding: 12px;
+      font-size: 14px;
+      color: #222;
+    }
+
+    .mockup-card-meta {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .section {
+      margin-top: 64px;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 48px;
     }
 
     .section-title {
-      margin: 0 0 14px;
-      font-size: 30px;
+      font-size: 32px;
+      margin-bottom: 16px;
       letter-spacing: -0.02em;
     }
 
-    .grid {
+    .section-desc {
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .features-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .feature-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #fff;
+    }
+
+    .feature-icon.pink {
+      background: linear-gradient(135deg, #b84f4f, #d47474);
+    }
+
+    .feature-icon.green {
+      background: linear-gradient(135deg, #3f7d58, #5a9e74);
+    }
+
+    .feature-icon.blue {
+      background: linear-gradient(135deg, #3c78a8, #5d9bc9);
+    }
+
+    .feature-icon.purple {
+      background: linear-gradient(135deg, #7a5a9e, #9b7ebd);
+    }
+
+    .feature-icon.orange {
+      background: linear-gradient(135deg, #c97b4a, #e39a6b);
+    }
+
+    .feature-title {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .demo-section {
+      margin-top: 64px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .demo-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .demo-img {
+      height: 200px;
+      background: linear-gradient(135deg, var(--bg), #fff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+
+    .demo-img-label {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .demo-content {
+      padding: 20px;
+    }
+
+    .demo-title {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .demo-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .process-section {
+      margin-top: 64px;
+    }
+
+    .process-timeline {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .process-timeline::before {
+      content: '';
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--line);
+    }
+
+    .process-item {
+      position: relative;
+      padding-left: 60px;
+      padding-bottom: 40px;
+    }
+
+    .process-item:last-child {
+      padding-bottom: 0;
+    }
+
+    .process-number {
+      position: absolute;
+      left: 8px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--text);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .process-step {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .process-desc {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .process-result {
+      margin-top: 8px;
+      padding: 12px 16px;
+      background: rgba(63, 125, 88, 0.08);
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--green);
+    }
+
+    .session-section {
+      margin-top: 64px;
+    }
+
+    .session-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 16px;
     }
 
-    .card {
-      padding: 22px;
+    .session-card {
+      background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 26px;
-      background: rgba(255, 250, 243, 0.78);
-      box-shadow: 0 18px 48px rgba(42, 36, 31, 0.08);
+      border-radius: 16px;
+      padding: 20px;
     }
 
-    .card h3 {
-      margin: 0 0 8px;
-      font-size: 19px;
+    .session-id {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--accent);
+      background: rgba(184, 79, 79, 0.08);
+      padding: 6px 10px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      word-break: break-all;
     }
 
-    .card p {
-      margin: 0;
+    .session-desc {
+      font-size: 14px;
       color: var(--muted);
-      font-size: 15px;
-    }
-
-    .wide {
-      grid-column: span 2;
-    }
-
-    .feature-list {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .feature-list li {
-      padding: 16px;
-      border-radius: 20px;
-      background: #fff;
-      border: 1px solid var(--line);
-      color: var(--muted);
-    }
-
-    .feature-list strong {
-      display: block;
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-
-    .quote {
-      padding: 30px;
-      border-radius: 30px;
-      background: var(--text);
-      color: #fff;
-      font-size: 24px;
-      line-height: 1.55;
-    }
-
-    .quote span {
-      display: block;
-      margin-top: 12px;
-      color: rgba(255, 255, 255, 0.66);
-      font-size: 15px;
+      line-height: 1.6;
     }
 
     .footer {
-      margin-top: 36px;
-      padding-top: 24px;
+      margin-top: 80px;
+      text-align: center;
+      padding-top: 32px;
       border-top: 1px solid var(--line);
       color: var(--muted);
       font-size: 14px;
     }
 
-    @media (max-width: 860px) {
-      .hero,
-      .grid,
-      .feature-list {
+    @media (max-width: 768px) {
+      .hero {
         grid-template-columns: 1fr;
+        min-height: auto;
       }
 
-      .wide {
-        grid-column: auto;
+      h1 {
+        font-size: 40px;
       }
 
-      .phone {
-        max-width: 420px;
-        margin: 0 auto;
+      .mockup {
+        margin-top: 24px;
       }
     }
   </style>
 </head>
 <body>
-  <main class="page">
+  <div class="page">
     <section class="hero">
       <div>
-        <div class="badge">TRAE 创意大赛 · 生活娱乐赛道</div>
+        <span class="badge">TRAE 创意大赛 · 生活娱乐赛道</span>
         <h1>我有物<br>我有悟</h1>
-        <p class="lead">一个把闲置物品、个人创作、灵感碎片和实用资源连接起来的暖心社区。让“用不上”的物品重新流动，也让普通人的经验、作品和想法被更多人看见。</p>
+        <p class="lead">一个把闲置物品、个人创作、灵感碎片和实用资源连接起来的暖心社区。让"用不上"的物品重新流动，也让普通人的经验、作品和想法被更多人看见。</p>
         <div class="actions">
-          <a class="button" href="#idea">查看创意方案</a>
-          <a class="button secondary" href="#value">了解价值</a>
+          <a href="#features" class="button">查看创意方案</a>
+          <a href="#value" class="button secondary">了解价值</a>
         </div>
       </div>
-
-      <div class="phone" aria-label="产品界面示意">
-        <div class="screen">
-          <div class="mini-nav">
+      <div class="mockup">
+        <div class="mockup-header">
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+        </div>
+        <div class="mockup-content">
+          <div class="mockup-nav">
             <span>首页</span>
             <span>闲置交换</span>
             <span>灵感</span>
             <span>资源</span>
           </div>
-          <div class="badge">你的随手分享，或许正在照亮他人的夜空</div>
-          <h2>记录物品故事，开启温度交换</h2>
-          <p>用户可以发布闲置好物、项目作品、文章故事、灵感碎片和资源链接，通过搜索、分类和互动找到真正需要的人。</p>
-          <div class="content-card">
-            <div class="content-image"></div>
-            <div class="tag-row">
-              <span class="tag">闲置交换</span>
-              <span class="tag">项目作品</span>
-              <span class="tag">资源分享</span>
-            </div>
-            <h2>因物而见，因悟而明</h2>
-            <p>从一件物品出发，沉淀故事、经验与连接。</p>
+          <div class="mockup-search">你的随手分享，或许正在照亮他人的夜空</div>
+          <div class="mockup-card">
+            <div class="mockup-card-img">📚</div>
+            <div class="mockup-card-text">闲置书籍 · 寻找新主人</div>
+            <div class="mockup-card-meta">数码电子 · 2小时前</div>
+          </div>
+          <div class="mockup-card">
+            <div class="mockup-card-img">🎨</div>
+            <div class="mockup-card-text">个人项目作品展示</div>
+            <div class="mockup-card-meta">项目作品 · 5小时前</div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="idea">
-      <h2 class="section-title">创意介绍</h2>
-      <div class="grid">
-        <article class="card">
-          <h3>想解决的问题</h3>
-          <p>闲置物品常被低效堆放，个人创作和生活经验也容易散落在不同平台，难以被附近或同圈层真正需要的人发现。</p>
-        </article>
-        <article class="card">
-          <h3>灵感来源</h3>
-          <p>很多物品并不是没有价值，只是暂时没有遇到合适的人。把物品故事、创作分享和资源推荐放在同一个社区里，可以让分享更有温度。</p>
-        </article>
-        <article class="card">
-          <h3>产品形态</h3>
-          <p>这是一个 Web 社区系统，支持账号、发布、搜索、筛选、点赞收藏、私信、个人主页和后台管理。</p>
-        </article>
+    <section id="features" class="section">
+      <div class="section-header">
+        <h2 class="section-title">核心功能</h2>
+        <p class="section-desc">支持多种内容类型的发布与发现，让分享更有温度</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon pink">🔄</div>
+          <h3 class="feature-title">闲置交换</h3>
+          <p class="feature-desc">发布闲置物品，附带故事描述，让物品找到真正需要它的人</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">📁</div>
+          <h3 class="feature-title">项目作品</h3>
+          <p class="feature-desc">展示个人或团队的创意作品，支持分类筛选和点赞互动</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">📝</div>
+          <h3 class="feature-title">文章故事</h3>
+          <p class="feature-desc">记录生活感悟、经验分享，让文字成为连接的桥梁</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple">💡</div>
+          <h3 class="feature-title">灵感碎片</h3>
+          <p class="feature-desc">捕捉一闪而过的创意，与同好交流碰撞出新的火花</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">🔗</div>
+          <h3 class="feature-title">资源分享</h3>
+          <p class="feature-desc">推荐实用工具、学习资料，打造有价值的资源库</p>
+        </div>
       </div>
     </section>
 
-    <section>
-      <h2 class="section-title">目标用户与使用场景</h2>
-      <div class="grid">
-        <article class="card wide">
-          <h3>核心用户</h3>
-          <p>面向学生、年轻创作者、社区居民、兴趣爱好者和注重可持续生活的人群。他们既有闲置物品要处理，也希望展示自己的作品、经验和灵感。</p>
-        </article>
-        <article class="card">
-          <h3>典型场景</h3>
-          <p>搬家整理、毕业季物品流转、兴趣作品展示、好用工具推荐、学习资料分享、同城或同圈层交流。</p>
-        </article>
-        <article class="card">
-          <h3>当前痛点</h3>
-          <p>传统二手平台偏交易，内容社区偏展示，资源收藏又太分散；用户缺少一个既能交换物品，也能沉淀故事和连接人的轻量空间。</p>
-        </article>
-        <article class="card wide">
-          <h3>使用路径</h3>
-          <p>用户进入首页后，可以浏览好物、创作与灵感；通过分类搜索找到目标内容；登录后发布闲置、项目、文章、灵感或资源，并通过私信继续沟通。</p>
-        </article>
+    <section class="demo-section">
+      <div class="section-header">
+        <h2 class="section-title">界面展示</h2>
+        <p class="section-desc">产品核心页面的交互设计预览</p>
+      </div>
+      <div class="demo-grid">
+        <div class="demo-card">
+          <div class="demo-img">🏠<span class="demo-img-label">首页</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">沉浸式首页体验</h3>
+            <p class="demo-desc">液态文字动效、资讯好望角、分类快捷入口，打造温暖的社区氛围</p>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-img">🔍<span class="demo-img-label">探索</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">多维筛选发现</h3>
+            <p class="demo-desc">按类型、分类、关键词搜索，网格/列表视图切换，精准找到目标内容</p>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-img">👤<span class="demo-img-label">个人主页</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">完整个人空间</h3>
+            <p class="demo-desc">支持头像上传、简历编辑、作品展示，打造个人品牌形象</p>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-img">📤<span class="demo-img-label">发布</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">一键发布多种内容</h3>
+            <p class="demo-desc">闲置、项目、文章、灵感、资源五种发布类型，统一入口操作简单</p>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-img">💬<span class="demo-img-label">私信</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">即时沟通互动</h3>
+            <p class="demo-desc">支持用户私信交流，让分享从线上延伸到线下</p>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-img">🎮<span class="demo-img-label">工具箱</span></div>
+          <div class="demo-content">
+            <h3 class="demo-title">实用工具集成</h3>
+            <p class="demo-desc">简历生成、文档转换、图片裁剪、股票监控等多种工具</p>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section>
-      <h2 class="section-title">功能亮点</h2>
-      <ul class="feature-list">
-        <li><strong>多类型发布</strong>支持闲置交换、项目作品、文章故事、灵感碎片、资源分享，不把用户表达限制在单一交易场景。</li>
-        <li><strong>发现与筛选</strong>按分类、类型、关键词、热度和时间查找内容，提升物品与需求的匹配效率。</li>
-        <li><strong>用户连接</strong>支持用户主页、私信、点赞收藏和社区浏览，让分享后续可以自然转化为交流。</li>
-        <li><strong>扩展工具箱</strong>站内已集成简历、文档转换、图片裁剪、股票监控、小游戏等功能，为用户留存提供更多日常入口。</li>
-      </ul>
-    </section>
-
-    <section id="value">
-      <h2 class="section-title">价值与意义</h2>
-      <div class="grid">
-        <article class="card">
-          <h3>社会价值</h3>
-          <p>推动闲置物品再利用，减少浪费；让物品背后的故事被保留，也让分享、互助和低碳生活变得更容易发生。</p>
-        </article>
-        <article class="card">
-          <h3>效率提升</h3>
-          <p>通过统一发布入口、分类筛选和搜索能力，把“找物品、找资源、找创作灵感”的过程集中到一个平台里。</p>
-        </article>
-        <article class="card">
-          <h3>商业潜力</h3>
-          <p>可扩展同城校园社区、兴趣圈层、资源精选、会员工具和本地服务合作，形成有温度的社区型增长。</p>
-        </article>
+    <section class="process-section">
+      <div class="section-header">
+        <h2 class="section-title">TRAE 开发流程</h2>
+        <p class="section-desc">从想法到成品，TRAE 如何帮助我完成这个项目</p>
+      </div>
+      <div class="process-timeline">
+        <div class="process-item">
+          <div class="process-number">1</div>
+          <div class="process-step">需求分析与规划</div>
+          <div class="process-desc">向 TRAE 描述社区平台的核心需求，包括闲置交换、内容发布、用户互动等功能模块</div>
+          <div class="process-result">TRAE 帮助梳理出完整的功能清单和技术架构</div>
+        </div>
+        <div class="process-item">
+          <div class="process-number">2</div>
+          <div class="process-step">前端页面开发</div>
+          <div class="process-desc">按照设计稿实现首页、物品列表、发布页、个人主页等核心页面，使用 React + TailwindCSS</div>
+          <div class="process-result">完成 20+ 个页面组件，实现响应式设计和流畅动画效果</div>
+        </div>
+        <div class="process-item">
+          <div class="process-number">3</div>
+          <div class="process-step">后端接口开发</div>
+          <div class="process-desc">开发 RESTful API，包括用户认证、内容 CRUD、搜索筛选、文件上传等功能</div>
+          <div class="process-result">完成 18+ 个路由模块，对接 MongoDB 数据库，支持 Socket.IO 实时通信</div>
+        </div>
+        <div class="process-item">
+          <div class="process-number">4</div>
+          <div class="process-step">功能迭代与优化</div>
+          <div class="process-desc">持续迭代功能，修复 Bug，优化性能，添加工具箱扩展功能</div>
+          <div class="process-result">项目稳定运行，支持完整的社区功能和多种扩展工具</div>
+        </div>
+        <div class="process-item">
+          <div class="process-number">5</div>
+          <div class="process-step">创意展示生成</div>
+          <div class="process-desc">使用 TRAE 生成创意大赛的展示 HTML 文件，整理报名资料</div>
+          <div class="process-result">生成完整的展示页面，包含功能介绍、界面预览和开发流程</div>
+        </div>
       </div>
     </section>
 
-    <section class="quote">
-      “淀于心者为种，破于世者为木。”我有物 · 我有悟希望让每一次随手分享，都成为人与人之间新的连接。
-      <span>创意产物 HTML 文件，由 TRAE Work 整理生成，可用于报名帖附件展示。</span>
+    <section class="session-section">
+      <div class="section-header">
+        <h2 class="section-title">关键开发 Session</h2>
+        <p class="section-desc">以下 Session ID 可证明作品由 TRAE 开发完成</p>
+      </div>
+      <div class="session-grid">
+        <div class="session-card">
+          <div class="session-id">6a446580b26d4728266eb4f3</div>
+          <div class="session-desc">创意大赛报名资料整理与展示页面生成</div>
+        </div>
+        <div class="session-card">
+          <div class="session-id">6a44b030e131eec803573a2b</div>
+          <div class="session-desc">管理员参考内容库文件上传功能开发</div>
+        </div>
+        <div class="session-card">
+          <div class="session-id">6a3a3c8cb32248273659932c</div>
+          <div class="session-desc">项目路径配置与规则设置</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="value" class="section">
+      <div class="section-header">
+        <h2 class="section-title">价值与意义</h2>
+        <p class="section-desc">让分享更有温度，让连接更有意义</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon green">🌱</div>
+          <h3 class="feature-title">社会价值</h3>
+          <p class="feature-desc">推动闲置物品再利用，减少浪费；让物品背后的故事被保留，促进分享与互助</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">⚡</div>
+          <h3 class="feature-title">效率提升</h3>
+          <p class="feature-desc">统一发布入口和分类筛选，让找物品、找资源、找灵感的过程更高效</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple">🚀</div>
+          <h3 class="feature-title">商业潜力</h3>
+          <p class="feature-desc">可扩展同城社区、兴趣圈层、资源精选、会员工具，形成有温度的社区增长</p>
+        </div>
+      </div>
     </section>
 
     <footer class="footer">
-      推荐报名标签：生活娱乐。若投稿时希望强调闲置循环、低碳互助，也可以额外考虑社会公益附加标签。
+      <p>我有物 · 我有悟 | TRAE 创意大赛初赛展示</p>
     </footer>
-  </main>
+  </div>
 </body>
 </html>

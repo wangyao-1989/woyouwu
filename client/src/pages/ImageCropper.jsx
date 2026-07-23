@@ -2,13 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
 
-const MBTI_NAMES = [
-  'INTJ_建筑师', 'INTP_逻辑学家', 'ENTJ_指挥官', 'ENTP_辩论家',
-  'INFJ_提倡者', 'INFP_调停者', 'ENFJ_主人公', 'ENFP_竞选者',
-  'ISTJ_物流师', 'ISFJ_守卫者', 'ESTJ_执行官', 'ESFJ_执政官',
-  'ISTP_鉴赏家', 'ISFP_探险家', 'ESTP_企业家', 'ESFP_娱乐者',
-];
-
 export default function ImageCropper() {
   const navigate = useNavigate();
   const [image, setImage] = useState(null);
@@ -184,9 +177,7 @@ export default function ImageCropper() {
         ctx.drawImage(image, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
 
         const dataUrl = cvs.toDataURL('image/png');
-        const name = (cols === 4 && rows === 4 && index < MBTI_NAMES.length)
-          ? MBTI_NAMES[index] + '.png'
-          : 'avatar_r' + (r + 1) + '_c' + (c + 1) + '.png';
+        const name = '裁剪_' + (r + 1) + '行_' + (c + 1) + '列.png';
 
         results.push({ name, dataUrl, base64: dataUrl.split(',')[1] });
         index++;
@@ -261,10 +252,7 @@ export default function ImageCropper() {
               <label className="block text-sm font-medium text-gray-600 mb-2">
                 1. 上传图片
               </label>
-              <div
-                className="relative w-full h-11 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-300 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <div className="relative w-full h-11 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-300 transition-colors">
                 <span className="text-sm text-gray-400 truncate px-3">
                   {imageName || '点击或拖拽上传图片'}
                 </span>

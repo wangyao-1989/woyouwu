@@ -43,6 +43,17 @@ async function fetchEastMoneyPrice(stockCode) {
       const price = data.data.f43 / divisor;
 
       if (!isNaN(price) && price > 0 && price < 10000) {
+        // ETF 的 f51/f52 字段含义与股票不同，不可信，自己计算涨跌额和涨跌幅
+        let changeAmount, changePercent;
+        if (isEtf) {
+          const yesterdayClose = data.data.f60 ? data.data.f60 / divisor : null;
+          changeAmount = yesterdayClose != null ? price - yesterdayClose : 0;
+          changePercent = yesterdayClose != null && yesterdayClose > 0 ? (changeAmount / yesterdayClose) * 100 : 0;
+        } else {
+          changeAmount = data.data.f51 / divisor;
+          changePercent = data.data.f52 / 100;
+        }
+
         return {
           currentPrice: price.toFixed(4),
           yesterdayClose: data.data.f60 ? data.data.f60 / divisor : null,
@@ -52,8 +63,8 @@ async function fetchEastMoneyPrice(stockCode) {
           volume: data.data.f47,
           amount: data.data.f48,
           volumeRatio: data.data.f50 ? data.data.f50 / 1000 : null,
-          changeAmount: data.data.f51 / divisor,
-          changePercent: data.data.f52 / 100,
+          changeAmount,
+          changePercent,
           amplitude: data.data.f107 ? data.data.f107 / 100 : null,
           turnoverRate: data.data.f108 ? data.data.f108 / 100 : null,
           totalMarketCap: data.data.f116,
@@ -142,6 +153,7 @@ router.post('/price', async (req, res) => {
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value.data) {
         stockData = result.value.data;
+        console.log(`[股价调试] ${stockCode} 数据源=${result.value.source}, changeAmount=${stockData.changeAmount}, changePercent=${stockData.changePercent}`);
         break;
       }
     }
@@ -960,6 +972,164 @@ router.post('/indicator', async (req, res) => {
     });
   } catch (error) {
     console.error('获取技术指标失败:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== 板块分类映射 ====================
+// 将东方财富细分行业板块按关键词归入大类
+const sectorCategoryMap = [
+  { name: '半导体', keys: ['集成电路', '半导体', '芯片', '分立器件', '电子化学品', '印制电路板', '元件', '光学元件', '光学光电子'] },
+  { name: '电力设备', keys: ['输变电', '电网', '配电', '逆变器', '电池', '电力设备', '风电', '光伏', '锂', '能源金属', '电机', '电源', '储能', '线缆', '充电桩', '太阳能', '燃料电池', '电池化学品', '风电零部件', '综合电力设备商'] },
+  { name: '有色金属', keys: ['铜', '铝', '铅锌', '镍', '钴', '钼', '白银', '黄金', '工业金属', '铁矿石', '稀土', '钨', '锡', '锑', '钛', '镁'] },
+  { name: '化工', keys: ['化学', '化工', '纯碱', '钛白粉', '氟化工', '煤化工', '磷肥', '氮肥', '钾肥', '复合肥', '聚氨酯', '涂料', '氯碱', '锦纶', '印染', '橡胶', '塑料', '化纤', '石化', '民爆', '氟', '硅', '氨纶', '炭黑', '有机硅', '磷化工', '其他石化', '辅料', '膜材料', '涤纶', '粘胶', '农药', '农化制品', '胶黏剂'] },
+  { name: '医药生物', keys: ['医药', '医美', '生物', '医疗', '药', '疫苗', '血液', '诊断', '中药', '化学制药', '线下药店', '医药流通', '医药商业', '医疗服务', '生物制品', '化学制剂', '医疗研发外包', '其他生物制品', '其他医疗服务', '医美耗材', '医疗美容'] },
+  { name: '食品饮料', keys: ['食品', '饮料', '白酒', '啤酒', '乳品', '调味', '休闲', '熟食', '宠物', '零食', '肉制品', '非白酒', '其他酒', '软饮料', '生活用纸', '食品饮料', '食用菌'] },
+  { name: '汽车', keys: ['汽车', '商用载客', '新能源车', '乘用车', '商用车', '摩托车', '轮胎', '汽车零部件', '汽车综合服务'] },
+  { name: '机械设备', keys: ['机械', '工程机械', '农用机械', '轨交', '通用设备', '专用设备', '仪器仪表', '机床', '机器人', '印刷包装', '楼宇设备', '能源及重型', '工程机械整机', '纺织服装设备', '其他通用设备', '金属制品', '磨具磨料', '制冷空调设备'] },
+  { name: 'TMT', keys: ['计算机', '软件', '通信', '电子', '消费电子', '品牌消费', '黑色家电', '白色家电', '家电', '冰洗', '空调', '彩电', '光学光电子', 'IT服务', '软件开发', '垂直应用软件', '横向通用软件', '通信终端', '通信网络', '通信设备', '金融信息服务', '电信运营商', '其他家电', '厨房电器', '个护小家电', '照明设备', '家电零部件', '电工仪器仪表'] },
+  { name: '金融', keys: ['银行', '保险', '证券', '非银金融', '多元金融', '农商行', '城商行', '股份制银行', '国有大型银行', '金融信息', '金融控股', '期货', '信托', '租赁'] },
+  { name: '房地产/建筑', keys: ['房地产', '建筑', '建材', '水泥', '玻璃', '装修', '玻纤', '房屋建设', '工程咨询', '专业工程', '基础建设', '园林', '商业地产', '产业地产', '水泥制品', '玻璃玻纤', '装修建材', '装修装饰', '工程咨询服务'] },
+  { name: '公用事业/环保', keys: ['电力', '水务', '环保', '燃气', '供热', '水力发电', '电能综合', '风力发电', '火力发电', '核能', '固废', '大气治理', '环境治理', '综合环境', '光伏发电', '新能源发电', '热力', '节能', '碳交易'] },
+  { name: '交通运输', keys: ['交通', '航运', '港口', '铁路', '公路', '机场', '物流', '快递', '公交', '高速公路', '航空', '机场'] },
+  { name: '农林牧渔', keys: ['农业', '林业', '牧业', '渔业', '饲料', '种植', '养殖', '种子', '农产品', '食用菌', '动物保健', '生猪养殖', '其他养殖', '其他种植业', '林业', '水产'] },
+  { name: '传媒', keys: ['传媒', '影视', '广告', '游戏', '出版', '文字媒体', '视频媒体', '数字媒体', '图片媒体', '门户网站', '教育出版', '其他数字媒体', '院线', '体育', '娱乐'] },
+  { name: '商贸零售', keys: ['商贸', '零售', '贸易', '电商', '百货', '超市', '专业连锁', '旅游零售', '综合电商', '电商服务', '人力资源', '一般零售', '互联网电商', '贸易', '旅游零售', '商业物业'] },
+  { name: '纺织服饰', keys: ['纺织', '服装', '服饰', '家纺', '辅料', '鞋类', '棉纺', '其他饰品', '印染', '纺织制造', '纺织鞋类制造', '非运动服装', '运动服装'] },
+  { name: '国防军工', keys: ['军工', '兵装', '航天', '航空', '地面兵装', '航海装备', '航空装备', '军工电子'] },
+  { name: '能源', keys: ['石油', '石化', '油田', '油气', '油服', '煤炭', '煤', '焦炭', '油田服务', '油服工程', '油气及炼化工程', '其他能源'] },
+  { name: '钢铁', keys: ['钢铁', '冶钢', '特钢', '板材'] },
+  { name: '社会服务', keys: ['旅游', '酒店', '餐饮', '教育', '会展', '租赁', '体育', '学历教育', '培训', '人力资源服务', '检测服务', '综合'] },
+];
+
+// 根据板块名称匹配大类
+function classifySector(name) {
+  for (const cat of sectorCategoryMap) {
+    for (const key of cat.keys) {
+      if (name.includes(key)) return cat.name;
+    }
+  }
+  return '其他';
+}
+
+// ==================== 板块热力图 ====================
+
+// GET /api/stocks/board-heatmap - 板块热力图数据（分类聚合 + 涨跌两极）
+router.get('/board-heatmap', async (req, res) => {
+  try {
+    const baseUrl = 'http://push2delay.eastmoney.com/api/qt/clist/get';
+    const params = 'pn=1&pz=100&np=1&fltt=2&invt=2&fs=m:90+t:2&fields=f2,f3,f4,f12,f14,f62,f184,f104,f105,f128,f140,f136';
+    const headers = { 'User-Agent': 'Mozilla/5.0', 'Referer': 'http://quote.eastmoney.com/' };
+
+    // 并行请求：升序取跌的（po=0），降序取涨的（po=1）
+    const [resDown, resUp] = await Promise.all([
+      fetch(`${baseUrl}?${params}&po=0&fid=f3`, { headers, signal: AbortSignal.timeout(10000) }),
+      fetch(`${baseUrl}?${params}&po=1&fid=f3`, { headers, signal: AbortSignal.timeout(10000) }),
+    ]);
+
+    const [dataDown, dataUp] = await Promise.all([resDown.json(), resUp.json()]);
+
+    if (!dataDown.data?.diff || !dataUp.data?.diff) {
+      return res.json({ success: false, error: '获取板块数据失败' });
+    }
+
+    const mapSector = item => ({
+      code: item.f12,
+      name: item.f14,
+      price: item.f2,
+      changePercent: item.f3 || 0,
+      changeAmount: item.f4 || 0,
+      mainInflow: item.f62 || 0,
+      mainInflowRatio: item.f184 || 0,
+      riseCount: item.f104 || 0,
+      fallCount: item.f105 || 0,
+      pe: item.f128 || 0,
+      turnoverRate: item.f140 || 0,
+      volumeRatio: item.f136 || 0,
+    });
+
+    // 合并去重（用code去重）
+    const sectorMap = new Map();
+    for (const item of [...dataDown.data.diff, ...dataUp.data.diff]) {
+      if (!sectorMap.has(item.f12)) {
+        sectorMap.set(item.f12, mapSector(item));
+      }
+    }
+    const allSectors = [...sectorMap.values()];
+
+    // 按大类分组
+    const categoryMap = {};
+    for (const sector of allSectors) {
+      const cat = classifySector(sector.name);
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { name: cat, sectors: [] };
+      }
+      categoryMap[cat].sectors.push(sector);
+    }
+
+    // 计算每个大类的聚合数据
+    const categories = Object.values(categoryMap).map(cat => {
+      const sectors = cat.sectors;
+      const avgChange = sectors.reduce((s, i) => s + i.changePercent, 0) / sectors.length;
+      const totalInflow = sectors.reduce((s, i) => s + i.mainInflow, 0);
+      const totalRise = sectors.reduce((s, i) => s + i.riseCount, 0);
+      const totalFall = sectors.reduce((s, i) => s + i.fallCount, 0);
+      return {
+        name: cat.name,
+        sectorCount: sectors.length,
+        avgChangePercent: Math.round(avgChange * 100) / 100,
+        totalMainInflow: totalInflow,
+        totalRiseCount: totalRise,
+        totalFallCount: totalFall,
+        // 子板块按涨跌幅降序排列
+        sectors: sectors.sort((a, b) => b.changePercent - a.changePercent),
+      };
+    });
+
+    // 按平均涨跌幅降序排列
+    categories.sort((a, b) => b.avgChangePercent - a.avgChangePercent);
+
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('获取板块热力图失败:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/stocks/board-fund-flow/:code - 板块资金流向分时数据
+router.get('/board-fund-flow/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) return res.status(400).json({ success: false, error: '板块代码不能为空' });
+
+    const url = `http://push2delay.eastmoney.com/api/qt/stock/fflow/kline/get?secid=90.${code}&fields1=f1,f2&fields2=f51,f52&klt=1&lmt=240`;
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'http://quote.eastmoney.com/' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await response.json();
+
+    if (!data.data?.klines) {
+      return res.json({ success: false, error: '获取资金流数据失败' });
+    }
+
+    // 解析分时数据：时间,主力净流入(元)
+    const flowData = data.data.klines.map(line => {
+      const [time, netInflow] = line.split(',');
+      return {
+        time: time.substring(11, 16), // 只保留 HH:mm
+        netInflow: parseFloat(netInflow) || 0,
+      };
+    });
+
+    res.json({
+      success: true,
+      code,
+      name: data.data.name,
+      flowData,
+    });
+  } catch (error) {
+    console.error('获取资金流数据失败:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

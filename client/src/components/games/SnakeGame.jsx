@@ -1,255 +1,225 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const GRID_SIZE = 20;
-const CELL_SIZE = 28;
-const GAME_WIDTH = GRID_SIZE * CELL_SIZE;
-const GAME_HEIGHT = GRID_SIZE * CELL_SIZE;
-const INITIAL_SPEED = 120;
+const GRID = 20, CELL = 28;
+const W = GRID * CELL, H = GRID * CELL;
+const SPEED = 120;
 
-const DIRECTION = {
-  ArrowUp: { x: 0, y: -1 },
-  ArrowDown: { x: 0, y: 1 },
-  ArrowLeft: { x: -1, y: 0 },
-  ArrowRight: { x: 1, y: 0 },
+const DIR = {
+  ArrowUp: {x:0,y:-1}, ArrowDown: {x:0,y:1},
+  ArrowLeft: {x:-1,y:0}, ArrowRight: {x:1,y:0},
 };
 
-function getRandomFood(snake) {
-  let pos;
-  do {
-    pos = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
-    };
-  } while (snake.some(s => s.x === pos.x && s.y === pos.y));
-  return pos;
+function randFood(snake) {
+  let p;
+  do { p = {x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID)}; }
+  while (snake.some(s => s.x===p.x && s.y===p.y));
+  return p;
 }
 
-function createInitialState() {
-  return {
-    snake: [{ x: 10, y: 10 }],
-    food: { x: 15, y: 10 },
-    direction: { x: 1, y: 0 },
-    nextDirection: { x: 1, y: 0 },
-    gameOver: false,
-    score: 0,
-  };
+function init() {
+  return { snake: [{x:10,y:10}], food: {x:15,y:10}, dir: {x:1,y:0}, nextDir: {x:1,y:0}, over: false, score: 0, particles: [] };
 }
 
 export default function SnakeGame() {
-  const [renderTick, setRenderTick] = useState(0);
-  const [isStarted, setIsStarted] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [started, setStarted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [best, setBest] = useState(() => parseInt(localStorage.getItem('snake_best')||'0'));
+  const st = useRef(init());
+  const loop = useRef(null);
+  const lastPaused = useRef(false);
 
-  // 用 ref 存可变游戏状态，避免闭包陷阱
-  const stateRef = useRef(createInitialState());
-  const gameLoopRef = useRef(null);
-  const prevIsPaused = useRef(false);
+  const render = useCallback(() => setTick(t => t+1), []);
 
-  const updateRender = useCallback(() => {
-    setRenderTick(t => t + 1);
-  }, []);
+  const start = useCallback(() => {
+    st.current = init(); setPaused(false); setStarted(true); render();
+  }, [render]);
 
-  const startGame = useCallback(() => {
-    stateRef.current = createInitialState();
-    setIsPaused(false);
-    setIsStarted(true);
-    updateRender();
-  }, [updateRender]);
-
-  // 游戏主循环——只创建一次，通过 ref 读写状态
   useEffect(() => {
-    if (!isStarted) return;
-
-    gameLoopRef.current = setInterval(() => {
-      const s = stateRef.current;
-      if (s.gameOver || isPaused) return;
-
-      const dir = s.nextDirection;
-      const head = s.snake[0];
-      const newHead = { x: head.x + dir.x, y: head.y + dir.y };
-
-      // 撞墙检测
-      if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-        s.gameOver = true;
-        updateRender();
-        return;
-      }
-
-      // 撞自身检测
-      if (s.snake.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
-        s.gameOver = true;
-        updateRender();
-        return;
-      }
-
-      // 移动
-      const ate = newHead.x === s.food.x && newHead.y === s.food.y;
-      s.snake = [newHead, ...s.snake];
+    if (!started) return;
+    if (loop.current) { clearInterval(loop.current); loop.current = null; }
+    if (st.current.over || paused) return;
+    loop.current = setInterval(() => {
+      const s = st.current;
+      if (s.over || paused) return;
+      const d = s.nextDir;
+      const h = s.snake[0];
+      const nh = {x: h.x+d.x, y: h.y+d.y};
+      if (nh.x<0||nh.x>=GRID||nh.y<0||nh.y>=GRID) { s.over=true; render(); return; }
+      if (s.snake.some(seg => seg.x===nh.x&&seg.y===nh.y)) { s.over=true; render(); return; }
+      const ate = nh.x===s.food.x && nh.y===s.food.y;
+      s.snake = [nh, ...s.snake];
       if (!ate) s.snake.pop();
-
       if (ate) {
-        s.score += 1;
-        s.food = getRandomFood(s.snake);
+        s.score++;
+        s.particles = s.particles.concat([{x: s.food.x, y: s.food.y, life: 1, id: Date.now()+Math.random()}]);
+        s.food = randFood(s.snake);
       }
+      s.dir = d;
+      // 衰减粒子
+      s.particles = s.particles.filter(p => { p.life -= 0.04; return p.life > 0; });
+      render();
+    }, SPEED);
+    return () => { if (loop.current) clearInterval(loop.current); };
+  }, [started, paused]);
 
-      s.direction = dir;
-      updateRender();
-    }, INITIAL_SPEED);
-
-    return () => clearInterval(gameLoopRef.current);
-    // 注意：isPaused 不需要在 deps 里，因为 interval 回调内部读取 ref
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStarted]);
-
-  // 暂停时清空定时器，恢复时重建
   useEffect(() => {
-    if (!isStarted) return;
-    if (prevIsPaused.current !== isPaused) {
-      prevIsPaused.current = isPaused;
-      if (isPaused) {
-        if (gameLoopRef.current) {
-          clearInterval(gameLoopRef.current);
-          gameLoopRef.current = null;
-        }
-      } else {
-        gameLoopRef.current = setInterval(() => {
-          const s = stateRef.current;
-          if (s.gameOver) return;
-
-          const dir = s.nextDirection;
-          const head = s.snake[0];
-          const newHead = { x: head.x + dir.x, y: head.y + dir.y };
-
-          if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-            s.gameOver = true;
-            updateRender();
-            return;
-          }
-
-          if (s.snake.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
-            s.gameOver = true;
-            updateRender();
-            return;
-          }
-
-          const ate = newHead.x === s.food.x && newHead.y === s.food.y;
-          s.snake = [newHead, ...s.snake];
-          if (!ate) s.snake.pop();
-
-          if (ate) {
-            s.score += 1;
-            s.food = getRandomFood(s.snake);
-          }
-
-          s.direction = dir;
-          updateRender();
-        }, INITIAL_SPEED);
-      }
-    }
-  }, [isStarted, isPaused, updateRender]);
-
-  // 键盘事件
-  useEffect(() => {
-    if (!isStarted) return;
-
-    const handleKeyDown = (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    if (!started) return;
+    const h = (e) => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
         e.preventDefault();
-        const newDir = DIRECTION[e.key];
-        const s = stateRef.current;
-        const curDir = isPaused ? s.direction : s.nextDirection;
-        if (newDir.x !== -curDir.x || newDir.y !== -curDir.y) {
-          s.nextDirection = newDir;
-        }
+        const nd = DIR[e.key];
+        const s = st.current;
+        const cd = paused ? s.dir : s.nextDir;
+        if (!(nd.x === -cd.x && nd.y === -cd.y)) s.nextDir = nd;
       }
-      if (e.key === ' ' || e.key === 'p' || e.key === 'P') {
-        setIsPaused(prev => !prev);
-      }
+      if (e.key===' '||e.key==='p'||e.key==='P') setPaused(prev => !prev);
     };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [started, paused]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isStarted, isPaused]);
+  useEffect(() => {
+    if (st.current.over && st.current.score > best) {
+      setBest(st.current.score);
+      localStorage.setItem('snake_best', st.current.score);
+    }
+  }, [st.current.over, st.current.score, best]);
 
-  // 从 ref 读取渲染数据
-  const { snake, food, gameOver, score } = stateRef.current;
+  const { snake, food, over, score, particles } = st.current;
+  const head = snake[0];
 
   return (
     <div className="flex flex-col items-center">
-      <div className="flex items-center justify-between w-full mb-3 px-1">
-        <div className="text-sm font-bold text-gray-700">🐍 贪吃蛇</div>
-        <div className="text-sm font-bold text-green-600">得分: {score}</div>
+      <div className="flex items-center justify-between w-full mb-4 px-1">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <span className="text-xl">🐍</span> 贪吃蛇
+        </h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
+            <span className="text-xs text-slate-400">最高</span>
+            <span className="text-sm font-bold text-amber-400 tabular-nums">{best}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <span className="text-xs text-emerald-300">得分</span>
+            <span className="text-sm font-bold text-emerald-400 tabular-nums">{score}</span>
+          </div>
+        </div>
       </div>
 
-      <div
-        className="relative bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-700"
-        style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}
-      >
-        {!isStarted && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10">
-            <p className="text-white text-lg font-bold mb-3">🐍 贪吃蛇</p>
-            <p className="text-gray-300 text-xs mb-4">方向键移动 · 空格暂停</p>
-            <button
-              onClick={startGame}
-              className="px-6 py-2 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition text-sm"
-            >
+      <div className="relative rounded-2xl overflow-hidden border border-slate-700 shadow-2xl shadow-emerald-900/20"
+        style={{ width: W, height: H, background: 'radial-gradient(ellipse at center, #0f172a 0%, #020617 100%)' }}>
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.04]">
+          {Array.from({length: GRID+1}).map((_,i) => (
+            <g key={i}>
+              <line x1={i*CELL} y1={0} x2={i*CELL} y2={H} stroke="#fff" strokeWidth="0.5"/>
+              <line x1={0} y1={i*CELL} x2={W} y2={i*CELL} stroke="#fff" strokeWidth="0.5"/>
+            </g>
+          ))}
+        </svg>
+
+        {!started && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-10">
+            <p className="text-4xl mb-3">🐍</p>
+            <p className="text-white text-lg font-bold mb-1">贪吃蛇</p>
+            <p className="text-slate-400 text-xs mb-5">方向键移动 · 空格暂停</p>
+            <button onClick={start} className="px-7 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold transition shadow-lg shadow-emerald-500/25">
               开始游戏
             </button>
           </div>
         )}
 
-        {gameOver && isStarted && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-10">
-            <p className="text-red-400 text-lg font-bold mb-1">游戏结束</p>
-            <p className="text-white text-sm mb-3">得分: {score}</p>
-            <button
-              onClick={startGame}
-              className="px-6 py-2 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition text-sm"
-            >
+        {over && started && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-10">
+            <p className="text-rose-400 text-lg font-bold mb-1">游戏结束</p>
+            <p className="text-white text-3xl font-bold mb-1">{score}</p>
+            {score >= best && score > 0 && <p className="text-amber-400 text-xs mb-3">🏆 新纪录！</p>}
+            <button onClick={start} className="px-7 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold transition shadow-lg shadow-emerald-500/25">
               重新开始
             </button>
           </div>
         )}
 
-        {isPaused && !gameOver && isStarted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-            <p className="text-white text-lg font-bold">已暂停</p>
+        {paused && !over && started && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
+            <p className="text-white text-xl font-bold tracking-widest">已暂停</p>
           </div>
         )}
 
-        {/* 蛇身 */}
-        {snake.map((seg, i) => (
-          <div
-            key={i}
-            className="absolute rounded-sm"
+        {/* 食物粒子 */}
+        {particles.map(p => (
+          <div key={p.id} className="absolute rounded-full pointer-events-none"
             style={{
-              left: seg.x * CELL_SIZE,
-              top: seg.y * CELL_SIZE,
-              width: CELL_SIZE - 1,
-              height: CELL_SIZE - 1,
-              backgroundColor: i === 0 ? '#22c55e' : '#16a34a',
-              borderRadius: i === 0 ? '3px' : '2px',
-              zIndex: snake.length - i,
+              left: p.x*CELL+CELL/2, top: p.y*CELL+CELL/2,
+              width: CELL*0.8, height: CELL*0.8,
+              transform: `translate(-50%, -50%) scale(${p.life})`,
+              background: `radial-gradient(circle, rgba(52,211,153,${p.life}) 0%, transparent 70%)`,
+              transition: 'none',
             }}
           />
         ))}
 
+        {/* 蛇身 */}
+        {snake.map((seg, i) => {
+          const isHead = i === 0;
+          const prev = i > 0 ? snake[i-1] : null;
+          const next = i < snake.length-1 ? snake[i+1] : null;
+          const progress = i / Math.max(snake.length - 1, 1);
+          const r = Math.floor(52 + progress * 20);
+          const g = Math.floor(211 - progress * 60);
+          const b = Math.floor(153 - progress * 40);
+          const color = `rgb(${r},${g},${b})`;
+          const dark = `rgb(${r-20},${g-40},${b-30})`;
+          return (
+            <div key={i}
+              className="absolute"
+              style={{
+                left: seg.x*CELL + 1, top: seg.y*CELL + 1,
+                width: CELL-2, height: CELL-2,
+                background: `linear-gradient(135deg, ${color} 0%, ${dark} 100%)`,
+                borderRadius: isHead ? '7px' : '5px',
+                boxShadow: isHead ? `0 0 16px rgba(52,211,153,0.6), inset 2px 2px 4px rgba(255,255,255,0.2)` : `inset 1px 1px 2px rgba(255,255,255,0.15)`,
+                border: '1px solid rgba(255,255,255,0.1)',
+                zIndex: snake.length - i,
+                transition: 'none',
+              }}
+            >
+              {isHead && (
+                <>
+                  <div className="absolute w-1.5 h-1.5 rounded-full bg-white/80"
+                    style={{
+                      left: st.current.dir.x === 1 ? 13 : st.current.dir.x === -1 ? 4 : 7,
+                      top: st.current.dir.y === 1 ? 13 : st.current.dir.y === -1 ? 4 : 7,
+                    }}
+                  />
+                  <div className="absolute w-1.5 h-1.5 rounded-full bg-white/80"
+                    style={{
+                      left: st.current.dir.x === 1 ? 13 : st.current.dir.x === -1 ? 4 : 13,
+                      top: st.current.dir.y === 1 ? 13 : st.current.dir.y === -1 ? 4 : 13,
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
+
         {/* 食物 */}
-        <div
-          className="absolute rounded-full"
+        <div className="absolute animate-pulse"
           style={{
-            left: food.x * CELL_SIZE + 2,
-            top: food.y * CELL_SIZE + 2,
-            width: CELL_SIZE - 4,
-            height: CELL_SIZE - 4,
-            backgroundColor: '#ef4444',
+            left: food.x*CELL + 3, top: food.y*CELL + 3,
+            width: CELL-6, height: CELL-6,
+            background: 'radial-gradient(circle at 40% 40%, #ff6b8a, #e11d48)',
+            borderRadius: '50%',
+            boxShadow: '0 0 18px rgba(244,63,94,0.7), 0 0 36px rgba(244,63,94,0.3)',
+            border: '1px solid rgba(255,255,255,0.2)',
           }}
-        />
+        >
+          <div className="absolute top-1 left-2 w-1 h-1 rounded-full bg-white/60" />
+        </div>
       </div>
 
-      {isStarted && (
-        <p className="text-xs text-gray-400 mt-2">方向键移动 · 空格/P 暂停</p>
-      )}
+      {started && <p className="text-xs text-slate-500 mt-3">方向键移动 · 空格 / P 暂停</p>}
     </div>
   );
 }

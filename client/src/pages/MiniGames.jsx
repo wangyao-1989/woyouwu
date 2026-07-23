@@ -9,49 +9,56 @@ import { GameSocketProvider, useGameSocket } from '../context/GameSocketContext'
 import { useAuth } from '../context/AuthContext';
 
 const GAMES = [
-  { id: 'snake', path: '/mini-games/snake', name: '🐍 贪吃蛇', desc: '经典贪吃蛇，控制小蛇吃食物不断变长', color: '#22c55e', bgColor: '#f0fdf4' },
-  { id: 'tetris', path: '/mini-games/tetris', name: '🧱 俄罗斯方块', desc: '经典俄罗斯方块，消除满行赢得高分', color: '#a855f7', bgColor: '#faf5ff' },
-  { id: 'sokoban', path: '/mini-games/sokoban', name: '📦 推箱子', desc: '经典推箱子，将箱子推到目标位置', color: '#d97706', bgColor: '#fffbeb' },
-  { id: 'gomoku', path: '/mini-games/gomoku', name: '⚫ 五子棋', desc: '经典五子棋，支持人机和联机对战', color: '#2563eb', bgColor: '#eff6ff' },
-  { id: 'chess', path: '/mini-games/chess', name: '♟ 中国象棋', desc: '经典中国象棋，支持人机和联机对战', color: '#dc2626', bgColor: '#fef2f2' },
-  { id: 'multiplayer', path: '/mini-games/multiplayer', name: '🌐 联机大厅', desc: '邀请好友，联机对战', color: '#7c3aed', bgColor: '#f5f3ff' },
+  { id: 'snake', path: '/mini-games/snake', name: '贪吃蛇', emoji: '🐍', desc: '控制小蛇吃食物，越吃越长', color: 'from-emerald-400 to-green-500', bg: 'bg-emerald-500/10' },
+  { id: 'tetris', path: '/mini-games/tetris', name: '俄罗斯方块', emoji: '🧱', desc: '消除满行，挑战高分', color: 'from-violet-400 to-purple-500', bg: 'bg-violet-500/10' },
+  { id: 'sokoban', path: '/mini-games/sokoban', name: '推箱子', emoji: '📦', desc: '经典益智，把箱子推到目标', color: 'from-amber-400 to-orange-500', bg: 'bg-orange-500/10' },
+  { id: 'gomoku', path: '/mini-games/gomoku', name: '五子棋', emoji: '⚫', desc: '人机对战或联机对弈', color: 'from-sky-400 to-blue-500', bg: 'bg-blue-500/10' },
+  { id: 'chess', path: '/mini-games/chess', name: '中国象棋', emoji: '♟', desc: '传统棋艺，支持人机', color: 'from-rose-400 to-red-500', bg: 'bg-red-500/10' },
+  { id: 'multiplayer', path: '/mini-games/multiplayer', name: '联机大厅', emoji: '🌐', desc: '邀请好友在线对战', color: 'from-fuchsia-400 to-pink-500', bg: 'bg-pink-500/10' },
 ];
 
 function GameList() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F0E8] to-[#EDE5D9]">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-lg px-4 pt-20 pb-8">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">🎮 娱乐岛</h1>
-          <p className="text-sm text-gray-500">挑选一款游戏开始玩吧</p>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25 mb-4">
+            <span className="text-3xl">🎮</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">娱乐岛</h1>
+          <p className="text-sm text-slate-400">挑选一款小游戏，放松一下</p>
         </div>
+
         <div className="grid gap-3">
           {GAMES.map((game) => (
             <button
               key={game.id}
               onClick={() => navigate(game.path)}
-              className="w-full text-left bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all hover:scale-[1.01] border border-gray-100"
+              className="group w-full text-left rounded-2xl p-4 bg-slate-900/60 border border-slate-800 hover:border-slate-600 hover:bg-slate-800/60 transition-all duration-200"
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-                  style={{ backgroundColor: game.bgColor }}
-                >
-                  {game.name.split(' ')[0]}
+              <div className="flex items-center gap-4">
+                <div className={`w-13 h-13 rounded-xl flex items-center justify-center text-2xl ${game.bg} ring-1 ring-white/5`}>
+                  {game.emoji}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800" style={{ color: game.color }}>{game.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{game.desc}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-slate-100 group-hover:text-white transition-colors">
+                    {game.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{game.desc}</p>
                 </div>
-                <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br ${game.color} text-white shadow-lg opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </button>
           ))}
         </div>
+
+        <p className="text-center text-xs text-slate-600 mt-8">方向键 / 鼠标 / 触控操作</p>
       </div>
     </div>
   );
@@ -66,29 +73,26 @@ function GameView({ gameId }) {
 
   const gameInfo = GAMES.find(g => g.id === gameId);
 
-  // 未登录时显示登录引导
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F0E8] to-[#EDE5D9]">
-        <div className="mx-auto max-w-lg px-4 pt-20 pb-6">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-5xl mb-4">{gameInfo ? gameInfo.name.split(' ')[0] : '🎮'}</div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">{gameInfo ? gameInfo.name : '游戏'}</h2>
-            <p className="text-sm text-gray-500 mb-6">需要登录后才能开始游戏</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => navigate('/mini-games')}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
-              >
-                ← 返回
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="px-6 py-2 text-sm text-white font-bold bg-purple-500 hover:bg-purple-600 rounded-xl transition"
-              >
-                去登录
-              </button>
-            </div>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-start justify-center pt-24 px-4">
+        <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 p-8 text-center">
+          <div className="text-5xl mb-4">{gameInfo?.emoji || '🎮'}</div>
+          <h2 className="text-lg font-bold text-white mb-2">{gameInfo?.name || '游戏'}</h2>
+          <p className="text-sm text-slate-400 mb-8">需要登录后才能开始游戏</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => navigate('/mini-games')}
+              className="px-5 py-2.5 text-sm text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl transition"
+            >
+              返回
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 text-sm text-white font-semibold bg-indigo-600 hover:bg-indigo-500 rounded-xl transition"
+            >
+              去登录
+            </button>
           </div>
         </div>
       </div>
@@ -108,17 +112,21 @@ function GameView({ gameId }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F0E8] to-[#EDE5D9]">
-      <div className="mx-auto max-w-3xl px-4 pt-20 pb-6">
-        <div className="bg-white rounded-2xl shadow-lg p-5">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => navigate('/mini-games')}
-              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-            >
-              ← 返回游戏列表
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-4xl px-4 pt-20 pb-8">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => navigate('/mini-games')}
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            返回娱乐岛
+          </button>
+        </div>
+
+        <div className="rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl shadow-black/40 p-5 sm:p-6">
           {renderGame()}
         </div>
       </div>
@@ -126,7 +134,6 @@ function GameView({ gameId }) {
   );
 }
 
-// 联机大厅封装，放在 Socket 内使用
 function MultiplayerLobbyWithNav({ navigate }) {
   const gameSocket = useGameSocket();
 
@@ -144,7 +151,6 @@ function MultiplayerLobbyWithNav({ navigate }) {
   return <MultiplayerLobby onStartGame={handleStartGame} />;
 }
 
-// 整个 MiniGames 子页面共用同一个 Socket 连接
 export default function MiniGames() {
   const location = useLocation();
 
@@ -163,3 +169,4 @@ function MiniGamesRouter({ location }) {
 
   return <GameList />;
 }
+
