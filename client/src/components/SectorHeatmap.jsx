@@ -1,172 +1,319 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-// ============== 工具函数 ==============
-
-// 根据涨跌幅返回背景色（红涨绿跌灰平，深浅代表幅度）
-function getBgColor(changePercent) {
-  if (changePercent == null) return '#e5e7eb';
-  const pct = Math.abs(changePercent);
-  if (pct === 0) return '#d1d5db';
-  if (changePercent > 0) {
-    if (pct >= 5) return '#dc2626';
-    if (pct >= 3) return '#ef4444';
-    if (pct >= 1) return '#f87171';
-    return '#fca5a5';
-  } else {
-    if (pct >= 5) return '#16a34a';
-    if (pct >= 3) return '#22c55e';
-    if (pct >= 1) return '#4ade80';
-    return '#86efac';
+// 连续颜色渐变：-5%深绿 → 0%浅灰 → +5%深红
+function heatColor(pct) {
+  if (pct == null) return { bg: '#f1f5f9', text: '#94a3b8' };
+  const t = Math.min(Math.abs(pct) / 5, 1);
+  if (pct > 0) {
+    const r = Math.round(252 - t * 22);
+    const g = Math.round(165 - t * 127);
+    const b = Math.round(165 - t * 127);
+    return { bg: `rgb(${r},${g},${b})`, text: t > 0.45 ? '#fff' : '#991b1b' };
   }
+  if (pct < 0) {
+    const r = Math.round(134 - t * 112);
+    const g = Math.round(239 - t * 76);
+    const b = Math.round(172 - t * 98);
+    return { bg: `rgb(${r},${g},${b})`, text: t > 0.45 ? '#fff' : '#14532d' };
+  }
+  return { bg: '#e2e8f0', text: '#64748b' };
 }
 
-// 格式化资金
-function formatFund(num) {
-  if (num == null) return '-';
-  const abs = Math.abs(num);
-  const sign = num >= 0 ? '' : '-';
-  if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + '亿';
-  if (abs >= 1e4) return sign + (abs / 1e4).toFixed(1) + '万';
-  return sign + abs.toFixed(0);
+function fmtFund(n) {
+  if (n == null) return '-';
+  const a = Math.abs(n), s = n >= 0 ? '' : '-';
+  if (a >= 1e8) return s + (a / 1e8).toFixed(2) + '亿';
+  if (a >= 1e4) return s + (a / 1e4).toFixed(1) + '万';
+  return s + a.toFixed(0);
 }
 
-// ============== 资金流曲线图 (SVG Sparkline) ==============
-
-function FundFlowChart({ data, width = 300, height = 60 }) {
-  if (!data || data.length < 2) return null;
-
-  const values = data.map(d => d.netInflow);
-  const maxVal = Math.max(...values);
-  const minVal = Math.min(...values);
-  const range = maxVal - minVal || 1;
-
-  // 生成SVG路径
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * width;
-    const y = height - ((v - minVal) / range) * (height - 4) - 2;
-    return `${x},${y}`;
-  });
-
-  const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p).join(' ');
-
-  // 填充区域路径
-  const fillD = pathD + ` L${width},${height} L0,${height} Z`;
-
-  const isPositive = values[values.length - 1] > values[0];
-  const lineColor = isPositive ? '#ef4444' : '#22c55e';
-  const fillColor = isPositive ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)';
-
+// 趋势箭头
+function TrendArrow({ pct, pct5d }) {
+  if (pct5d == null) return null;
+  const dir = pct5d > 0 ? '↑' : pct5d < 0 ? '↓' : '→';
+  const sameDir = (pct > 0 && pct5d > 0) || (pct < 0 && pct5d < 0);
+  const color = pct5d > 0 ? '#ef4444' : pct5d < 0 ? '#22c55e' : '#94a3b8';
   return (
-    <svg width={width} height={height} className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-      <path d={fillD} fill={fillColor} />
-      <path d={pathD} fill="none" stroke={lineColor} strokeWidth="1.5" />
-    </svg>
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold ml-1"
+      style={{ color }}>
+      {dir}{Math.abs(pct5d).toFixed(1)}%
+      {sameDir && <span className="text-[8px]">持续</span>}
+    </span>
   );
 }
 
-// ============== 组件 ==============
-
 export default function SectorHeatmap() {
-  const [categories, setCategories] = useState([]);
+  const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedCat, setExpandedCat] = useState(null);
-  const [fundFlowMap, setFundFlowMap] = useState({}); // { categoryName: { flowData, loading } }
-  const flowCacheRef = useRef({}); // 缓存已获取的数据
+  const [drill, setDrill] = useState(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const [viewType, setViewType] = useState('industry'); // industry | concept
+  const [rotation, setRotation] = useState(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(async (type) => {
+    setLoading(true); setError(null); setDrill(null);
     try {
-      const res = await axios.get('/api/stocks/board-heatmap');
-      if (res.data.success) {
-        setCategories(res.data.categories);
+      const r = await axios.get(`/api/stocks/board-heatmap-enhanced?type=${type}`);
+      if (r.data.success) {
+        setCats(r.data.categories || []);
+        setRotation(r.data.rotationSummary || null);
       } else {
-        setError(res.data.error || '获取数据失败');
+        setError(r.data.error || '获取失败');
       }
-    } catch (err) {
-      setError('请求失败：' + err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError('请求失败：' + e.message); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData('industry'); }, [fetchData]);
 
-  // 展开大类时，获取该大类第一个子板块的资金流数据
-  useEffect(() => {
-    if (!expandedCat) return;
-    if (flowCacheRef.current[expandedCat]) return; // 已缓存
+  const switchView = (type) => {
+    setViewType(type);
+    fetchData(type);
+  };
 
-    const cat = categories.find(c => c.name === expandedCat);
-    if (!cat || cat.sectors.length === 0) return;
+  const sorted = [...cats].sort((a, b) => (b.avgChangePercent || 0) - (a.avgChangePercent || 0));
+  const totalRise = cats.reduce((s, c) => s + (c.totalRiseCount || 0), 0);
+  const totalFall = cats.reduce((s, c) => s + (c.totalFallCount || 0), 0);
+  const sumInflow = cats.reduce((s, c) => s + (c.totalMainInflow || 0), 0);
 
-    // 取涨跌幅绝对值最大的子板块作为代表
-    const topSector = cat.sectors.reduce((a, b) =>
-      Math.abs(a.changePercent) > Math.abs(b.changePercent) ? a : b
+  const CatCard = ({ cat, index }) => {
+    const c = heatColor(cat.avgChangePercent);
+    const isHover = hoverIdx === index;
+    const isDrill = drill && drill.name === cat.name;
+    const pct = cat.avgChangePercent || 0;
+    const pct5d = cat.avgChange5d;
+
+    return (
+      <div className="relative group cursor-pointer" style={{ breakInside: 'avoid', marginBottom: 8 }}
+        onMouseEnter={() => setHoverIdx(index)}
+        onMouseLeave={() => setHoverIdx(null)}
+        onClick={() => cat.sectors?.length > 0 && setDrill(drill?.name === cat.name ? null : cat)}>
+
+        <div className="rounded-2xl p-4 transition-all duration-300 border-2 overflow-hidden"
+          style={{
+            background: `linear-gradient(145deg, ${c.bg} 0%, ${c.bg}dd 100%)`,
+            borderColor: isDrill ? 'rgba(255,255,255,0.6)' : isHover ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
+            boxShadow: isHover
+              ? `0 8px 32px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)`
+              : `0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.1)`,
+            transform: isHover ? 'translateY(-2px)' : 'translateY(0)',
+          }}>
+          {/* 高光条纹 */}
+          <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+          {/* 板块名称 + 趋势箭头 */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center flex-wrap gap-1">
+              <span className="text-sm font-bold tracking-wide" style={{ color: c.text }}>{cat.name}</span>
+              <TrendArrow pct={pct} pct5d={pct5d} />
+            </div>
+            {cat.sectors?.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+                style={{ background: 'rgba(255,255,255,0.15)', color: c.text }}>
+                {cat.sectorCount}个
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isDrill ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'} />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          {/* 涨跌幅大数字 */}
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-2xl font-black font-mono tracking-tight" style={{ color: c.text }}>
+              {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
+            </span>
+            {cat.avgFlowDays > 0 && (
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono"
+                style={{ background: 'rgba(255,255,255,0.2)', color: c.text }}>
+                🔥{cat.avgFlowDays}日
+              </span>
+            )}
+          </div>
+
+          {/* 主力资金 */}
+          <div className="flex items-center gap-2 text-[11px] font-mono font-medium" style={{ color: c.text, opacity: 0.8 }}>
+            <span>{cat.totalMainInflow >= 0 ? '📈' : '📉'}</span>
+            <span>{fmtFund(cat.totalMainInflow)}</span>
+          </div>
+
+          {/* 领涨龙头 */}
+          {cat.topSector && (
+            <div className="mt-2 flex items-center gap-1.5 text-[10px]" style={{ color: c.text, opacity: 0.7 }}>
+              <span className="opacity-60">领涨</span>
+              <span className="font-medium">{cat.topSector.name}</span>
+              <span className="font-mono font-bold">{(cat.topSector.changePercent || 0) > 0 ? '+' : ''}{cat.topSector.changePercent?.toFixed(1)}%</span>
+            </div>
+          )}
+
+          {/* 涨跌家数进度条 */}
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden flex" style={{ background: 'rgba(0,0,0,0.15)' }}>
+              {cat.totalRiseCount + cat.totalFallCount > 0 && (
+                <>
+                  <div className="h-full bg-red-400/60 rounded-l-full transition-all duration-500"
+                    style={{ width: `${(cat.totalRiseCount / (cat.totalRiseCount + cat.totalFallCount)) * 100}%` }} />
+                  <div className="h-full bg-green-400/60 rounded-r-full transition-all duration-500"
+                    style={{ width: `${(cat.totalFallCount / (cat.totalRiseCount + cat.totalFallCount)) * 100}%` }} />
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: c.text, opacity: 0.7 }}>
+              <span>{cat.totalRiseCount}↑</span>
+              <span>{cat.totalFallCount}↓</span>
+            </div>
+          </div>
+
+          {/* 展开的细分板块 */}
+          {isDrill && cat.sectors && (
+            <div className="mt-3 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.15)' }}>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
+                {cat.sectors.sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)).map(s => {
+                  const sc = heatColor(s.changePercent);
+                  return (
+                    <div key={s.code} className="rounded-xl px-2.5 py-2 transition-all hover:scale-105"
+                      style={{
+                        background: `linear-gradient(135deg, ${sc.bg}cc, ${sc.bg})`,
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                      }}>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-semibold truncate" style={{ color: sc.text }}>{s.name}</span>
+                        {s.flowDays > 0 && (
+                          <span className="text-[8px] px-1 rounded" style={{ background: 'rgba(255,255,255,0.2)', color: sc.text }}>
+                            {s.flowDays}日
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-[11px] font-bold font-mono" style={{ color: sc.text }}>
+                          {(s.changePercent || 0) > 0 ? '+' : ''}{(s.changePercent || 0).toFixed(2)}%
+                        </span>
+                        {s.change5d != null && (
+                          <span className="text-[9px] font-mono" style={{ color: sc.text, opacity: 0.6 }}>
+                            {(s.change5d || 0) > 0 ? '+' : ''}{(s.change5d || 0).toFixed(1)}% 5日
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[9px] font-mono mt-0.5" style={{ color: sc.text, opacity: 0.7 }}>
+                        {fmtFund(s.mainInflow)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     );
-
-    setFundFlowMap(prev => ({ ...prev, [expandedCat]: { loading: true } }));
-
-    axios.get(`/api/stocks/board-fund-flow/${topSector.code}`)
-      .then(res => {
-        if (res.data.success) {
-          flowCacheRef.current[expandedCat] = res.data;
-          setFundFlowMap(prev => ({
-            ...prev,
-            [expandedCat]: { flowData: res.data.flowData, name: res.data.name, loading: false },
-          }));
-        } else {
-          setFundFlowMap(prev => ({ ...prev, [expandedCat]: { loading: false, error: true } }));
-        }
-      })
-      .catch(() => {
-        setFundFlowMap(prev => ({ ...prev, [expandedCat]: { loading: false, error: true } }));
-      });
-  }, [expandedCat, categories]);
-
-  // 切换展开/折叠
-  const toggleCategory = (catName) => {
-    setExpandedCat(prev => prev === catName ? null : catName);
   };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* 头部 */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-bold text-gray-900">板块热力图</h3>
-          <span className="text-xs text-gray-400">({categories.length}个大类)</span>
+      {/* === 头部看板 === */}
+      <div className="px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-gray-900">板块热力图</h3>
+            {/* 行业/概念切换 */}
+            <div className="flex rounded-lg bg-gray-100 p-0.5">
+              <button onClick={() => switchView('industry')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition ${viewType === 'industry' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                行业板块
+              </button>
+              <button onClick={() => switchView('concept')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition ${viewType === 'concept' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                概念板块
+              </button>
+            </div>
+          </div>
+          <button onClick={() => fetchData(viewType)} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
+            ↻ 刷新
+          </button>
         </div>
-        <button
-          onClick={fetchData}
-          className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-slate-100 transition"
-          title="刷新"
-        >
-          ↻ 刷新
-        </button>
+
+        {/* 轮动总结条 */}
+        {rotation && (
+          <div className="mb-3 px-4 py-2.5 rounded-xl flex items-center gap-3 flex-wrap"
+            style={{
+              background: rotation.strength === '强势' ? 'linear-gradient(135deg, #fef2f2, #fff7ed)'
+                : rotation.strength === '温和' ? 'linear-gradient(135deg, #f8fafc, #f1f5f9)'
+                : 'linear-gradient(135deg, #f0fdf4, #f8fafc)',
+              border: '1px solid #e2e8f0',
+            }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-800">📊 轮动总结</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                rotation.strength === '强势' ? 'bg-red-100 text-red-700'
+                : rotation.strength === '温和' ? 'bg-amber-100 text-amber-700'
+                : 'bg-green-100 text-green-700'
+              }`}>
+                {rotation.summary}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-gray-500 flex-wrap">
+              <span className="flex items-center gap-1">
+                <span className="font-medium text-gray-700">强势:</span>
+                {rotation.topSectors?.join('、')}
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-medium text-gray-700">弱势:</span>
+                {rotation.weakSectors?.join('、')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 概览统计 */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-gray-50 rounded-xl p-3">
+            <div className="text-[10px] text-gray-400 mb-0.5">板块总数</div>
+            <div className="text-lg font-bold text-gray-900">{cats.length}<span className="text-xs font-normal text-gray-400 ml-1">个</span></div>
+          </div>
+          <div className="bg-red-50 rounded-xl p-3">
+            <div className="text-[10px] text-gray-400 mb-0.5">上涨家数</div>
+            <div className="text-lg font-bold text-red-600">{totalRise}<span className="text-xs font-normal text-red-400 ml-1">家</span></div>
+          </div>
+          <div className="bg-green-50 rounded-xl p-3">
+            <div className="text-[10px] text-gray-400 mb-0.5">下跌家数</div>
+            <div className="text-lg font-bold text-green-600">{totalFall}<span className="text-xs font-normal text-green-400 ml-1">家</span></div>
+          </div>
+          <div className={`rounded-xl p-3 ${sumInflow >= 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+            <div className="text-[10px] text-gray-400 mb-0.5">主力净流入</div>
+            <div className={`text-lg font-bold ${sumInflow >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {sumInflow >= 0 ? '+' : ''}{fmtFund(sumInflow)}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 图例 */}
-      <div className="px-5 py-2 flex items-center gap-2 text-xs text-gray-400">
-        <span>跌</span>
-        <div className="flex h-4 rounded overflow-hidden">
-          <div className="w-5 h-full" style={{ background: '#16a34a' }} />
-          <div className="w-5 h-full" style={{ background: '#22c55e' }} />
-          <div className="w-5 h-full" style={{ background: '#4ade80' }} />
-          <div className="w-5 h-full" style={{ background: '#86efac' }} />
-          <div className="w-5 h-full" style={{ background: '#d1d5db' }} />
-          <div className="w-5 h-full" style={{ background: '#fca5a5' }} />
-          <div className="w-5 h-full" style={{ background: '#f87171' }} />
-          <div className="w-5 h-full" style={{ background: '#ef4444' }} />
-          <div className="w-5 h-full" style={{ background: '#dc2626' }} />
+      {/* === 图例 === */}
+      <div className="px-5 py-2.5 flex items-center gap-2 border-b border-gray-100">
+        <span className="text-[10px] text-gray-400">跌</span>
+        <div className="h-3 rounded-full overflow-hidden flex shadow-inner" style={{ width: 140 }}>
+          {Array.from({ length: 30 }).map((_, i) => {
+            const p = (i / 29) * 10 - 5;
+            const hc = heatColor(p);
+            return <div key={i} className="flex-1 h-full" style={{ background: hc.bg }} />;
+          })}
         </div>
-        <span>涨</span>
-        <span className="ml-auto text-gray-400">点击大类查看细分板块</span>
+        <span className="text-[10px] text-gray-400">涨</span>
+        {drill && (
+          <button onClick={() => setDrill(null)} className="ml-auto text-[10px] text-blue-500 hover:text-blue-700 font-medium">
+            ← 返回全景
+          </button>
+        )}
+        {!drill && (
+          <span className="ml-auto text-[10px] text-gray-400">
+            🔥N日 = 连续主力流入 · 点击板块展开细分
+          </span>
+        )}
       </div>
 
-      {/* 加载/错误 */}
+      {/* === 加载/错误 === */}
       {loading && (
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-500" />
@@ -176,119 +323,22 @@ export default function SectorHeatmap() {
         <div className="text-center py-10 text-red-500 text-sm">{error}</div>
       )}
 
-      {/* 大类热力图 */}
+      {/* === 热力图网格 === */}
       {!loading && !error && (
         <div className="p-4">
-          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
-            {categories.map((cat) => {
-              const bgColor = getBgColor(cat.avgChangePercent);
-              const isLight = Math.abs(cat.avgChangePercent || 0) < 3;
-              const textColor = isLight ? '#374151' : '#ffffff';
-              const isExpanded = expandedCat === cat.name;
-
-              return (
-                <div key={cat.name}>
-                  {/* 大类卡片 */}
-                  <div
-                    onClick={() => toggleCategory(cat.name)}
-                    className={`rounded-xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-150 border-2 ${
-                      isExpanded ? 'border-blue-400 shadow-md scale-[1.02]' : 'border-transparent hover:shadow-md hover:scale-[1.02]'
-                    }`}
-                    style={{ background: bgColor, minHeight: '90px' }}
-                    title={`${cat.name}\n平均涨跌: ${cat.avgChangePercent > 0 ? '+' : ''}${cat.avgChangePercent.toFixed(2)}%\n主力净流入: ${formatFund(cat.totalMainInflow)}\n${cat.sectorCount}个细分板块`}
-                  >
-                    {/* 大类名称 */}
-                    <div className="text-sm font-semibold truncate" style={{ color: textColor, opacity: 0.95 }}>
-                      {cat.name}
-                      {isExpanded && <span className="ml-1 text-xs opacity-70">▲</span>}
-                    </div>
-
-                    {/* 涨跌幅 */}
-                    <div>
-                      <div className="text-lg font-bold font-mono" style={{ color: textColor }}>
-                        {cat.avgChangePercent > 0 ? '+' : ''}{cat.avgChangePercent.toFixed(2)}%
-                      </div>
-                    </div>
-
-                    {/* 资金流向 */}
-                    <div className="text-[10px] font-mono mt-0.5" style={{ color: textColor, opacity: 0.75 }}>
-                      {cat.totalMainInflow >= 0 ? '流入' : '流出'} {formatFund(cat.totalMainInflow)}
-                    </div>
-
-                    {/* 涨跌家数 + 子板块数 */}
-                    <div className="flex items-center justify-between mt-1">
-                      <div className="text-[10px]" style={{ color: textColor, opacity: 0.6 }}>
-                        涨{cat.totalRiseCount} 跌{cat.totalFallCount}
-                      </div>
-                      <div className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{
-                        color: textColor,
-                        background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.2)',
-                      }}>
-                        {cat.sectorCount}个
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 展开的细分板块 */}
-                  {isExpanded && (
-                    <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <div className="text-xs text-gray-500 mb-2 font-medium">
-                        {cat.name} · 细分板块 ({cat.sectors.length}个)
-                      </div>
-
-                      {/* 资金流曲线图 */}
-                      {fundFlowMap[cat.name]?.loading && (
-                        <div className="mb-3 flex items-center justify-center h-16 bg-white rounded-lg">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500" />
-                        </div>
-                      )}
-                      {fundFlowMap[cat.name]?.flowData && (
-                        <div className="mb-3 bg-white rounded-lg p-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] text-gray-400">
-                              {fundFlowMap[cat.name].name} · 主力资金流分时
-                            </span>
-                            <span className="text-[10px] text-gray-400">
-                              {formatFund(fundFlowMap[cat.name].flowData[fundFlowMap[cat.name].flowData.length - 1]?.netInflow)}
-                            </span>
-                          </div>
-                          <FundFlowChart data={fundFlowMap[cat.name].flowData} />
-                        </div>
-                      )}
-
-                      <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
-                        {cat.sectors.map((s) => {
-                          const subBg = getBgColor(s.changePercent);
-                          const subLight = Math.abs(s.changePercent || 0) < 3;
-                          const subText = subLight ? '#374151' : '#ffffff';
-                          return (
-                            <div
-                              key={s.code}
-                              className="rounded-lg p-2 flex flex-col gap-0.5 transition-transform hover:scale-105"
-                              style={{ background: subBg }}
-                              title={`${s.name}\n涨跌: ${s.changePercent > 0 ? '+' : ''}${s.changePercent.toFixed(2)}%\n主力净流入: ${formatFund(s.mainInflow)}\n涨${s.riseCount}家 跌${s.fallCount}家`}
-                            >
-                              <div className="text-[10px] font-medium truncate" style={{ color: subText, opacity: 0.9 }}>
-                                {s.name}
-                              </div>
-                              <div className="text-xs font-bold font-mono" style={{ color: subText }}>
-                                {s.changePercent > 0 ? '+' : ''}{s.changePercent.toFixed(2)}%
-                              </div>
-                              <div className="text-[9px] font-mono truncate" style={{ color: subText, opacity: 0.7 }}>
-                                {s.mainInflow >= 0 ? '流入' : '流出'}{formatFund(s.mainInflow)}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-2"
+            style={{ columnFill: 'balance' }}>
+            {sorted.map((cat, i) => (
+              <CatCard key={cat.name} cat={cat} index={i} />
+            ))}
           </div>
         </div>
       )}
+
+      {/* === 底部提示 === */}
+      <div className="px-5 py-2 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+        数据来自东方财富公开行情接口，仅供参考，不构成投资建议
+      </div>
     </div>
   );
 }
